@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sapori — Il Tuo Ricettario Personale</title>
+  <meta name="description" content="Crea e salva le tue ricette personali italiane. Un ricettario digitale sempre disponibile, anche offline.">
+  <meta name="author" content="Sapori">
+
+  <!-- PWA Meta -->
+  <meta name="theme-color" content="#E85D3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Sapori">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+
+  <!-- FOUC Prevention — must run before CSS loads -->
+  <script>
+    (function(){
+      var t=localStorage.getItem('sapori-theme')||'light';
+      var p=localStorage.getItem('sapori-palette')||'classico';
+      document.documentElement.setAttribute('data-theme',t);
+      document.documentElement.setAttribute('data-palette',p);
+    })();
+  </script>
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="./css/variables.css">
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <link rel="stylesheet" href="./css/animations.css">
+</head>
+<body>
+  <!-- App Header -->
+  <header id="app-header">
+    <div class="logo">🍴 Sapori</div>
+    <div class="view-header__actions">
+      <button type="button" class="icon-btn" id="btn-search-toggle" aria-label="Cerca ricette">🔍</button>
+      <button type="button" class="icon-btn" id="btn-theme-toggle" aria-label="Cambia tema">🌙</button>
+    </div>
+  </header>
+
+  <!-- Search Bar (hidden by default) -->
+  <div class="search-bar hidden" id="search-bar">
+    <input type="search" id="search-input" placeholder="Cerca ricette..." autocomplete="off" aria-label="Cerca ricette">
+    <button type="button" class="icon-btn" id="btn-search-close" aria-label="Chiudi ricerca">✕</button>
+  </div>
+
+  <!-- Main Content -->
+  <main id="app-content"></main>
+
+  <!-- Bottom Navigation -->
+  <nav id="bottom-nav" class="bottom-nav">
+    <button type="button" class="nav-item active" data-view="home" aria-label="Home">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button type="button" class="nav-item" data-view="create" aria-label="Nuova ricetta">
+      <span class="nav-icon">➕</span>
+      <span class="nav-label">Nuova</span>
+    </button>
+    <button type="button" class="nav-item" data-view="favorites" aria-label="Preferiti">
+      <span class="nav-icon">❤️</span>
+      <span class="nav-label">Preferiti</span>
+    </button>
+    <button type="button" class="nav-item" data-view="settings" aria-label="Impostazioni">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Impostazioni</span>
+    </button>
+  </nav>
+
+  <!-- Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay hidden"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts (order matters) -->
+  <script src="./js/db.js"></script>
+  <script src="./js/utils.js"></script>
+  <script src="./js/theme.js"></script>
+  <script src="./js/recipes.js"></script>
+  <script src="./js/views.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

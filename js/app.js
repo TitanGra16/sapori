@@ -1,0 +1,819 @@
+/**
+ * Sapori — Main Application Controller
+ * Handles routing, event delegation, and all user interactions.
+ */
+(async function () {
+  'use strict';
+
+  /* ──────────────────── APP STATE ──────────────────── */
+
+  var state = {
+    currentView: 'home',
+    filters: { search: '', category: '', sortBy: 'recent' },
+    editingRecipe: null
+  };
+
+  /* ──────────────────── DOM REFERENCES ──────────────────── */
+
+  var appContent = document.getElementById('app-content');
+  var bottomNav = document.getElementById('bottom-nav');
+  var searchBar = document.getElementById('search-bar');
+  var searchInput = document.getElementById('search-input');
+  var btnSearchToggle = document.getElementById('btn-search-toggle');
+  var btnSearchClose = document.getElementById('btn-search-close');
+  var btnThemeToggle = document.getElementById('btn-theme-toggle');
+  var modalOverlay = document.getElementById('modal-overlay');
+
+  /* ──────────────────── INITIALIZATION ──────────────────── */
+
+  async function init() {
+    await DB.init();
+    await Theme.init();
+    updateThemeIcon();
+    setupRouter();
+    setupEventListeners();
+    navigateTo(window.location.hash || '#home');
+    registerServiceWorker();
+  }
+
+  /* ──────────────────── HASH-BASED ROUTER ──────────────────── */
+
+  function setupRouter() {
+    window.addEventListener('hashchange', function () {
+      var hash = window.location.hash || '#home';
+      handleRoute(hash);
+    });
+  }
+
+  function handleRoute(hash) {
+    // Parse the hash
+    var parts = hash.replace('#', '').split('/');
+    var view = parts[0] || 'home';
+    var param = parts[1] || null;
+
+    state.currentView = view;
+
+    // Transition animation
+    appContent.classList.add('animate-fade-in');
+    setTimeout(function () { appContent.classList.remove('animate-fade-in'); }, 400);
+
+    switch (view) {
+      case 'home':
+        updateNav('home');
+        showHeader(true);
+        Views.renderHome(appContent, state.filters);
+        break;
+
+      case 'create':
+        updateNav('create');
+        showHeader(false);
+        state.editingRecipe = null;
+        Views.renderCreate(appContent, null);
+        break;
+
+      case 'edit':
+        updateNav('create');
+        showHeader(false);
+        if (param) {
+          DB.getRecipe(param).then(function (recipe) {
+            if (recipe) {
+              state.editingRecipe = recipe;
+              Views.renderCreate(appContent, recipe);
+            } else {
+              Utils.showToast('Ricetta non trovata', 'error');
+              navigateTo('#home');
+            }
+          });
+        } else {
+          navigateTo('#home');
+        }
+        break;
+
+      case 'detail':
+        updateNav('');
+        showHeader(false);
+        if (param) {
+          Views.renderDetail(appContent, param);
+        } else {
+          navigateTo('#home');
+        }
+        break;
+
+      case 'favorites':
+        updateNav('favorites');
+        showHeader(true);
+        Views.renderFavorites(appContent);
+        break;
+
+      case 'settings':
+        updateNav('settings');
+        showHeader(true);
+        Views.renderSettings(appContent);
+        break;
+
+      default:
+        navigateTo('#home');
+        break;
+    }
+
+    // Close search bar on navigation
+    closeSearch();
+
+    // Scroll to top on view change
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function navigateTo(hash) {
+    if (window.location.hash === hash) {
+      // Force re-render even if same hash
+      handleRoute(hash);
+    } else {
+      window.location.hash = hash;
+    }
+  }
+
+  function showHeader(visible) {
+    var header = document.getElementById('app-header');
+    if (visible) {
+      header.classList.remove('hidden');
+      bottomNav.classList.remove('hidden');
+    } else {
+      header.classList.add('hidden');
+      bottomNav.classList.add('hidden');
+    }
+  }
+
+  /* ──────────────────── NAV UPDATE ──────────────────── */
+
+  function updateNav(view) {
+    var items = bottomNav.querySelectorAll('.nav-item');
+    items.forEach(function (item) {
+      if (item.getAttribute('data-view') === view) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+
+  /* ──────────────────── THEME ICON ──────────────────── */
+
+  function updateThemeIcon() {
+    var current = Theme.getCurrentTheme();
+    btnThemeToggle.textContent = current.mode === 'dark' ? '☀️' : '🌙';
+  }
+
+  /* ──────────────────── SEARCH ──────────────────── */
+
+  function openSearch() {
+    searchBar.classList.remove('hidden');
+    searchInput.focus();
+  }
+
+  function closeSearch() {
+    searchBar.classList.add('hidden');
+    searchInput.value = '';
+    if (state.filters.search !== '') {
+      state.filters.search = '';
+      if (state.currentView === 'home') {
+        Views.renderHome(appContent, state.filters);
+      }
+    }
+  }
+
+  var debouncedSearch = Utils.debounce(function (value) {
+    state.filters.search = value;
+    if (state.currentView === 'home') {
+      Views.renderHome(appContent, state.filters);
+    }
+  }, 300);
+
+  /* ──────────────────── FAVORITE TOGGLE ──────────────────── */
+
+  async function toggleFavorite(id) {
+    try {
+      var recipe = await DB.getRecipe(id);
+      if (!recipe) return;
+      recipe.isFavorite = !recipe.isFavorite;
+      recipe.updatedAt = Date.now();
+      await DB.updateRecipe(recipe);
+      Utils.showToast(
+        recipe.isFavorite ? 'Aggiunta ai preferiti ❤️' : 'Rimossa dai preferiti',
+        'success'
+      );
+      return recipe.isFavorite;
+    } catch (e) {
+      Utils.showToast('Errore nel salvataggio', 'error');
+      return null;
+    }
+  }
+
+  /* ──────────────────── FORM: COLLECT DATA ──────────────────── */
+
+  function collectFormData() {
+    var idInput = document.getElementById('input-id');
+    var name = document.getElementById('input-name').value.trim();
+    var category = document.getElementById('input-category').value;
+    var description = (document.getElementById('input-description').value || '').trim();
+    var imageData = document.getElementById('input-image-data').value || '';
+    var prepTime = parseInt(document.getElementById('input-preptime').value, 10) || 0;
+    var cookTime = parseInt(document.getElementById('input-cooktime').value, 10) || 0;
+    var difficulty = document.getElementById('input-difficulty').value;
+    var servings = parseInt(document.getElementById('input-servings').value, 10) || 4;
+
+    // Collect ingredients
+    var ingRows = document.querySelectorAll('#ingredients-list .ingredient-row');
+    var ingredients = [];
+    ingRows.forEach(function (row) {
+      var ingName = row.querySelector('[data-field="ing-name"]').value.trim();
+      var ingQty = row.querySelector('[data-field="ing-qty"]').value.trim();
+      var ingUnit = row.querySelector('[data-field="ing-unit"]').value;
+      if (ingName) {
+        ingredients.push({ name: ingName, quantity: ingQty, unit: ingUnit });
+      }
+    });
+
+    // Collect steps
+    var stepRows = document.querySelectorAll('#steps-list .step-item');
+    var steps = [];
+    stepRows.forEach(function (row) {
+      var text = row.querySelector('[data-field="step-text"]').value.trim();
+      if (text) {
+        steps.push(text);
+      }
+    });
+
+    var now = Date.now();
+    var recipe = {
+      id: idInput ? idInput.value : Utils.generateId(),
+      name: name,
+      category: category,
+      description: description,
+      ingredients: ingredients,
+      steps: steps,
+      prepTime: prepTime,
+      cookTime: cookTime,
+      difficulty: difficulty,
+      servings: servings,
+      image: imageData || null,
+      isFavorite: state.editingRecipe ? state.editingRecipe.isFavorite : false,
+      createdAt: state.editingRecipe ? state.editingRecipe.createdAt : now,
+      updatedAt: now
+    };
+
+    return recipe;
+  }
+
+  /* ──────────────────── FORM: SHOW ERRORS ──────────────────── */
+
+  function clearFormErrors() {
+    var errors = document.querySelectorAll('.form-error');
+    errors.forEach(function (el) { el.textContent = ''; });
+    var inputs = document.querySelectorAll('.form-input.error, .form-select.error, .form-textarea.error');
+    inputs.forEach(function (el) { el.classList.remove('error'); });
+  }
+
+  function showFormErrors(errors) {
+    errors.forEach(function (err) {
+      // err is a string like "Il nome è obbligatorio"
+      if (err.toLowerCase().includes('nome')) {
+        setFieldError('error-name', err);
+      } else if (err.toLowerCase().includes('categoria')) {
+        setFieldError('error-category', err);
+      } else if (err.toLowerCase().includes('ingrediente') || err.toLowerCase().includes('ingredienti')) {
+        setFieldError('error-ingredients', err);
+      } else if (err.toLowerCase().includes('passagg') || err.toLowerCase().includes('preparazione')) {
+        setFieldError('error-steps', err);
+      }
+    });
+  }
+
+  function setFieldError(errorId, message) {
+    var el = document.getElementById(errorId);
+    if (el) el.textContent = message;
+  }
+
+  /* ──────────────────── FORM: SAVE ──────────────────── */
+
+  async function saveRecipe() {
+    clearFormErrors();
+    var recipe = collectFormData();
+    var validation = Recipes.validate(recipe);
+
+    if (!validation.valid) {
+      showFormErrors(validation.errors);
+      Utils.showToast('Correggi gli errori nel modulo', 'error');
+      return;
+    }
+
+    try {
+      if (state.editingRecipe) {
+        await DB.updateRecipe(recipe);
+        Utils.showToast('Ricetta aggiornata con successo! ✅', 'success');
+      } else {
+        await DB.addRecipe(recipe);
+        Utils.showToast('Ricetta creata con successo! 🎉', 'success');
+      }
+      navigateTo('#home');
+    } catch (e) {
+      Utils.showToast('Errore nel salvataggio: ' + e.message, 'error');
+    }
+  }
+
+  /* ──────────────────── FORM: DYNAMIC ROWS ──────────────────── */
+
+  function addIngredientRow() {
+    var list = document.getElementById('ingredients-list');
+    if (!list) return;
+    var rows = list.querySelectorAll('.ingredient-row');
+    var newIndex = rows.length;
+
+    // Re-render all rows with correct indices and remove buttons
+    var ingredients = collectCurrentIngredients();
+    ingredients.push({ name: '', quantity: '', unit: '' });
+    rerenderIngredients(ingredients);
+  }
+
+  function removeIngredientRow(index) {
+    var ingredients = collectCurrentIngredients();
+    if (ingredients.length <= 1) return;
+    ingredients.splice(index, 1);
+    rerenderIngredients(ingredients);
+  }
+
+  function collectCurrentIngredients() {
+    var rows = document.querySelectorAll('#ingredients-list .ingredient-row');
+    var ingredients = [];
+    rows.forEach(function (row) {
+      ingredients.push({
+        name: row.querySelector('[data-field="ing-name"]').value,
+        quantity: row.querySelector('[data-field="ing-qty"]').value,
+        unit: row.querySelector('[data-field="ing-unit"]').value
+      });
+    });
+    return ingredients;
+  }
+
+  function rerenderIngredients(ingredients) {
+    var list = document.getElementById('ingredients-list');
+    if (!list) return;
+    var html = '';
+    ingredients.forEach(function (ing, idx) {
+      html += ingredientRowHTMLFromApp(ing, idx, ingredients.length);
+    });
+    list.innerHTML = html;
+  }
+
+  function ingredientRowHTMLFromApp(ing, index, total) {
+    var esc = Utils.escapeHtml;
+    var html =
+      '<div class="dynamic-list__item ingredient-row" data-index="' + index + '">' +
+        '<div class="ingredient-inputs">' +
+          '<input type="text" class="form-input" placeholder="Ingrediente" data-field="ing-name" value="' + esc(ing.name || '') + '">' +
+          '<input type="text" class="form-input" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
+          '<select class="form-select" data-field="ing-unit" style="max-width:6rem">' +
+            '<option value="">—</option>';
+    Recipes.UNITS.forEach(function (u) {
+      html += '<option value="' + esc(u) + '"' + (ing.unit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
+    });
+    html += '</select>';
+    if (total > 1) {
+      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi">✕</button>';
+    }
+    html += '</div></div>';
+    return html;
+  }
+
+  function addStepRow() {
+    var steps = collectCurrentSteps();
+    steps.push('');
+    rerenderSteps(steps);
+  }
+
+  function removeStepRow(index) {
+    var steps = collectCurrentSteps();
+    if (steps.length <= 1) return;
+    steps.splice(index, 1);
+    rerenderSteps(steps);
+  }
+
+  function collectCurrentSteps() {
+    var rows = document.querySelectorAll('#steps-list .step-item');
+    var steps = [];
+    rows.forEach(function (row) {
+      steps.push(row.querySelector('[data-field="step-text"]').value);
+    });
+    return steps;
+  }
+
+  function rerenderSteps(steps) {
+    var list = document.getElementById('steps-list');
+    if (!list) return;
+    var html = '';
+    steps.forEach(function (step, idx) {
+      html += stepRowHTMLFromApp(step, idx, steps.length);
+    });
+    list.innerHTML = html;
+  }
+
+  function stepRowHTMLFromApp(step, index, total) {
+    var esc = Utils.escapeHtml;
+    var html =
+      '<div class="dynamic-list__item step-item" data-index="' + index + '">' +
+        '<span class="step-number">' + (index + 1) + '</span>' +
+        '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio...">' + esc(step || '') + '</textarea>';
+    if (total > 1) {
+      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">✕</button>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  /* ──────────────────── IMAGE HANDLING ──────────────────── */
+
+  function triggerImageUpload() {
+    var fileInput = document.getElementById('input-image');
+    if (fileInput) fileInput.click();
+  }
+
+  async function handleImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+
+    try {
+      var base64 = await Utils.compressImage(file, 800);
+      document.getElementById('input-image-data').value = base64;
+
+      var uploadArea = document.getElementById('image-upload-area');
+      uploadArea.innerHTML =
+        '<div class="image-upload__preview">' +
+          '<img src="' + Utils.escapeHtml(base64) + '" alt="Anteprima" id="image-preview">' +
+          '<button type="button" class="image-upload__remove" data-action="remove-image" aria-label="Rimuovi foto">✕</button>' +
+        '</div>';
+    } catch (e) {
+      Utils.showToast('Errore nel caricamento dell\'immagine', 'error');
+    }
+  }
+
+  function removeImage() {
+    document.getElementById('input-image-data').value = '';
+    var fileInput = document.getElementById('input-image');
+    if (fileInput) fileInput.value = '';
+
+    var uploadArea = document.getElementById('image-upload-area');
+    uploadArea.innerHTML =
+      '<div class="image-upload__placeholder" id="image-placeholder">' +
+        '<span style="font-size:2rem">📷</span>' +
+        '<span>Tocca per aggiungere una foto</span>' +
+      '</div>';
+  }
+
+  /* ──────────────────── EXPORT / IMPORT ──────────────────── */
+
+  async function exportData() {
+    try {
+      var json = await DB.exportData();
+      var date = new Date().toISOString().slice(0, 10);
+      Utils.triggerDownload(json, 'sapori-backup-' + date + '.json', 'application/json');
+      Utils.showToast('Esportazione completata! 📥', 'success');
+    } catch (e) {
+      Utils.showToast('Errore nell\'esportazione', 'error');
+    }
+  }
+
+  async function importData() {
+    var fileInput = document.getElementById('import-file-input');
+    if (fileInput) fileInput.click();
+  }
+
+  async function handleImportFile(file) {
+    if (!file) return;
+    try {
+      var text = await Utils.readFileAsText(file);
+      var count = await DB.importData(text);
+      Utils.showToast('Importate ' + count + ' ricette con successo! 📤', 'success');
+      // Re-render settings to update count
+      if (state.currentView === 'settings') {
+        Views.renderSettings(appContent);
+      }
+    } catch (e) {
+      Utils.showToast('Errore nell\'importazione: ' + e.message, 'error');
+    }
+  }
+
+  /* ──────────────────── DELETE RECIPE ──────────────────── */
+
+  function confirmDeleteRecipe(id) {
+    Views.showConfirmModal(
+      'Elimina Ricetta',
+      'Sei sicuro di voler eliminare questa ricetta? Questa azione non può essere annullata.',
+      async function () {
+        try {
+          await DB.deleteRecipe(id);
+          Views.hideModal();
+          Utils.showToast('Ricetta eliminata 🗑️', 'success');
+          navigateTo('#home');
+        } catch (e) {
+          Utils.showToast('Errore nell\'eliminazione', 'error');
+        }
+      }
+    );
+  }
+
+  /* ──────────────────── EVENT LISTENERS ──────────────────── */
+
+  function setupEventListeners() {
+    // Bottom nav
+    bottomNav.addEventListener('click', function (e) {
+      var navItem = e.target.closest('.nav-item');
+      if (!navItem) return;
+      var view = navItem.getAttribute('data-view');
+      if (view) navigateTo('#' + view);
+    });
+
+    // Search toggle
+    btnSearchToggle.addEventListener('click', function () {
+      if (searchBar.classList.contains('hidden')) {
+        openSearch();
+      } else {
+        closeSearch();
+      }
+    });
+
+    // Search close
+    btnSearchClose.addEventListener('click', closeSearch);
+
+    // Search input
+    searchInput.addEventListener('input', function (e) {
+      debouncedSearch(e.target.value.trim());
+    });
+
+    // Escape key closes search
+    searchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeSearch();
+    });
+
+    // Theme toggle
+    btnThemeToggle.addEventListener('click', async function () {
+      await Theme.toggleDarkMode();
+      updateThemeIcon();
+    });
+
+    // Modal overlay click (close)
+    modalOverlay.addEventListener('click', function (e) {
+      if (e.target === modalOverlay) {
+        Views.hideModal();
+      }
+    });
+
+    // File input for image
+    document.addEventListener('change', function (e) {
+      if (e.target.id === 'input-image') {
+        var file = e.target.files && e.target.files[0];
+        if (file) handleImageFile(file);
+      }
+      if (e.target.id === 'import-file-input') {
+        var importFile = e.target.files && e.target.files[0];
+        if (importFile) handleImportFile(importFile);
+      }
+      // Sort select
+      if (e.target.id === 'sort-select') {
+        state.filters.sortBy = e.target.value;
+        if (state.currentView === 'home') {
+          Views.renderHome(appContent, state.filters);
+        }
+      }
+    });
+
+    // Global delegated click handler for dynamic content
+    document.addEventListener('click', function (e) {
+      var target = e.target;
+      var actionEl = target.closest('[data-action]');
+      if (!actionEl) {
+        // Check for special elements without data-action
+        handleNonActionClick(e);
+        return;
+      }
+
+      var action = actionEl.getAttribute('data-action');
+
+      switch (action) {
+        /* ── Navigation actions ── */
+        case 'open-recipe': {
+          var id = actionEl.getAttribute('data-id');
+          if (id) navigateTo('#detail/' + id);
+          break;
+        }
+        case 'go-home': {
+          navigateTo('#home');
+          break;
+        }
+        case 'go-create': {
+          navigateTo('#create');
+          break;
+        }
+        case 'go-back': {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            navigateTo('#home');
+          }
+          break;
+        }
+        case 'edit-recipe': {
+          var editId = actionEl.getAttribute('data-id');
+          if (editId) navigateTo('#edit/' + editId);
+          break;
+        }
+
+        /* ── Favorite toggle ── */
+        case 'toggle-fav': {
+          e.stopPropagation();
+          var favId = actionEl.getAttribute('data-id');
+          toggleFavorite(favId).then(function (isFav) {
+            if (isFav !== null) {
+              // Re-render current view
+              if (state.currentView === 'home') {
+                Views.renderHome(appContent, state.filters);
+              } else if (state.currentView === 'favorites') {
+                Views.renderFavorites(appContent);
+              }
+            }
+          });
+          break;
+        }
+        case 'toggle-fav-detail': {
+          e.stopPropagation();
+          var favDetailId = actionEl.getAttribute('data-id');
+          toggleFavorite(favDetailId).then(function (isFav) {
+            if (isFav !== null) {
+              // Update the button in place
+              actionEl.classList.toggle('active', isFav);
+              actionEl.textContent = isFav ? '❤️' : '🤍';
+            }
+          });
+          break;
+        }
+
+        /* ── Delete ── */
+        case 'delete-recipe': {
+          var deleteId = actionEl.getAttribute('data-id');
+          if (deleteId) confirmDeleteRecipe(deleteId);
+          break;
+        }
+
+        /* ── Category filter ── */
+        case 'filter-category': {
+          var cat = actionEl.getAttribute('data-category');
+          state.filters.category = cat || '';
+          Views.renderHome(appContent, state.filters);
+          break;
+        }
+
+        /* ── Form: dynamic rows ── */
+        case 'add-ingredient': {
+          addIngredientRow();
+          break;
+        }
+        case 'remove-ingredient': {
+          var ingIdx = parseInt(actionEl.getAttribute('data-index'), 10);
+          removeIngredientRow(ingIdx);
+          break;
+        }
+        case 'add-step': {
+          addStepRow();
+          break;
+        }
+        case 'remove-step': {
+          var stepIdx = parseInt(actionEl.getAttribute('data-index'), 10);
+          removeStepRow(stepIdx);
+          break;
+        }
+
+        /* ── Form: image ── */
+        case 'remove-image': {
+          e.stopPropagation();
+          removeImage();
+          break;
+        }
+
+        /* ── Form: cancel ── */
+        case 'cancel-form': {
+          if (state.editingRecipe) {
+            navigateTo('#detail/' + state.editingRecipe.id);
+          } else {
+            navigateTo('#home');
+          }
+          break;
+        }
+
+        /* ── Settings: theme ── */
+        case 'toggle-dark': {
+          // Handled by the checkbox change, but also support click
+          break;
+        }
+        case 'set-palette': {
+          var palette = actionEl.getAttribute('data-palette');
+          if (palette) {
+            Theme.setPalette(palette).then(function () {
+              // Re-render settings to update active state
+              Views.renderSettings(appContent);
+            });
+          }
+          break;
+        }
+
+        /* ── Settings: data ── */
+        case 'export-data': {
+          exportData();
+          break;
+        }
+        case 'import-data': {
+          importData();
+          break;
+        }
+
+        /* ── Modal ── */
+        case 'modal-cancel': {
+          Views.hideModal();
+          break;
+        }
+        case 'modal-confirm': {
+          var onConfirm = modalOverlay._onConfirm;
+          if (typeof onConfirm === 'function') {
+            onConfirm();
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
+    });
+
+    // Dark mode toggle via checkbox change event
+    document.addEventListener('change', function (e) {
+      if (e.target.closest('[data-action="toggle-dark"]') || (e.target.type === 'checkbox' && e.target.closest('.toggle-switch') && e.target.getAttribute('data-action') === 'toggle-dark')) {
+        Theme.toggleDarkMode().then(function () {
+          updateThemeIcon();
+        });
+      }
+    });
+
+    // Form submission
+    document.addEventListener('submit', function (e) {
+      if (e.target.id === 'recipe-form') {
+        e.preventDefault();
+        saveRecipe();
+      }
+    });
+
+    // Image upload area click (delegate)
+    document.addEventListener('click', function (e) {
+      var placeholder = e.target.closest('.image-upload__placeholder');
+      var uploadArea = e.target.closest('.image-upload');
+      // Only trigger if clicking placeholder or the upload area itself (not remove button)
+      if (placeholder || (uploadArea && !e.target.closest('.image-upload__remove') && !e.target.closest('.image-upload__preview img'))) {
+        if (uploadArea && !e.target.closest('.image-upload__preview')) {
+          triggerImageUpload();
+        }
+      }
+    });
+
+    // Sort select change
+    document.addEventListener('change', function (e) {
+      if (e.target.id === 'sort-select') {
+        state.filters.sortBy = e.target.value;
+        if (state.currentView === 'home') {
+          Views.renderHome(appContent, state.filters);
+        }
+      }
+    });
+  }
+
+  /* ── Handle clicks on elements without data-action ── */
+  function handleNonActionClick(e) {
+    // Recipe card click (the card itself is the data-action element, handled above)
+    // Nothing extra needed here
+  }
+
+  /* ──────────────────── SERVICE WORKER ──────────────────── */
+
+  function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(function (reg) {
+          console.log('Service Worker registrato con successo', reg.scope);
+        })
+        .catch(function (err) {
+          console.error('Registrazione Service Worker fallita:', err);
+        });
+    }
+  }
+
+  /* ──────────────────── BOOT ──────────────────── */
+
+  init().catch(function (err) {
+    console.error('Errore inizializzazione app:', err);
+  });
+
+})();

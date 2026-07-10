@@ -1,0 +1,240 @@
+/* ============================================================
+   SAPORI — Design System Variables
+   Premium Italian Recipe PWA
+   ============================================================ */
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ============================================================
+   DEFAULT / CLASSICO LIGHT (fallback :root)
+   ============================================================ */
+:root {
+  /* — Color Palette — */
+  --primary: #E85D3A;
+  --primary-light: #FF8A65;
+  --primary-dark: #C0421D;
+  --secondary: #FFA726;
+  --bg-primary: #FAF7F5;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #FFF3E0;
+  --text-primary: #2D1B14;
+  --text-secondary: #5D4037;
+  --text-muted: #A1887F;
+  --border: rgba(93, 64, 55, 0.12);
+  --shadow: rgba(232, 93, 58, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --gradient: linear-gradient(135deg, #E85D3A, #FFA726);
+
+  /* — Semantic Colors — */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+
+  /* — Border Radius — */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+
+  /* — Shadows — */
+  --shadow-sm: 0 1px 3px var(--shadow), 0 1px 2px var(--shadow);
+  --shadow-md: 0 4px 14px var(--shadow), 0 2px 6px var(--shadow);
+  --shadow-lg: 0 10px 40px var(--shadow), 0 4px 12px var(--shadow);
+
+  /* — Transitions — */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+
+  /* — Typography — */
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* — Z-Index Scale — */
+  --z-header: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+  --z-nav: 100;
+
+  /* — Spacing (optional helpers) — */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+}
+
+/* ============================================================
+   CLASSICO — LIGHT
+   ============================================================ */
+[data-palette="classico"][data-theme="light"],
+html:not([data-palette])[data-theme="light"],
+html:not([data-palette]):not([data-theme]) {
+  --primary: #E85D3A;
+  --primary-light: #FF8A65;
+  --primary-dark: #C0421D;
+  --secondary: #FFA726;
+  --bg-primary: #FAF7F5;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #FFF3E0;
+  --text-primary: #2D1B14;
+  --text-secondary: #5D4037;
+  --text-muted: #A1887F;
+  --border: rgba(93, 64, 55, 0.12);
+  --shadow: rgba(232, 93, 58, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --gradient: linear-gradient(135deg, #E85D3A, #FFA726);
+}
+
+/* ============================================================
+   CLASSICO — DARK
+   ============================================================ */
+[data-palette="classico"][data-theme="dark"],
+html:not([data-palette])[data-theme="dark"] {
+  --primary: #FF7F5C;
+  --primary-light: #FFAB91;
+  --primary-dark: #E85D3A;
+  --secondary: #FFB74D;
+  --bg-primary: #1A1614;
+  --bg-secondary: #2D2420;
+  --bg-tertiary: #3E302A;
+  --text-primary: #FAF0EB;
+  --text-secondary: #D7CCC8;
+  --text-muted: #8D6E63;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(45, 36, 32, 0.7);
+  --glass-border: rgba(255, 127, 92, 0.15);
+  --gradient: linear-gradient(135deg, #FF7F5C, #FFB74D);
+}
+
+/* ============================================================
+   OCEANO — LIGHT
+   ============================================================ */
+[data-palette="oceano"][data-theme="light"] {
+  --primary: #0EA5E9;
+  --primary-light: #38BDF8;
+  --primary-dark: #0284C7;
+  --secondary: #06B6D4;
+  --bg-primary: #F0F9FF;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #E0F2FE;
+  --text-primary: #0C2D48;
+  --text-secondary: #1E6091;
+  --text-muted: #7EB8DA;
+  --border: rgba(14, 165, 233, 0.12);
+  --shadow: rgba(14, 165, 233, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --gradient: linear-gradient(135deg, #0EA5E9, #06B6D4);
+}
+
+/* ============================================================
+   OCEANO — DARK
+   ============================================================ */
+[data-palette="oceano"][data-theme="dark"] {
+  --primary: #38BDF8;
+  --primary-light: #7DD3FC;
+  --primary-dark: #0EA5E9;
+  --secondary: #22D3EE;
+  --bg-primary: #0C1B2E;
+  --bg-secondary: #152238;
+  --bg-tertiary: #1E3A5F;
+  --text-primary: #E0F2FE;
+  --text-secondary: #BAE6FD;
+  --text-muted: #4A7A9B;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(21, 34, 56, 0.7);
+  --glass-border: rgba(56, 189, 248, 0.15);
+  --gradient: linear-gradient(135deg, #38BDF8, #22D3EE);
+}
+
+/* ============================================================
+   BOSCO — LIGHT
+   ============================================================ */
+[data-palette="bosco"][data-theme="light"] {
+  --primary: #16A34A;
+  --primary-light: #4ADE80;
+  --primary-dark: #15803D;
+  --secondary: #84CC16;
+  --bg-primary: #F0FDF4;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #DCFCE7;
+  --text-primary: #14291E;
+  --text-secondary: #2D5A3D;
+  --text-muted: #86C49B;
+  --border: rgba(22, 163, 74, 0.12);
+  --shadow: rgba(22, 163, 74, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --gradient: linear-gradient(135deg, #16A34A, #84CC16);
+}
+
+/* ============================================================
+   BOSCO — DARK
+   ============================================================ */
+[data-palette="bosco"][data-theme="dark"] {
+  --primary: #4ADE80;
+  --primary-light: #86EFAC;
+  --primary-dark: #16A34A;
+  --secondary: #A3E635;
+  --bg-primary: #0F1F14;
+  --bg-secondary: #1A3323;
+  --bg-tertiary: #234D33;
+  --text-primary: #DCFCE7;
+  --text-secondary: #BBF7D0;
+  --text-muted: #4A7A5A;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(26, 51, 35, 0.7);
+  --glass-border: rgba(74, 222, 128, 0.15);
+  --gradient: linear-gradient(135deg, #4ADE80, #A3E635);
+}
+
+/* ============================================================
+   TRAMONTO — LIGHT
+   ============================================================ */
+[data-palette="tramonto"][data-theme="light"] {
+  --primary: #A855F7;
+  --primary-light: #C084FC;
+  --primary-dark: #9333EA;
+  --secondary: #EC4899;
+  --bg-primary: #FAF5FF;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F3E8FF;
+  --text-primary: #2E1540;
+  --text-secondary: #6B3FA0;
+  --text-muted: #C4A5DE;
+  --border: rgba(168, 85, 247, 0.12);
+  --shadow: rgba(168, 85, 247, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --gradient: linear-gradient(135deg, #A855F7, #EC4899);
+}
+
+/* ============================================================
+   TRAMONTO — DARK
+   ============================================================ */
+[data-palette="tramonto"][data-theme="dark"] {
+  --primary: #C084FC;
+  --primary-light: #D8B4FE;
+  --primary-dark: #A855F7;
+  --secondary: #F472B6;
+  --bg-primary: #1E0F2E;
+  --bg-secondary: #2D1B42;
+  --bg-tertiary: #3D2658;
+  --text-primary: #F3E8FF;
+  --text-secondary: #E9D5FF;
+  --text-muted: #7C5A9E;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(45, 27, 66, 0.7);
+  --glass-border: rgba(192, 132, 252, 0.15);
+  --gradient: linear-gradient(135deg, #C084FC, #F472B6);
+}

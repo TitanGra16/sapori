@@ -1,0 +1,17 @@
+{
+  "name": "Sapori — Il Tuo Ricettario Personale",
+  "short_name": "Sapori",
+  "description": "Crea e salva le tue ricette personali, sempre disponibili offline",
+  "start_url": "./index.html",
+  "id": "/sapori",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF7F5",
+  "theme_color": "#E85D3A",
+  "lang": "it",
+  "categories": ["food", "lifestyle"],
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
