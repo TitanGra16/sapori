@@ -1344,7 +1344,8 @@
     visibility var(--transition-normal);
 }
 
-.modal-overlay.is-open {
+.modal-overlay.is-open,
+.modal-overlay:not(.hidden) {
   opacity: 1;
   visibility: visible;
 }

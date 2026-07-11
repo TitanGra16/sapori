@@ -28,6 +28,7 @@
 
   async function init() {
     await DB.init();
+    await requestPersistentStorage();
     await loadCustomCategories();
     await Theme.init();
     updateThemeIcon();
@@ -57,6 +58,29 @@
       }
     } catch (e) {
       console.warn('Errore nel caricamento delle categorie personalizzate:', e);
+    }
+  }
+
+  async function requestPersistentStorage() {
+    if (navigator.storage && navigator.storage.persist) {
+      try {
+        var isPersisted = await navigator.storage.persisted();
+        console.log('Stato persistenza iniziale:', isPersisted);
+        
+        if (!isPersisted) {
+          var granted = await navigator.storage.persist();
+          console.log('Persistenza storage richiesta. Risultato:', granted);
+          if (granted) {
+            console.log('Il browser ha concesso lo storage persistente.');
+          } else {
+            console.warn('Il browser ha rifiutato lo storage persistente.');
+          }
+        } else {
+          console.log('Lo storage è già persistente.');
+        }
+      } catch (e) {
+        console.warn('Errore durante la richiesta di storage persistente:', e);
+      }
     }
   }
 
