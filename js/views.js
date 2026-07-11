@@ -153,7 +153,9 @@ window.Views = (function () {
     }
 
     var html = '<div class="view animate-fade-in">';
-    html += '<div class="view-header"><h1 class="view-header__title">' + esc(title) + '</h1></div>';
+    html += '<div class="view-header" style="display:flex; align-items:center; gap:var(--space-sm);">';
+    html += '<button type="button" class="btn btn--icon" data-action="cancel-form" aria-label="Annulla e torna indietro" style="margin-right:var(--space-xs); border:1px solid var(--border); background:var(--glass-bg); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); color:var(--text-primary); width:40px; height:40px; border-radius:var(--radius-full); display:flex; align-items:center; justify-content:center; cursor:pointer;">' + Icons.arrowLeft + '</button>';
+    html += '<h1 class="view-header__title" style="margin:0;">' + esc(title) + '</h1></div>';
     
     // Step Navigation Header
     html +=
