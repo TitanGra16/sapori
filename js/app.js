@@ -396,18 +396,25 @@
   }
 
   function showFormErrors(errors) {
+    var switchTarget = null;
     errors.forEach(function (err) {
-      // err is a string like "Il nome è obbligatorio"
       if (err.toLowerCase().includes('nome')) {
         setFieldError('error-name', err);
+        if (!switchTarget) switchTarget = 'tab-info';
       } else if (err.toLowerCase().includes('categoria')) {
         setFieldError('error-category', err);
+        if (!switchTarget) switchTarget = 'tab-info';
       } else if (err.toLowerCase().includes('ingrediente') || err.toLowerCase().includes('ingredienti')) {
         setFieldError('error-ingredients', err);
+        if (!switchTarget || switchTarget === 'tab-cook') switchTarget = 'tab-prep';
       } else if (err.toLowerCase().includes('passagg') || err.toLowerCase().includes('preparazione')) {
         setFieldError('error-steps', err);
+        if (!switchTarget || switchTarget === 'tab-cook') switchTarget = 'tab-prep';
       }
     });
+    if (switchTarget) {
+      switchFormTab(switchTarget);
+    }
   }
 
   function setFieldError(errorId, message) {

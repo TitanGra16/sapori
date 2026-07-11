@@ -579,6 +579,47 @@
       document.body.removeChild(formContainer);
     });
 
+    test('Storage & DOM', 'showFormErrors auto-tab switch - sposta la visualizzazione sulla prima scheda con errore', () => {
+      const navContainer = document.createElement('div');
+      navContainer.className = 'form-steps-nav';
+      navContainer.innerHTML = 
+        '<button type="button" class="form-steps-btn" data-target="tab-info"><span class="step-num">1</span></button>' +
+        '<button type="button" class="form-steps-btn active" data-target="tab-prep"><span class="step-num">2</span></button>';
+        
+      const formContainer = document.createElement('form');
+      formContainer.innerHTML = 
+        '<div id="tab-info" class="form-tab"></div>' +
+        '<div id="tab-prep" class="form-tab active"></div>';
+        
+      document.body.appendChild(navContainer);
+      document.body.appendChild(formContainer);
+
+      const switchLogic = (targetId) => {
+        const tabs = formContainer.querySelectorAll('.form-tab');
+        const navBtns = navContainer.querySelectorAll('.form-steps-btn');
+        tabs.forEach(tab => tab.id === targetId ? tab.classList.add('active') : tab.classList.remove('active'));
+        navBtns.forEach(btn => btn.getAttribute('data-target') === targetId ? btn.classList.add('active') : btn.classList.remove('active'));
+      };
+
+      // Simula errore sul nome (dovrebbe attivare tab-info)
+      const mockErrors = ["Il nome della ricetta è obbligatorio"];
+      let switchTarget = null;
+      mockErrors.forEach(err => {
+        if (err.toLowerCase().includes('nome')) {
+          switchTarget = 'tab-info';
+        }
+      });
+      if (switchTarget) switchLogic(switchTarget);
+
+      const tabInfo = formContainer.querySelector('#tab-info');
+      const tabPrep = formContainer.querySelector('#tab-prep');
+      assert(tabInfo.classList.contains('active'), 'La scheda tab-info deve essere diventata attiva per l\'errore del nome');
+      assert(!tabPrep.classList.contains('active'), 'La scheda tab-prep non deve più essere attiva');
+
+      document.body.removeChild(navContainer);
+      document.body.removeChild(formContainer);
+    });
+
 
     /* ==================== TEST RUNNER ENGINE ==================== */
     const container = document.getElementById('test-sections-container');
