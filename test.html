@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sapori — Test Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0F172A;
+      --bg-secondary: #1E293B;
+      --bg-tertiary: #334155;
+      --text-primary: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --primary: #E85D3A;
+      --primary-hover: #FFA726;
+      --success: #10B981;
+      --error: #EF4444;
+      --border: #475569;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-full: 9999px;
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 2.25rem;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1rem;
+    }
+
+    /* Stats Panel */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-val {
+      font-size: 2rem;
+      font-weight: 800;
+      font-family: 'Outfit', sans-serif;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .stat-card--success .stat-val { color: var(--success); }
+    .stat-card--error .stat-val { color: var(--error); }
+    .stat-card--primary .stat-val { color: var(--primary); }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .btn {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-full);
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn--primary {
+      background-color: var(--primary);
+      color: #fff;
+    }
+
+    .btn--primary:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+    }
+
+    /* Test Cases Cards */
+    .test-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-badge {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .test-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .test-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--bg-primary);
+      border-radius: var(--radius-sm);
+      border-left: 4px solid var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+
+    .test-item.passed {
+      border-left-color: var(--success);
+    }
+
+    .test-item.failed {
+      border-left-color: var(--error);
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .test-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .test-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .test-error {
+      font-size: 0.75rem;
+      color: var(--error);
+      font-family: monospace;
+      margin-top: 4px;
+    }
+
+    .test-status {
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+    }
+
+    .test-status.status-pending {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .test-status.status-passed {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+    }
+
+    .test-status.status-failed {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--error);
+    }
+
+    /* Logs view */
+    .logs-panel {
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      max-height: 250px;
+      overflow-y: auto;
+      margin-top: 2rem;
+      color: #38BDF8;
+    }
+
+    .log-entry {
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .log-entry.error { color: var(--error); }
+    .log-entry.success { color: var(--success); }
+    .log-entry.info { color: var(--text-secondary); }
+  </style>
+
+  <!-- Dummy elements to satisfy app.js references -->
+  <div style="display: none;">
+    <div id="app-content"></div>
+    <nav id="bottom-nav">
+      <div class="nav-item" data-view="home"></div>
+    </nav>
+    <div id="search-bar" class="hidden"></div>
+    <input id="search-input" type="text">
+    <button id="btn-search-toggle"></button>
+    <button id="btn-search-close"></button>
+    <button id="btn-theme-toggle"></button>
+    <div id="modal-overlay" class="hidden"></div>
+    <div id="toast-container"></div>
+    <div id="install-prompt" class="hidden">
+      <div class="install-prompt__title"></div>
+      <div class="install-prompt__description"></div>
+      <button id="btn-install-confirm"></button>
+      <button id="btn-install-cancel"></button>
+    </div>
+  </div>
+
+  <!-- Load dependencies (with Mock DB to avoid write side effects) -->
+  <script>
+    // Mock window.DB before loading scripts that might access it
+    window.DB = {
+      _settings: {},
+      async init() { return this; },
+      async getSetting(key) { return this._settings[key] || null; },
+      async setSetting(key, val) { this._settings[key] = val; },
+      async getAllRecipes() { return []; },
+      async getRecipe() { return null; },
+      async addRecipe() { return true; },
+      async updateRecipe() { return true; },
+      async deleteRecipe() { return true; }
+    };
+  </script>
+
+  <script src="./js/icons.js"></script>
+  <script src="./js/utils.js"></script>
+  <script src="./js/recipes.js"></script>
+  <script src="./js/theme.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Sapori — Test Dashboard</h1>
+      <div class="subtitle">Esecuzione di unit test automatici per le funzionalità della Web App</div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-total">0</div>
+        <div class="stat-label">Totale Test</div>
+      </div>
+      <div class="stat-card stat-card--success">
+        <div class="stat-val" id="stat-passed">0</div>
+        <div class="stat-label">Superati</div>
+      </div>
+      <div class="stat-card stat-card--error">
+        <div class="stat-val" id="stat-failed">0</div>
+        <div class="stat-label">Falliti</div>
+      </div>
+      <div class="stat-card stat-card--primary">
+        <div class="stat-val" id="stat-duration">0ms</div>
+        <div class="stat-label">Durata</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn--primary" id="btn-run">Avvia Test Suite</button>
+    </div>
+
+    <!-- Test Sections -->
+    <div id="test-sections-container"></div>
+
+    <!-- Debug Logs -->
+    <div class="logs-panel" id="logs-panel">
+      <div class="log-entry info">[System] Clicca su "Avvia Test Suite" per eseguire i test delle componenti.</div>
+    </div>
+  </div>
+
+  <script>
+    const testCases = [];
+    
+    function test(category, name, fn) {
+      testCases.push({ category, name, fn });
+    }
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message || 'Asserzione fallita');
+      }
+    }
+
+    /* ==================== 1. UTILITY TESTS ==================== */
+    test('Utility Helpers', 'Utils.generateId - crea ID unici corretti', () => {
+      const id1 = Utils.generateId();
+      const id2 = Utils.generateId();
+      assert(typeof id1 === 'string' && id1.length > 5, 'ID deve essere una stringa valida');
+      assert(id1 !== id2, 'Due ID generati consecutivamente devono essere diversi');
+    });
+
+    test('Utility Helpers', 'Utils.getYouTubeId - estrae ID da link YouTube lunghi', () => {
+      const id = Utils.getYouTubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+      assert(id === 'dQw4w9WgXcQ', `Atteso "dQw4w9WgXcQ", ottenuto "${id}"`);
+    });
+
+    test('Utility Helpers', 'Utils.getYouTubeId - estrae ID da link YouTube corti', () => {
+      const id = Utils.getYouTubeId('https://youtu.be/dQw4w9WgXcQ');
+      assert(id === 'dQw4w9WgXcQ', `Atteso "dQw4w9WgXcQ", ottenuto "${id}"`);
+    });
+
+    test('Utility Helpers', 'Utils.getYouTubeId - estrae ID da link YouTube embed', () => {
+      const id = Utils.getYouTubeId('https://www.youtube.com/embed/dQw4w9WgXcQ');
+      assert(id === 'dQw4w9WgXcQ', `Atteso "dQw4w9WgXcQ", ottenuto "${id}"`);
+    });
+
+    test('Utility Helpers', 'Utils.getYouTubeId - restituisce null per link non YouTube', () => {
+      const id = Utils.getYouTubeId('https://google.com/some-page');
+      assert(id === null, `Atteso null, ottenuto "${id}"`);
+    });
+
+
+    /* ==================== 2. RECIPE VALIDATION & FILTERS ==================== */
+    test('Recipe Engine', 'Recipes.validate - convalida ricette corrette', () => {
+      const recipe = {
+        name: 'Carbonara Classica',
+        category: 'primi'
+      };
+      const res = Recipes.validate(recipe);
+      assert(res.valid === true, 'La ricetta corretta dovrebbe essere valida');
+    });
+
+    test('Recipe Engine', 'Recipes.validate - rifiuta nome troppo corto', () => {
+      const recipe = {
+        name: 'A',
+        category: 'primi'
+      };
+      const res = Recipes.validate(recipe);
+      assert(res.valid === false, 'La ricetta con nome monocarattere non dovrebbe essere valida');
+      assert(res.errors.name !== undefined, 'Dovrebbe esserci un errore sul campo nome');
+    });
+
+    test('Recipe Engine', 'Recipes.validate - rifiuta categoria non in whitelist', () => {
+      const recipe = {
+        name: 'Carbonara',
+        category: 'non-esisto'
+      };
+      const res = Recipes.validate(recipe);
+      assert(res.valid === false, 'La categoria non valida deve fallire la convalida');
+      assert(res.errors.category !== undefined, 'Dovrebbe esserci un errore sul campo categoria');
+    });
+
+    test('Recipe Engine', 'Recipes.getCategoryById - restituisce categoria o fallback altro', () => {
+      const cat = Recipes.getCategoryById('primi');
+      assert(cat.id === 'primi' && cat.label === 'Primi Piatti', 'Dovrebbe trovare la categoria Primi');
+      
+      const fallback = Recipes.getCategoryById('fantasia');
+      assert(fallback.id === 'altro', 'Dovrebbe ritornare la categoria altro per ID sconosciuti');
+    });
+
+    test('Recipe Engine', 'Recipes.filterRecipes - filtra ricette per categoria', () => {
+      const list = [
+        { name: 'Pasta', category: 'primi' },
+        { name: 'Torta', category: 'dolci' }
+      ];
+      const filtered = Recipes.filterRecipes(list, { category: 'primi' });
+      assert(filtered.length === 1 && filtered[0].name === 'Pasta', 'Dovrebbe filtrare solo i primi piatti');
+    });
+
+    test('Recipe Engine', 'Recipes.filterRecipes - cerca parole chiavi nel titolo o ingredienti', () => {
+      const list = [
+        { name: 'Tiramisù', category: 'dolci', ingredients: [{ name: 'Mascarpone' }] },
+        { name: 'Amatriciana', category: 'primi', ingredients: [{ name: 'Guanciale' }] }
+      ];
+      const searchTitle = Recipes.filterRecipes(list, { search: 'tira' });
+      assert(searchTitle.length === 1 && searchTitle[0].name === 'Tiramisù', 'Dovrebbe trovare Tiramisù dal titolo');
+
+      const searchIng = Recipes.filterRecipes(list, { search: 'guancia' });
+      assert(searchIng.length === 1 && searchIng[0].name === 'Amatriciana', 'Dovrebbe trovare Amatriciana dall\'ingrediente');
+    });
+
+
+    /* ==================== 3. CUSTOM CATEGORIES PERSISTENCE ==================== */
+    test('Custom Categories', 'Aggiunta e caricamento categorie personalizzate', async () => {
+      // Mock category save
+      const originalCategoriesCount = Recipes.CATEGORIES.length;
+      const newCat = {
+        id: 'aperitivo-test',
+        label: 'Aperitivi Test',
+        icon: '🍸',
+        color: '#A855F7',
+        isCustom: true
+      };
+
+      // Simula aggiunta
+      Recipes.CATEGORIES.push(newCat);
+      
+      // Controlla se è registrata in memoria
+      const cat = Recipes.getCategoryById('aperitivo-test');
+      assert(cat !== null && cat.label === 'Aperitivi Test', 'Dovrebbe trovare la categoria personalizzata appena creata');
+      assert(cat.isCustom === true, 'La categoria personalizzata deve avere la proprietà isCustom impostata a true');
+
+      // Pulisci
+      Recipes.CATEGORIES = Recipes.CATEGORIES.filter(c => c.id !== 'aperitivo-test');
+      assert(Recipes.CATEGORIES.length === originalCategoriesCount, 'Deve tornare al conteggio originale dopo la pulizia');
+    });
+
+
+    /* ==================== 4. PWA INSTALL PROMPT & iOS MOCK ==================== */
+    test('PWA & iOS Prompt', 'localStorage - memorizza correttamente l\'annullamento del prompt', () => {
+      localStorage.removeItem('sapori-install-dismissed');
+      
+      // Simula annullamento
+      const now = Date.now();
+      localStorage.setItem('sapori-install-dismissed', now.toString());
+      
+      const stored = localStorage.getItem('sapori-install-dismissed');
+      assert(stored === now.toString(), 'La data di dismissione deve essere memorizzata correttamente');
+      
+      // Controlla se la regola dei 7 giorni funziona (es. 1 giorno fa)
+      const oneDayAgo = now - (24 * 60 * 60 * 1000);
+      assert((now - oneDayAgo) < 7 * 24 * 60 * 60 * 1000, 'Un giorno fa è inferiore a 7 giorni');
+      
+      // Pulisci
+      localStorage.removeItem('sapori-install-dismissed');
+    });
+
+    test('PWA & iOS Prompt', 'Rilevamento iOS e caricamento corretto delle istruzioni', () => {
+      // Simula uno user agent iOS
+      const mockUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1";
+      const isIOS = /iPad|iPhone|iPod/.test(mockUserAgent) && !window.MSStream;
+      
+      assert(isIOS === true, 'Lo user agent iOS deve essere rilevato correttamente');
+    });
+
+
+    /* ==================== 5. THEME ENGINE ==================== */
+    test('Theme Engine', 'Theme.setPalette - blocca palette non in whitelist', async () => {
+      const originalPalette = Theme.currentPalette;
+      
+      // Prova a forzare una palette inesistente
+      await Theme.setPalette('inesistente');
+      
+      assert(Theme.currentPalette === 'classico', 'La palette inesistente deve forzare il fallback classico');
+      
+      // Ripristina
+      await Theme.setPalette(originalPalette);
+    });
+
+    test('Theme Engine', 'Theme.setPalette - permette le nuove palette registrate', async () => {
+      const originalPalette = Theme.currentPalette;
+      
+      // Ametista
+      await Theme.setPalette('ametista');
+      assert(Theme.currentPalette === 'ametista', 'Ametista dovrebbe essere una palette valida e accettata');
+
+      // Autunno
+      await Theme.setPalette('autunno');
+      assert(Theme.currentPalette === 'autunno', 'Autunno dovrebbe essere una palette valida e accettata');
+
+      // Zafferano
+      await Theme.setPalette('zafferano');
+      assert(Theme.currentPalette === 'zafferano', 'Zafferano dovrebbe essere una palette valida e accettata');
+
+      // Ripristina
+      await Theme.setPalette(originalPalette);
+    });
+
+
+    /* ==================== TEST RUNNER ENGINE ==================== */
+    const container = document.getElementById('test-sections-container');
+    const logsPanel = document.getElementById('logs-panel');
+    const statTotal = document.getElementById('stat-total');
+    const statPassed = document.getElementById('stat-passed');
+    const statFailed = document.getElementById('stat-failed');
+    const statDuration = document.getElementById('stat-duration');
+    const btnRun = document.getElementById('btn-run');
+
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = `log-entry ${type}`;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logsPanel.appendChild(div);
+      logsPanel.scrollTop = logsPanel.scrollHeight;
+    }
+
+    // Build the visual groups
+    function buildTestUI() {
+      container.innerHTML = '';
+      const categories = {};
+      
+      testCases.forEach(tc => {
+        if (!categories[tc.category]) {
+          categories[tc.category] = [];
+        }
+        categories[tc.category].push(tc);
+      });
+
+      for (const catName in categories) {
+        const sec = document.createElement('div');
+        sec.className = 'test-section';
+        
+        sec.innerHTML = `
+          <div class="section-title">
+            <span>${catName}</span>
+            <span class="section-badge">${categories[catName].length} test</span>
+          </div>
+          <div class="test-list" id="cat-${catName.replace(/\s+/g, '-')}"></div>
+        `;
+        
+        container.appendChild(sec);
+        const listDiv = document.getElementById(`cat-${catName.replace(/\s+/g, '-')}`);
+        
+        categories[catName].forEach((tc, idx) => {
+          const item = document.createElement('div');
+          item.className = 'test-item';
+          item.id = `test-${catName.replace(/\s+/g, '-')}-${idx}`;
+          item.innerHTML = `
+            <div class="test-info">
+              <span class="test-name">${tc.name}</span>
+              <span class="test-error" id="err-${item.id}"></span>
+            </div>
+            <span class="test-status status-pending" id="status-${item.id}">In attesa</span>
+          `;
+          listDiv.appendChild(item);
+        });
+      }
+
+      statTotal.textContent = testCases.length;
+      statPassed.textContent = 0;
+      statFailed.textContent = 0;
+    }
+
+    async function runTestSuite() {
+      buildTestUI();
+      log('Avvio della Test Suite...', 'info');
+      btnRun.disabled = true;
+      btnRun.textContent = 'Esecuzione in corso...';
+      
+      const startTime = performance.now();
+      let passed = 0;
+      let failed = 0;
+
+      const categories = {};
+      testCases.forEach(tc => {
+        if (!categories[tc.category]) categories[tc.category] = [];
+        categories[tc.category].push(tc);
+      });
+
+      let catIndex = 0;
+      for (const catName in categories) {
+        let tcIndex = 0;
+        for (const tc of categories[catName]) {
+          const itemId = `test-${catName.replace(/\s+/g, '-')}-${tcIndex}`;
+          const itemEl = document.getElementById(itemId);
+          const statusEl = document.getElementById(`status-${itemId}`);
+          const errorEl = document.getElementById(`err-${itemId}`);
+
+          // Give a tiny timeout so the UI updates frame-by-frame and animates
+          await new Promise(r => setTimeout(r, 60));
+
+          try {
+            await tc.fn();
+            
+            // Pass
+            itemEl.classList.add('passed');
+            statusEl.textContent = 'OK';
+            statusEl.className = 'test-status status-passed';
+            passed++;
+            statPassed.textContent = passed;
+            log(`PASSED: ${tc.name}`, 'success');
+          } catch (err) {
+            
+            // Fail
+            itemEl.classList.add('failed');
+            statusEl.textContent = 'Fallito';
+            statusEl.className = 'test-status status-failed';
+            errorEl.textContent = err.message;
+            failed++;
+            statFailed.textContent = failed;
+            log(`FAILED: ${tc.name} - ${err.message}`, 'error');
+          }
+          tcIndex++;
+        }
+        catIndex++;
+      }
+
+      const duration = Math.round(performance.now() - startTime);
+      statDuration.textContent = `${duration}ms`;
+      btnRun.disabled = false;
+      btnRun.textContent = 'Riavvia Test Suite';
+
+      if (failed === 0) {
+        log(`Test completati! Tutti i ${passed} test sono stati superati con successo in ${duration}ms! 🎉`, 'success');
+      } else {
+        log(`Test completati con errori! Superati: ${passed}, Falliti: ${failed} in ${duration}ms.`, 'error');
+      }
+    }
+
+    btnRun.addEventListener('click', runTestSuite);
+    
+    // Initial build
+    buildTestUI();
+  </script>
+</body>
+</html>

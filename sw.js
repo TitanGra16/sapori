@@ -1,8 +1,9 @@
-const CACHE_NAME = 'sapori-v10';
+const CACHE_NAME = 'sapori-v11';
 
 const STATIC_ASSETS = [
   './',
   './index.html',
+  './test.html',
   './manifest.json',
   './css/variables.css',
   './css/base.css',
