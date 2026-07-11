@@ -268,13 +268,6 @@ window.Views = (function () {
         '<input type="number" class="form-input" id="input-servings" min="1" placeholder="4" value="' + (r.servings || '') + '">' +
       '</div>';
 
-    // Link Video
-    html +=
-      '<div class="form-group">' +
-        '<label class="form-label" for="input-video">Link Video (YouTube, TikTok, Instagram, ecc.)</label>' +
-        '<input type="url" class="form-input" id="input-video" placeholder="Es. https://www.youtube.com/watch?v=..." value="' + esc(r.video || '') + '">' +
-      '</div>';
-
     // Buttons
     html +=
       '<div class="form-group" style="display:flex;gap:.75rem;padding-top:.5rem">' +
@@ -385,25 +378,6 @@ window.Views = (function () {
         '<div class="recipe-detail__section recipe-detail__description-section">' +
           '<p>' + esc(recipe.description) + '</p>' +
         '</div>';
-    }
-
-    // Video Section
-    if (recipe.video) {
-      var ytId = Utils.getYouTubeId(recipe.video);
-      html += '<div class="recipe-detail__section recipe-detail__video-section">';
-      html += '<h2 class="recipe-detail__section-title">Video Ricetta</h2>';
-      if (ytId) {
-        html +=
-          '<div class="video-container" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:var(--radius-md);border:1px solid var(--border);margin-bottom:var(--space-md);">' +
-            '<iframe src="https://www.youtube.com/embed/' + ytId + '" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe>' +
-          '</div>';
-      } else {
-        html +=
-          '<a href="' + esc(recipe.video) + '" target="_blank" rel="noopener noreferrer" class="btn btn--secondary" style="display:inline-flex;gap:.5rem;width:100%;max-width:320px;margin-bottom:var(--space-md);">' +
-            Icons.video + ' Guarda Video Tutorial' +
-          '</a>';
-      }
-      html += '</div>';
     }
 
     // Wrap ingredients and steps in a layout container for desktop side-by-side / cookbook print layout

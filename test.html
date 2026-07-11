@@ -355,26 +355,6 @@
       assert(id1 !== id2, 'Due ID generati consecutivamente devono essere diversi');
     });
 
-    test('Utility Helpers', 'Utils.getYouTubeId - estrae ID da link YouTube lunghi', () => {
-      const id = Utils.getYouTubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-      assert(id === 'dQw4w9WgXcQ', `Atteso "dQw4w9WgXcQ", ottenuto "${id}"`);
-    });
-
-    test('Utility Helpers', 'Utils.getYouTubeId - estrae ID da link YouTube corti', () => {
-      const id = Utils.getYouTubeId('https://youtu.be/dQw4w9WgXcQ');
-      assert(id === 'dQw4w9WgXcQ', `Atteso "dQw4w9WgXcQ", ottenuto "${id}"`);
-    });
-
-    test('Utility Helpers', 'Utils.getYouTubeId - estrae ID da link YouTube embed', () => {
-      const id = Utils.getYouTubeId('https://www.youtube.com/embed/dQw4w9WgXcQ');
-      assert(id === 'dQw4w9WgXcQ', `Atteso "dQw4w9WgXcQ", ottenuto "${id}"`);
-    });
-
-    test('Utility Helpers', 'Utils.getYouTubeId - restituisce null per link non YouTube', () => {
-      const id = Utils.getYouTubeId('https://google.com/some-page');
-      assert(id === null, `Atteso null, ottenuto "${id}"`);
-    });
-
 
     /* ==================== 2. RECIPE VALIDATION & FILTERS ==================== */
     test('Recipe Engine', 'Recipes.validate - convalida ricette corrette', () => {

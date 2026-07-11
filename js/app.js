@@ -296,7 +296,6 @@
     var cookTime = parseInt(document.getElementById('input-cooktime').value, 10) || 0;
     var difficulty = document.getElementById('input-difficulty').value;
     var servings = parseInt(document.getElementById('input-servings').value, 10) || 4;
-    var video = document.getElementById('input-video') ? document.getElementById('input-video').value.trim() : '';
 
     // Collect ingredients
     var ingRows = document.querySelectorAll('#ingredients-list .ingredient-row');
@@ -326,7 +325,6 @@
       name: name,
       category: category,
       description: description,
-      video: video,
       ingredients: ingredients,
       steps: steps,
       prepTime: prepTime,
