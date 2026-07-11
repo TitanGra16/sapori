@@ -98,6 +98,25 @@
     </div>
   </div>
 
+  <!-- Data Warning Modal -->
+  <div id="warning-modal" class="modal-overlay hidden">
+    <div class="modal animate-scale-in" style="max-width: 440px;">
+      <div class="modal__header" style="display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">
+        <span style="font-size:1.5rem;">⚠️</span>
+        <h2 class="modal__title" style="font-size:1.15rem; font-weight:700; color:var(--text-primary);">Nota importante sui tuoi dati</h2>
+      </div>
+      <div class="modal__body" style="font-size:0.875rem; color:var(--text-secondary); line-height:1.5; margin-bottom:20px;">
+        <p>Sapori salva le ricette <strong>esclusivamente sul tuo dispositivo</strong> per garantire la massima privacy e velocità.</p>
+        <p style="margin-top:10px;">Tuttavia, se esegui una pulizia del browser cancellando i <strong>cookie o i dati dei siti web</strong>, il ricettario potrebbe essere eliminato.</p>
+        <p style="margin-top:10px;">Ti consigliamo di effettuare regolarmente un backup scaricando il file dalle <strong>Impostazioni</strong>.</p>
+      </div>
+      <div class="modal__actions" style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" class="btn btn--ghost btn--small" id="btn-warning-dontshow">Non mostrare più</button>
+        <button type="button" class="btn btn--primary btn--small" id="btn-warning-close">Ho capito</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Overlay -->
   <div id="modal-overlay" class="modal-overlay hidden"></div>
 

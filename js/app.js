@@ -33,6 +33,7 @@
     updateThemeIcon();
     setupRouter();
     setupEventListeners();
+    setupDataWarning();
     navigateTo(window.location.hash || '#home');
     registerServiceWorker();
   }
@@ -1103,6 +1104,34 @@
           installPrompt.classList.add('hidden');
         }
         localStorage.setItem('sapori-install-dismissed', Date.now().toString());
+      });
+    }
+  }
+
+  /* ──────────────────── DATA LOSS WARNING MODAL ──────────────────── */
+
+  function setupDataWarning() {
+    var warningModal = document.getElementById('warning-modal');
+    var btnClose = document.getElementById('btn-warning-close');
+    var btnDontShow = document.getElementById('btn-warning-dontshow');
+
+    if (!warningModal) return;
+
+    var dismissed = localStorage.getItem('sapori-warning-dismissed');
+    if (dismissed !== 'true') {
+      warningModal.classList.remove('hidden');
+    }
+
+    if (btnClose) {
+      btnClose.addEventListener('click', function () {
+        warningModal.classList.add('hidden');
+      });
+    }
+
+    if (btnDontShow) {
+      btnDontShow.addEventListener('click', function () {
+        localStorage.setItem('sapori-warning-dismissed', 'true');
+        warningModal.classList.add('hidden');
       });
     }
   }

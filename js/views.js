@@ -562,6 +562,15 @@ window.Views = (function () {
     html += '<div class="settings-card">';
     html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.database + '</span><h2 class="settings-card__title">Gestione Dati</h2></div>';
     html += '<div class="settings-card__body">';
+    html += '<div class="settings-warning-banner" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:var(--text-primary); padding:12px; border-radius:var(--radius-md); font-size:0.85rem; margin-bottom:var(--space-md); display:flex; gap:10px; align-items:flex-start;">' +
+              '<span style="font-size:1.2rem; line-height:1;">⚠️</span>' +
+              '<div>' +
+                '<strong style="color:var(--text-primary); font-weight:700;">Nota sulla conservazione dei dati:</strong>' +
+                '<p style="color:var(--text-secondary); margin-top:4px; line-height:1.4;">' +
+                  'Le tue ricette sono salvate al 100% in locale sul browser. Se cancelli la cronologia di navigazione (compresi i cookie o i dati dei siti web), le ricette andranno perse definitivamente. Esporta regolarmente un **Backup JSON** per sicurezza.' +
+                '</p>' +
+              '</div>' +
+            '</div>';
     html +=
       '<div class="settings-item">' +
         '<div class="settings-item__info">' +
