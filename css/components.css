@@ -483,11 +483,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-full);
-  border: none;
   cursor: pointer;
   color: var(--text-muted);
   font-size: 1.1rem;
@@ -495,7 +495,7 @@
     transform var(--transition-fast),
     color var(--transition-fast),
     background var(--transition-fast);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 .recipe-card__favorite:hover {
@@ -619,7 +619,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius-full);
@@ -628,8 +629,9 @@
   font-size: 1.25rem;
   transition:
     transform var(--transition-fast),
-    background var(--transition-fast);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    background var(--transition-fast),
+    color var(--transition-fast);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .recipe-detail__back:hover {
