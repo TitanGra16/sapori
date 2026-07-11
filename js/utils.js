@@ -377,5 +377,19 @@ window.Utils = {
       reader.onerror = () => reject(new Error('Errore nella lettura del file: ' + (reader.error ? reader.error.message : 'sconosciuto')));
       reader.readAsText(file, 'UTF-8');
     });
+  },
+
+  /**
+   * Format a numeric quantity to a clean string.
+   * Examples: 1.5 -> 1.5, 1.3333 -> 1.33, 2.0 -> 2
+   * @param {number} val
+   * @returns {string}
+   */
+  formatQuantity(val) {
+    if (val === 0) return '';
+    // If it's a whole number, return as is
+    if (val % 1 === 0) return val.toString();
+    // Otherwise, round to max 2 decimal places, and remove trailing zeros
+    return parseFloat(val.toFixed(2)).toString();
   }
 };

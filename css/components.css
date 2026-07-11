@@ -684,6 +684,67 @@
   color: var(--text-primary);
 }
 
+/* Servings Control UI */
+.recipe-detail__info-item--servings {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.servings-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  margin: 0 4px;
+}
+
+.btn-servings-dec,
+.btn-servings-inc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  transition:
+    transform var(--transition-fast),
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.btn-servings-dec:hover,
+.btn-servings-inc:hover {
+  background: var(--primary);
+  color: #FFFFFF;
+  transform: scale(1.1);
+  border-color: transparent;
+}
+
+.btn-servings-dec:active,
+.btn-servings-inc:active {
+  transform: scale(0.9);
+}
+
+.servings-count {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 1.2rem;
+  text-align: center;
+}
+
 /* Section headings */
 .recipe-detail__section-title {
   font-family: var(--font-heading);
@@ -2113,8 +2174,17 @@
   .recipe-detail__dates-row,
   .btn--fab,
   .modal-overlay,
-  #modal-overlay {
+  #modal-overlay,
+  .btn-servings-dec,
+  .btn-servings-inc {
     display: none !important;
+  }
+
+  .servings-control {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 4px !important;
   }
 
   /* Remove page padding, margins, shadows and scroll behaviors */
