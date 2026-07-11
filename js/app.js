@@ -954,11 +954,18 @@
 
         /* ── Form: cancel ── */
         case 'cancel-form': {
-          if (state.editingRecipe) {
-            navigateTo('#detail/' + state.editingRecipe.id);
-          } else {
-            navigateTo('#home');
-          }
+          Views.showConfirmModal(
+            'Uscire dal modulo?',
+            'Sei sicuro di voler uscire? Le modifiche non salvate andranno perse.',
+            function () {
+              Views.hideModal();
+              if (state.editingRecipe) {
+                navigateTo('#detail/' + state.editingRecipe.id);
+              } else {
+                navigateTo('#home');
+              }
+            }
+          );
           break;
         }
 
