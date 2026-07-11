@@ -227,6 +227,18 @@
   }
 }
 
+/* — Icon Rotate (theme toggle) — */
+@keyframes iconRotate {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
 /* ============================================================
    UTILITY ANIMATION CLASSES
    ============================================================ */

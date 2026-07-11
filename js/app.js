@@ -159,8 +159,8 @@
   /* ──────────────────── THEME ICON ──────────────────── */
 
   function updateThemeIcon() {
-    var current = Theme.getCurrentTheme();
-    btnThemeToggle.textContent = current.mode === 'dark' ? '☀️' : '🌙';
+    // CSS handles sun/moon visibility via [data-theme] selectors.
+    // This function is kept for compatibility but no longer swaps icons.
   }
 
   /* ──────────────────── SEARCH ──────────────────── */
@@ -647,8 +647,8 @@
           toggleFavorite(favDetailId).then(function (isFav) {
             if (isFav !== null) {
               // Update the button in place
-              actionEl.classList.toggle('active', isFav);
-              actionEl.textContent = isFav ? '❤️' : '🤍';
+              actionEl.classList.toggle('is-favorite', isFav);
+              actionEl.innerHTML = isFav ? Icons.heartFilled : Icons.heartOutline;
             }
           });
           break;

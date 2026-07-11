@@ -14,7 +14,7 @@ window.Views = (function () {
     const totalTime = Utils.getTotalTime(recipe.prepTime, recipe.cookTime);
     const diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
     const stagger = (index % 8) + 1;
-    const favClass = recipe.isFavorite ? 'active' : '';
+    const favClass = recipe.isFavorite ? 'is-favorite' : '';
 
     let imageBlock;
     if (recipe.image) {
@@ -40,7 +40,7 @@ window.Views = (function () {
           '</span>' +
         '</div>' +
         '<button type="button" class="recipe-card__favorite ' + favClass + '" data-action="toggle-fav" data-id="' + esc(recipe.id) + '" aria-label="Preferito">' +
-          (recipe.isFavorite ? '❤️' : '🤍') +
+          (recipe.isFavorite ? Icons.heartFilled : Icons.heartOutline) +
         '</button>' +
       '</article>'
     );
@@ -125,9 +125,9 @@ window.Views = (function () {
     if (filtered.length > 0) {
       html += recipeGridHTML(filtered);
     } else if (recipes.length === 0) {
-      html += emptyStateHTML('📖', 'Nessuna ricetta ancora!', 'Inizia creando la tua prima ricetta', 'Crea Ricetta', 'go-create');
+      html += emptyStateHTML(Icons.bookOpen, 'Nessuna ricetta ancora!', 'Inizia creando la tua prima ricetta', 'Crea Ricetta', 'go-create');
     } else {
-      html += emptyStateHTML('🔍', 'Nessun risultato', 'Prova a cambiare i filtri di ricerca', null, null);
+      html += emptyStateHTML(Icons.searchLg, 'Nessun risultato', 'Prova a cambiare i filtri di ricerca', null, null);
     }
 
     html += '</div>';
@@ -196,12 +196,12 @@ window.Views = (function () {
       html +=
         '<div class="image-upload__preview">' +
           '<img src="' + esc(r.image) + '" alt="Anteprima" id="image-preview">' +
-          '<button type="button" class="image-upload__remove" data-action="remove-image" aria-label="Rimuovi foto">✕</button>' +
+          '<button type="button" class="image-upload__remove" data-action="remove-image" aria-label="Rimuovi foto">' + Icons.x + '</button>' +
         '</div>';
     } else {
       html +=
         '<div class="image-upload__placeholder" id="image-placeholder">' +
-          '<span style="font-size:2rem">📷</span>' +
+          Icons.camera +
           '<span>Tocca per aggiungere una foto</span>' +
         '</div>';
     }
@@ -220,7 +220,7 @@ window.Views = (function () {
       html += ingredientRowHTML(ing, idx, r.ingredients.length);
     });
     html += '</div>';
-    html += '<button type="button" class="dynamic-list__add btn btn--ghost btn--small" data-action="add-ingredient">➕ Aggiungi ingrediente</button>';
+    html += '<button type="button" class="dynamic-list__add btn btn--ghost btn--small" data-action="add-ingredient">' + Icons.plus + ' Aggiungi ingrediente</button>';
     html += '</div>';
 
     // Passaggi
@@ -233,7 +233,7 @@ window.Views = (function () {
       html += stepRowHTML(step, idx, r.steps.length);
     });
     html += '</div>';
-    html += '<button type="button" class="dynamic-list__add btn btn--ghost btn--small" data-action="add-step">➕ Aggiungi passaggio</button>';
+    html += '<button type="button" class="dynamic-list__add btn btn--ghost btn--small" data-action="add-step">' + Icons.plus + ' Aggiungi passaggio</button>';
     html += '</div>';
 
     // Tempo preparazione
@@ -271,7 +271,7 @@ window.Views = (function () {
     // Buttons
     html +=
       '<div class="form-group" style="display:flex;gap:.75rem;padding-top:.5rem">' +
-        '<button type="submit" class="btn btn--primary" style="flex:1">' + (isEdit ? '💾 Salva Modifiche' : '💾 Salva Ricetta') + '</button>' +
+        '<button type="submit" class="btn btn--primary" style="flex:1">' + Icons.save + (isEdit ? ' Salva Modifiche' : ' Salva Ricetta') + '</button>' +
         '<button type="button" class="btn btn--ghost" data-action="cancel-form" style="flex:0 0 auto">Annulla</button>' +
       '</div>';
 
@@ -325,14 +325,14 @@ window.Views = (function () {
     }
 
     if (!recipe) {
-      container.innerHTML = emptyStateHTML('😕', 'Ricetta non trovata', 'La ricetta richiesta non esiste più', 'Torna alla Home', 'go-home');
+      container.innerHTML = emptyStateHTML(Icons.frown, 'Ricetta non trovata', 'La ricetta richiesta non esiste più', 'Torna alla Home', 'go-home');
       return;
     }
 
     var cat = Utils.getCategoryInfo(recipe.category);
     var totalTime = Utils.getTotalTime(recipe.prepTime, recipe.cookTime);
     var diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
-    var favClass = recipe.isFavorite ? ' active' : '';
+    var favClass = recipe.isFavorite ? ' is-favorite' : '';
 
     var html = '<div class="view recipe-detail animate-fade-in">';
 
@@ -349,9 +349,9 @@ window.Views = (function () {
     }
     // Overlay buttons
     html +=
-      '<button type="button" class="recipe-detail__back" data-action="go-back" aria-label="Indietro">←</button>' +
+      '<button type="button" class="recipe-detail__back" data-action="go-back" aria-label="Indietro">' + Icons.arrowLeft + '</button>' +
       '<button type="button" class="recipe-detail__actions recipe-card__favorite' + favClass + '" data-action="toggle-fav-detail" data-id="' + esc(recipe.id) + '" aria-label="Preferito">' +
-        (recipe.isFavorite ? '❤️' : '🤍') +
+        (recipe.isFavorite ? Icons.heartFilled : Icons.heartOutline) +
       '</button>';
     html += '</div>';
 
@@ -366,10 +366,10 @@ window.Views = (function () {
     // Info bar
     html +=
       '<div class="recipe-detail__info-bar">' +
-        '<div class="recipe-detail__info-item"><span>⏱️</span><span>Prep: ' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</span></div>' +
-        '<div class="recipe-detail__info-item"><span>🍳</span><span>Cottura: ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
+        '<div class="recipe-detail__info-item"><span>' + Icons.clock + '</span><span>Prep: ' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</span></div>' +
+        '<div class="recipe-detail__info-item"><span>' + Icons.flame + '</span><span>Cottura: ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + esc(diffEmoji) + '</span><span>' + esc(recipe.difficulty || 'facile') + '</span></div>' +
-        '<div class="recipe-detail__info-item"><span>👥</span><span>' + (recipe.servings || 4) + ' porzioni</span></div>' +
+        '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span><span>' + (recipe.servings || 4) + ' porzioni</span></div>' +
       '</div>';
 
     // Description
@@ -383,7 +383,7 @@ window.Views = (function () {
     // Ingredienti
     html +=
       '<div class="recipe-detail__section">' +
-        '<h2 class="recipe-detail__section-title">🧂 Ingredienti</h2>' +
+        '<h2 class="recipe-detail__section-title">Ingredienti</h2>' +
         '<ul class="ingredient-list">';
     if (recipe.ingredients && recipe.ingredients.length > 0) {
       recipe.ingredients.forEach(function (ing) {
@@ -399,7 +399,7 @@ window.Views = (function () {
     // Preparazione
     html +=
       '<div class="recipe-detail__section">' +
-        '<h2 class="recipe-detail__section-title">👨‍🍳 Preparazione</h2>' +
+        '<h2 class="recipe-detail__section-title">Preparazione</h2>' +
         '<ol class="step-list">';
     if (recipe.steps && recipe.steps.length > 0) {
       recipe.steps.forEach(function (step, idx) {
@@ -415,8 +415,8 @@ window.Views = (function () {
     // Action buttons
     html +=
       '<div class="recipe-detail__section" style="display:flex;gap:.75rem;flex-wrap:wrap">' +
-        '<button type="button" class="btn btn--secondary" data-action="edit-recipe" data-id="' + esc(recipe.id) + '">✏️ Modifica</button>' +
-        '<button type="button" class="btn btn--danger" data-action="delete-recipe" data-id="' + esc(recipe.id) + '">🗑️ Elimina</button>' +
+        '<button type="button" class="btn btn--secondary" data-action="edit-recipe" data-id="' + esc(recipe.id) + '">' + Icons.edit + ' Modifica</button>' +
+        '<button type="button" class="btn btn--danger" data-action="delete-recipe" data-id="' + esc(recipe.id) + '">' + Icons.trash + ' Elimina</button>' +
       '</div>';
 
     // Dates
@@ -439,12 +439,12 @@ window.Views = (function () {
     var favs = recipes.filter(function (r) { return r.isFavorite; });
 
     var html = '<div class="view animate-fade-in">';
-    html += '<div class="view-header"><h1 class="view-header__title">❤️ I Miei Preferiti</h1></div>';
+    html += '<div class="view-header"><h1 class="view-header__title">I Miei Preferiti</h1></div>';
 
     if (favs.length > 0) {
       html += recipeGridHTML(favs);
     } else {
-      html += emptyStateHTML('💔', 'Nessun preferito!', 'Tocca il cuore su una ricetta per aggiungerla qui', null, null);
+      html += emptyStateHTML(Icons.heartCrack, 'Nessun preferito!', 'Tocca il cuore su una ricetta per aggiungerla qui', null, null);
     }
 
     html += '</div>';
@@ -462,23 +462,23 @@ window.Views = (function () {
     var count = recipes.length;
 
     var palettes = [
-      { id: 'classico', label: 'Classico', gradient: 'linear-gradient(135deg,#E85D3A,#C0392B)' },
-      { id: 'oceano', label: 'Oceano', gradient: 'linear-gradient(135deg,#2980B9,#3498DB)' },
-      { id: 'bosco', label: 'Bosco', gradient: 'linear-gradient(135deg,#27AE60,#2ECC71)' },
-      { id: 'tramonto', label: 'Tramonto', gradient: 'linear-gradient(135deg,#8E44AD,#E91E63)' }
+      { id: 'classico', label: 'Classico', gradient: 'linear-gradient(135deg,#E85D3A,#FFA726)' },
+      { id: 'oceano', label: 'Oceano', gradient: 'linear-gradient(135deg,#0EA5E9,#06B6D4)' },
+      { id: 'bosco', label: 'Bosco', gradient: 'linear-gradient(135deg,#16A34A,#84CC16)' },
+      { id: 'tramonto', label: 'Tramonto', gradient: 'linear-gradient(135deg,#A855F7,#EC4899)' }
     ];
 
     var html = '<div class="view animate-fade-in">';
-    html += '<div class="view-header"><h1 class="view-header__title">⚙️ Impostazioni</h1></div>';
+    html += '<div class="view-header"><h1 class="view-header__title">Impostazioni</h1></div>';
 
-    // — Aspetto —
-    html += '<div class="settings-section">';
-    html += '<h2 class="settings-section__title">🎨 Aspetto</h2>';
-
+    // — CARD: Aspetto —
+    html += '<div class="settings-card">';
+    html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.palette + '</span><h2 class="settings-card__title">Aspetto</h2></div>';
+    html += '<div class="settings-card__body">';
     // Dark mode toggle
     html +=
       '<div class="settings-item">' +
-        '<div>' +
+        '<div class="settings-item__info">' +
           '<div class="settings-item__label">Tema scuro</div>' +
           '<div class="settings-item__description">Attiva la modalità scura per riposare gli occhi</div>' +
         '</div>' +
@@ -489,52 +489,69 @@ window.Views = (function () {
           '</label>' +
         '</div>' +
       '</div>';
-
     // Palette
     html +=
-      '<div class="settings-item" style="flex-direction:column;align-items:flex-start">' +
+      '<div class="settings-item settings-item--column">' +
         '<div class="settings-item__label">Palette colori</div>' +
         '<div class="theme-selector">';
     palettes.forEach(function (p) {
       html +=
         '<button type="button" class="theme-option' + (currentPalette === p.id ? ' active' : '') + '" data-action="set-palette" data-palette="' + esc(p.id) + '" aria-label="' + esc(p.label) + '">' +
-          '<span style="display:block;width:2.5rem;height:2.5rem;border-radius:50%;background:' + p.gradient + '"></span>' +
-          '<span style="font-size:.75rem;margin-top:.25rem">' + esc(p.label) + '</span>' +
+          '<span class="theme-circle" style="background:' + p.gradient + '"></span>' +
+          '<span class="theme-name">' + esc(p.label) + '</span>' +
         '</button>';
     });
     html += '</div></div>';
-    html += '</div>';
+    html += '</div></div>'; // close body + card
 
-    // — Gestione Dati —
-    html += '<div class="settings-section">';
-    html += '<h2 class="settings-section__title">💾 Gestione Dati</h2>';
-
+    // — CARD: Gestione Dati —
+    html += '<div class="settings-card">';
+    html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.database + '</span><h2 class="settings-card__title">Gestione Dati</h2></div>';
+    html += '<div class="settings-card__body">';
     html +=
       '<div class="settings-item">' +
-        '<div>' +
-          '<div class="settings-item__label">Hai <strong>' + count + '</strong> ricett' + (count === 1 ? 'a' : 'e') + ' salvat' + (count === 1 ? 'a' : 'e') + '</div>' +
+        '<div class="settings-item__info">' +
+          '<div class="settings-item__label">Ricette salvate</div>' +
+          '<div class="settings-item__description"><strong>' + count + '</strong> ricett' + (count === 1 ? 'a' : 'e') + ' nel tuo ricettario</div>' +
         '</div>' +
       '</div>';
-
     html +=
-      '<div class="settings-item">' +
-        '<button type="button" class="btn btn--secondary btn--small" data-action="export-data">📥 Esporta Ricette</button>' +
-        '<button type="button" class="btn btn--secondary btn--small" data-action="import-data">📤 Importa Ricette</button>' +
+      '<div class="settings-actions">' +
+        '<button type="button" class="btn btn--secondary" data-action="export-data">' + Icons.download + ' Esporta</button>' +
+        '<button type="button" class="btn btn--secondary" data-action="import-data">' + Icons.upload + ' Importa</button>' +
         '<input type="file" id="import-file-input" accept=".json,application/json" class="hidden">' +
       '</div>';
-    html += '</div>';
+    html += '</div></div>';
 
-    // — Informazioni —
-    html += '<div class="settings-section">';
-    html += '<h2 class="settings-section__title">ℹ️ Informazioni</h2>';
-
+    // — CARD: Informazioni —
+    html += '<div class="settings-card">';
+    html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.infoCircle + '</span><h2 class="settings-card__title">Informazioni</h2></div>';
+    html += '<div class="settings-card__body">';
     html +=
-      '<div class="settings-item"><div><div class="settings-item__label">Versione</div><div class="settings-item__description">1.0.0</div></div></div>' +
-      '<div class="settings-item"><div><div class="settings-item__label">Sapori — Il tuo ricettario personale</div></div></div>' +
-      '<div class="settings-item"><div><div class="settings-item__description">Creato con ❤️ in Italia</div></div></div>' +
-      '<div class="settings-item"><div><div class="settings-item__description">🔒 I tuoi dati sono salvati localmente sul dispositivo</div></div></div>';
+      '<div class="settings-item">' +
+        '<div class="settings-item__info">' +
+          '<div class="settings-item__label">Versione</div>' +
+          '<div class="settings-item__description">1.0.0</div>' +
+        '</div>' +
+      '</div>';
+    html +=
+      '<div class="settings-item">' +
+        '<div class="settings-item__info">' +
+          '<div class="settings-item__label">Sapori</div>' +
+          '<div class="settings-item__description">Il tuo ricettario personale</div>' +
+        '</div>' +
+      '</div>';
+    html +=
+      '<div class="settings-item">' +
+        '<div class="settings-item__info">' +
+          '<div class="settings-item__label">' + Icons.shield + ' Privacy</div>' +
+          '<div class="settings-item__description">I tuoi dati sono salvati localmente sul dispositivo</div>' +
+        '</div>' +
+      '</div>';
+    html += '</div></div>';
 
-    html += '</div>';
+    // Footer
+    html += '<div class="settings-footer"><p>Creato con cura in Italia</p></div>';
     html += '</div>';
 
     container.innerHTML = html;
