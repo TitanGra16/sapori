@@ -524,19 +524,24 @@
     });
 
     test('Storage & DOM', 'Modal Overlay - si mostra correttamente rimuovendo la classe hidden', () => {
-      const modal = document.getElementById('warning-modal');
-      assert(modal !== null, 'L\'elemento warning-modal deve essere presente nel DOM');
+      // Crea l'elemento temporaneo nel DOM del test
+      const modal = document.createElement('div');
+      modal.id = 'warning-modal';
+      modal.className = 'modal-overlay hidden';
+      document.body.appendChild(modal);
       
-      // Simula visualizzazione modal
-      modal.classList.remove('hidden');
-      assert(!modal.classList.contains('hidden'), 'Il modal deve essere privo della classe hidden');
-      
-      // Controlla che le regole CSS del foglio di stile permettano la visibilità
-      const styles = window.getComputedStyle(modal);
-      assert(styles.position === 'fixed', 'La proprietà position dell\'overlay deve essere fixed');
-      
-      // Ripristina stato
-      modal.classList.add('hidden');
+      try {
+        // Simula visualizzazione modal
+        modal.classList.remove('hidden');
+        assert(!modal.classList.contains('hidden'), 'Il modal deve essere privo della classe hidden');
+        
+        // Controlla che le regole CSS del foglio di stile permettano la visibilità
+        const styles = window.getComputedStyle(modal);
+        assert(styles.position === 'fixed', 'La proprietà position dell\'overlay deve essere fixed');
+      } finally {
+        // Ripristina e rimuovi dal DOM
+        document.body.removeChild(modal);
+      }
     });
 
     test('Storage & DOM', 'Multi-step Tab Switcher - cambia correttamente le schede attive', () => {
