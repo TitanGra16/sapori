@@ -238,3 +238,129 @@ html:not([data-palette])[data-theme="dark"] {
   --glass-border: rgba(192, 132, 252, 0.15);
   --gradient: linear-gradient(135deg, #C084FC, #F472B6);
 }
+
+/* ============================================================
+   AMETISTA — LIGHT
+   ============================================================ */
+[data-palette="ametista"][data-theme="light"] {
+  --primary: #8B5CF6;
+  --primary-light: #A78BFA;
+  --primary-dark: #7C3AED;
+  --secondary: #EC4899;
+  --bg-primary: #F9F5FF;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F3E8FF;
+  --text-primary: #2E1065;
+  --text-secondary: #5B21B6;
+  --text-muted: #A78BFA;
+  --border: rgba(139, 92, 246, 0.12);
+  --shadow: rgba(139, 92, 246, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --gradient: linear-gradient(135deg, #8B5CF6, #EC4899);
+}
+
+/* ============================================================
+   AMETISTA — DARK
+   ============================================================ */
+[data-palette="ametista"][data-theme="dark"] {
+  --primary: #A78BFA;
+  --primary-light: #C4B5FD;
+  --primary-dark: #8B5CF6;
+  --secondary: #F472B6;
+  --bg-primary: #170F26;
+  --bg-secondary: #24183B;
+  --bg-tertiary: #322152;
+  --text-primary: #F3E8FF;
+  --text-secondary: #DDD6FE;
+  --text-muted: #7C3AED;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(36, 24, 59, 0.7);
+  --glass-border: rgba(167, 139, 250, 0.15);
+  --gradient: linear-gradient(135deg, #A78BFA, #F472B6);
+}
+
+/* ============================================================
+   AUTUNNO — LIGHT
+   ============================================================ */
+[data-palette="autunno"][data-theme="light"] {
+  --primary: #8C5A3C;
+  --primary-light: #A67C58;
+  --primary-dark: #6C442A;
+  --secondary: #D4A373;
+  --bg-primary: #FDFBF7;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F2E9E1;
+  --text-primary: #3D271D;
+  --text-secondary: #5E3D2F;
+  --text-muted: #A88E82;
+  --border: rgba(140, 90, 60, 0.12);
+  --shadow: rgba(140, 90, 60, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --gradient: linear-gradient(135deg, #8C5A3C, #D4A373);
+}
+
+/* ============================================================
+   AUTUNNO — DARK
+   ============================================================ */
+[data-palette="autunno"][data-theme="dark"] {
+  --primary: #D4A373;
+  --primary-light: #E6CCB2;
+  --primary-dark: #8C5A3C;
+  --secondary: #D4A373;
+  --bg-primary: #1C1512;
+  --bg-secondary: #2B211C;
+  --bg-tertiary: #3D2F28;
+  --text-primary: #F5EBE6;
+  --text-secondary: #E6CCB2;
+  --text-muted: #8C5A3C;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(43, 33, 28, 0.7);
+  --glass-border: rgba(212, 163, 115, 0.15);
+  --gradient: linear-gradient(135deg, #D4A373, #8C5A3C);
+}
+
+/* ============================================================
+   ZAFFERANO — LIGHT
+   ============================================================ */
+[data-palette="zafferano"][data-theme="light"] {
+  --primary: #D97706;
+  --primary-light: #F59E0B;
+  --primary-dark: #B45309;
+  --secondary: #FBBF24;
+  --bg-primary: #FFFDF5;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #FEF3C7;
+  --text-primary: #451A03;
+  --text-secondary: #78350F;
+  --text-muted: #D97706;
+  --border: rgba(217, 119, 6, 0.12);
+  --shadow: rgba(217, 119, 6, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --gradient: linear-gradient(135deg, #D97706, #FBBF24);
+}
+
+/* ============================================================
+   ZAFFERANO — DARK
+   ============================================================ */
+[data-palette="zafferano"][data-theme="dark"] {
+  --primary: #F59E0B;
+  --primary-light: #FBBF24;
+  --primary-dark: #D97706;
+  --secondary: #FCD34D;
+  --bg-primary: #1A120C;
+  --bg-secondary: #291D13;
+  --bg-tertiary: #3D2B1C;
+  --text-primary: #FFFBEB;
+  --text-secondary: #FEF3C7;
+  --text-muted: #D97706;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(41, 29, 19, 0.7);
+  --glass-border: rgba(245, 158, 11, 0.15);
+  --gradient: linear-gradient(135deg, #F59E0B, #FCD34D);
+}
