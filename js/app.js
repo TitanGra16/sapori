@@ -480,6 +480,112 @@
     }
   }
 
+  async function exportAllRecipesPDF() {
+    try {
+      var recipes = await DB.getAllRecipes();
+      if (!recipes || recipes.length === 0) {
+        Utils.showToast('Nessuna ricetta da esportare! 🍳', 'error');
+        return;
+      }
+
+      // Ordina le ricette alfabeticamente A-Z per un ricettario ordinato
+      recipes.sort(function (a, b) {
+        return a.name.localeCompare(b.name);
+      });
+
+      var esc = Utils.escapeHtml;
+
+      // Crea contenitore temporaneo di stampa
+      var printDiv = document.createElement('div');
+      printDiv.className = 'print-all-recipes-container';
+
+      var html = '';
+      recipes.forEach(function (recipe) {
+        var cat = Utils.getCategoryInfo(recipe.category);
+        var totalTime = Utils.getTotalTime(recipe.prepTime, recipe.cookTime);
+        var diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
+
+        html += '<article class="print-cookbook-recipe">';
+
+        // Title
+        html += '<h1 class="recipe-detail__title">' + esc(recipe.name) + '</h1>';
+
+        // Category
+        html += '<span class="recipe-card__category" style="border-color:' + esc(cat.color) + ';color:' + esc(cat.color) + '">' +
+                  esc(cat.icon) + ' ' + esc(cat.label) +
+                '</span>';
+
+        // Info Bar
+        html +=
+          '<div class="recipe-detail__info-bar">' +
+            '<div class="recipe-detail__info-item"><span>' + Icons.clock + '</span><span>Prep: ' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</span></div>' +
+            '<div class="recipe-detail__info-item"><span>' + Icons.flame + '</span><span>Cottura: ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
+            '<div class="recipe-detail__info-item"><span>' + esc(diffEmoji) + '</span><span>' + esc(recipe.difficulty || 'facile') + '</span></div>' +
+            '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span><span>' + (recipe.servings || 4) + ' porzioni</span></div>' +
+          '</div>';
+
+        // Description
+        if (recipe.description) {
+          html += '<div class="recipe-detail__section recipe-detail__description-section"><p>' + esc(recipe.description) + '</p></div>';
+        }
+
+        // Body layout: ingredients + steps side-by-side
+        html += '<div class="recipe-detail__body-layout">';
+
+        // Ingredients
+        html +=
+          '<div class="recipe-detail__section recipe-detail__ingredients-section">' +
+            '<h2 class="recipe-detail__section-title">Ingredienti</h2>' +
+            '<ul class="ingredient-list">';
+        if (recipe.ingredients && recipe.ingredients.length > 0) {
+          recipe.ingredients.forEach(function (ing) {
+            var parts = [];
+            if (ing.quantity) parts.push(esc(ing.quantity));
+            if (ing.unit) parts.push(esc(ing.unit));
+            parts.push(esc(ing.name));
+            html += '<li class="ingredient-item">• ' + parts.join(' ') + '</li>';
+          });
+        }
+        html += '</ul></div>';
+
+        // Steps
+        html +=
+          '<div class="recipe-detail__section recipe-detail__steps-section">' +
+            '<h2 class="recipe-detail__section-title">Preparazione</h2>' +
+            '<ol class="step-list">';
+        if (recipe.steps && recipe.steps.length > 0) {
+          recipe.steps.forEach(function (step, idx) {
+            html +=
+              '<li class="step-item">' +
+                '<span class="step-number">' + (idx + 1) + '</span>' +
+                '<p>' + esc(step) + '</p>' +
+              '</li>';
+          });
+        }
+        html += '</ol></div>';
+
+        html += '</div>'; // close body-layout
+        html += '</article>';
+      });
+
+      printDiv.innerHTML = html;
+      document.body.appendChild(printDiv);
+      document.body.classList.add('printing-all-recipes');
+
+      // Attiva la stampa
+      setTimeout(function () {
+        window.print();
+        document.body.classList.remove('printing-all-recipes');
+        if (printDiv.parentNode) {
+          printDiv.parentNode.removeChild(printDiv);
+        }
+      }, 150);
+
+    } catch (err) {
+      Utils.showToast('Errore durante la creazione del PDF', 'error');
+    }
+  }
+
   async function importData() {
     var fileInput = document.getElementById('import-file-input');
     if (fileInput) fileInput.click();
@@ -727,6 +833,10 @@
         }
 
         /* ── Settings: data ── */
+        case 'export-pdf-all': {
+          exportAllRecipesPDF();
+          break;
+        }
         case 'export-data': {
           exportData();
           break;

@@ -2258,3 +2258,36 @@
     line-height: 1.6 !important;
   }
 }
+
+/* Print all recipes styling container (hidden on screen) */
+.print-all-recipes-container {
+  display: none;
+}
+
+@media print {
+  body.printing-all-recipes #app-header,
+  body.printing-all-recipes #bottom-nav,
+  body.printing-all-recipes #app-content,
+  body.printing-all-recipes #modal-overlay,
+  body.printing-all-recipes .btn--fab {
+    display: none !important;
+  }
+
+  body.printing-all-recipes .print-all-recipes-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-cookbook-recipe {
+    page-break-before: always;
+    page-break-inside: avoid;
+    padding: 1cm 0 !important;
+  }
+
+  .print-cookbook-recipe:first-child {
+    page-break-before: avoid;
+  }
+}

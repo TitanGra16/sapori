@@ -523,7 +523,8 @@ window.Views = (function () {
       '</div>';
     html +=
       '<div class="settings-actions">' +
-        '<button type="button" class="btn btn--secondary" data-action="export-data">' + Icons.download + ' Esporta</button>' +
+        '<button type="button" class="btn btn--secondary" data-action="export-pdf-all">' + Icons.download + ' Esporta PDF</button>' +
+        '<button type="button" class="btn btn--secondary" data-action="export-data">' + Icons.download + ' Backup JSON</button>' +
         '<button type="button" class="btn btn--secondary" data-action="import-data">' + Icons.upload + ' Importa</button>' +
         '<input type="file" id="import-file-input" accept=".json,application/json" class="hidden">' +
       '</div>';
