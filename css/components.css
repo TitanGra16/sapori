@@ -2104,16 +2104,19 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide app bar, bottom navigation, floating buttons, back/favorite overlays, action buttons, dates */
+  /* Hide app bar, bottom navigation, floating buttons, back/favorite overlays, action buttons, dates, video tutorial */
   #app-header,
   #bottom-nav,
   .recipe-detail__back,
   .recipe-detail__actions,
   .recipe-detail__actions-row,
   .recipe-detail__dates-row,
+  .recipe-detail__video-section,
   .btn--fab,
   .modal-overlay,
-  #modal-overlay {
+  #modal-overlay,
+  .btn-servings-dec,
+  .btn-servings-inc {
     display: none !important;
   }
 

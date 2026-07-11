@@ -377,5 +377,17 @@ window.Utils = {
       reader.onerror = () => reject(new Error('Errore nella lettura del file: ' + (reader.error ? reader.error.message : 'sconosciuto')));
       reader.readAsText(file, 'UTF-8');
     });
+  },
+
+  /**
+   * Extract YouTube Video ID from standard and short YouTube URLs.
+   * @param {string} url
+   * @returns {string|null} Video ID or null
+   */
+  getYouTubeId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
   }
 };

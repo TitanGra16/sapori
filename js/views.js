@@ -268,6 +268,13 @@ window.Views = (function () {
         '<input type="number" class="form-input" id="input-servings" min="1" placeholder="4" value="' + (r.servings || '') + '">' +
       '</div>';
 
+    // Link Video
+    html +=
+      '<div class="form-group">' +
+        '<label class="form-label" for="input-video">Link Video (YouTube, TikTok, Instagram, ecc.)</label>' +
+        '<input type="url" class="form-input" id="input-video" placeholder="Es. https://www.youtube.com/watch?v=..." value="' + esc(r.video || '') + '">' +
+      '</div>';
+
     // Buttons
     html +=
       '<div class="form-group" style="display:flex;gap:.75rem;padding-top:.5rem">' +
@@ -378,6 +385,25 @@ window.Views = (function () {
         '<div class="recipe-detail__section recipe-detail__description-section">' +
           '<p>' + esc(recipe.description) + '</p>' +
         '</div>';
+    }
+
+    // Video Section
+    if (recipe.video) {
+      var ytId = Utils.getYouTubeId(recipe.video);
+      html += '<div class="recipe-detail__section recipe-detail__video-section">';
+      html += '<h2 class="recipe-detail__section-title">Video Ricetta</h2>';
+      if (ytId) {
+        html +=
+          '<div class="video-container" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:var(--radius-md);border:1px solid var(--border);margin-bottom:var(--space-md);">' +
+            '<iframe src="https://www.youtube.com/embed/' + ytId + '" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe>' +
+          '</div>';
+      } else {
+        html +=
+          '<a href="' + esc(recipe.video) + '" target="_blank" rel="noopener noreferrer" class="btn btn--secondary" style="display:inline-flex;gap:.5rem;width:100%;max-width:320px;margin-bottom:var(--space-md);">' +
+            Icons.video + ' Guarda Video Tutorial' +
+          '</a>';
+      }
+      html += '</div>';
     }
 
     // Wrap ingredients and steps in a layout container for desktop side-by-side / cookbook print layout
@@ -511,6 +537,51 @@ window.Views = (function () {
         '</button>';
     });
     html += '</div></div>';
+    html += '</div></div>'; // close body + card
+
+    // — CARD: Gestione Categorie —
+    html += '<div class="settings-card">';
+    html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.bookOpen + '</span><h2 class="settings-card__title">Gestione Categorie</h2></div>';
+    html += '<div class="settings-card__body">';
+    
+    // Categorie personalizzate esistenti
+    html += '<div class="settings-item settings-item--column">';
+    html += '<div class="settings-item__label">Le tue categorie</div>';
+    html += '<div class="custom-categories-list" style="display:flex; flex-wrap:wrap; gap:6px; margin: var(--space-sm) 0; width:100%;">';
+    
+    var customCats = Recipes.CATEGORIES.filter(function (cat) {
+      return cat.isCustom;
+    });
+    
+    if (customCats.length === 0) {
+      html += '<p style="font-size:0.875rem; color:var(--text-muted); margin: 4px 0;">Non hai ancora creato categorie personalizzate.</p>';
+    } else {
+      customCats.forEach(function (cat) {
+        html += '<div class="custom-cat-chip" style="display:inline-flex; align-items:center; gap:0.4rem; background:' + esc(cat.color) + '22; color:' + esc(cat.color) + '; border:1px solid ' + esc(cat.color) + '33; padding:6px 12px; border-radius:var(--radius-full); font-size:0.85rem; font-weight:600;">' +
+                  '<span>' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>' +
+                  '<button type="button" class="btn-delete-cat" data-action="delete-category" data-id="' + esc(cat.id) + '" aria-label="Elimina categoria" style="cursor:pointer; display:inline-flex; align-items:center; border:none; background:transparent; color:' + esc(cat.color) + '; padding:0; margin-left:4px; opacity:0.8; transition:opacity var(--transition-fast);">' + Icons.x + '</button>' +
+                '</div>';
+      });
+    }
+    html += '</div></div>';
+
+    // Form aggiungi categoria
+    html += '<div class="settings-item settings-item--column">';
+    html += '<div class="settings-item__label">Aggiungi nuova categoria</div>';
+    html += '<div class="add-category-form" style="display:flex; flex-wrap:wrap; gap:var(--space-sm); width:100%; margin-top:var(--space-xs);">';
+    html += '<input type="text" id="input-cat-label" class="form-input" placeholder="Es. Ricette Veloci" style="flex:1; min-width:150px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem;">';
+    html += '<input type="text" id="input-cat-icon" class="form-input" placeholder="Emoji (es. ⏱️)" style="width:100px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem; text-align:center;">';
+    html += '<select id="input-cat-color" class="form-select" style="width:120px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem; background-color:var(--bg-secondary);">' +
+              '<option value="#E85D3A">Arancione</option>' +
+              '<option value="#0EA5E9">Azzurro</option>' +
+              '<option value="#16A34A">Verde</option>' +
+              '<option value="#A855F7">Viola</option>' +
+              '<option value="#EC4899">Rosa</option>' +
+              '<option value="#FBBF24">Giallo</option>' +
+            '</select>';
+    html += '<button type="button" class="btn btn--secondary" data-action="add-category" style="padding:10px 20px; font-size:0.9rem; flex-shrink:0;">' + Icons.plus + ' Aggiungi</button>';
+    html += '</div></div>';
+    
     html += '</div></div>'; // close body + card
 
     // — CARD: Gestione Dati —

@@ -28,12 +28,88 @@
 
   async function init() {
     await DB.init();
+    await loadCustomCategories();
     await Theme.init();
     updateThemeIcon();
     setupRouter();
     setupEventListeners();
     navigateTo(window.location.hash || '#home');
     registerServiceWorker();
+  }
+
+  async function loadCustomCategories() {
+    try {
+      var categoriesSetting = await DB.getSetting('customCategories');
+      if (categoriesSetting) {
+        var custom = JSON.parse(categoriesSetting);
+        if (Array.isArray(custom)) {
+          // Rimuovi eventuali custom categories caricate in precedenza (evita duplicati)
+          Recipes.CATEGORIES = Recipes.CATEGORIES.filter(function (cat) {
+            return !cat.isCustom;
+          });
+          // Unisci le categorie personalizzate caricate
+          custom.forEach(function (cat) {
+            cat.isCustom = true;
+            Recipes.CATEGORIES.push(cat);
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Errore nel caricamento delle categorie personalizzate:', e);
+    }
+  }
+
+  async function saveCustomCategory(newCat) {
+    try {
+      var categoriesSetting = await DB.getSetting('customCategories');
+      var custom = [];
+      if (categoriesSetting) {
+        custom = JSON.parse(categoriesSetting);
+      }
+      
+      custom.push(newCat);
+      await DB.setSetting('customCategories', JSON.stringify(custom));
+      
+      // Aggiorna array in esecuzione
+      Recipes.CATEGORIES.push(newCat);
+      
+      Utils.showToast('Categoria aggiunta! 🏷️', 'success');
+      
+      // Re-render delle impostazioni
+      if (state.currentView === 'settings') {
+        Views.renderSettings(appContent);
+      }
+    } catch (e) {
+      Utils.showToast('Errore durante il salvataggio della categoria', 'error');
+    }
+  }
+
+  async function deleteCustomCategory(catId) {
+    try {
+      var categoriesSetting = await DB.getSetting('customCategories');
+      if (categoriesSetting) {
+        var custom = JSON.parse(categoriesSetting);
+        custom = custom.filter(function (cat) {
+          return cat.id !== catId;
+        });
+        
+        await DB.setSetting('customCategories', JSON.stringify(custom));
+        
+        // Aggiorna array in esecuzione
+        Recipes.CATEGORIES = Recipes.CATEGORIES.filter(function (cat) {
+          return cat.id !== catId;
+        });
+        
+        Utils.showToast('Categoria eliminata', 'success');
+        
+        // Re-render delle impostazioni
+        if (state.currentView === 'settings') {
+          Views.renderSettings(appContent);
+        }
+      }
+    } catch (e) {
+      Utils.showToast('Errore durante l\'eliminazione della categoria', 'error');
+    }
   }
 
   /* ──────────────────── HASH-BASED ROUTER ──────────────────── */
@@ -220,6 +296,7 @@
     var cookTime = parseInt(document.getElementById('input-cooktime').value, 10) || 0;
     var difficulty = document.getElementById('input-difficulty').value;
     var servings = parseInt(document.getElementById('input-servings').value, 10) || 4;
+    var video = document.getElementById('input-video') ? document.getElementById('input-video').value.trim() : '';
 
     // Collect ingredients
     var ingRows = document.querySelectorAll('#ingredients-list .ingredient-row');
@@ -249,6 +326,7 @@
       name: name,
       category: category,
       description: description,
+      video: video,
       ingredients: ingredients,
       steps: steps,
       prepTime: prepTime,
@@ -833,6 +911,48 @@
         }
 
         /* ── Settings: data ── */
+        case 'add-category': {
+          var labelInput = document.getElementById('input-cat-label');
+          var iconInput = document.getElementById('input-cat-icon');
+          var colorInput = document.getElementById('input-cat-color');
+          
+          if (!labelInput || !labelInput.value.trim()) {
+            Utils.showToast('Inserisci un nome per la categoria 🏷️', 'error');
+            return;
+          }
+          
+          var label = labelInput.value.trim();
+          var icon = iconInput ? iconInput.value.trim() : '🍴';
+          var color = colorInput ? colorInput.value : '#E85D3A';
+          var id = label.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          
+          if (!id) id = 'cat-' + Date.now();
+          
+          var exists = Recipes.CATEGORIES.some(function(cat) {
+            return cat.id === id;
+          });
+          
+          if (exists) {
+            Utils.showToast('Categoria già esistente', 'error');
+            return;
+          }
+          
+          var newCat = {
+            id: id,
+            label: label,
+            icon: icon || '🍴',
+            color: color,
+            isCustom: true
+          };
+          
+          saveCustomCategory(newCat);
+          break;
+        }
+        case 'delete-category': {
+          var catId = actionEl.getAttribute('data-id');
+          if (catId) deleteCustomCategory(catId);
+          break;
+        }
         case 'export-pdf-all': {
           exportAllRecipesPDF();
           break;
