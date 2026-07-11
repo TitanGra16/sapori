@@ -395,6 +395,65 @@
     });
   }
 
+  function isFormDirty() {
+    var current = collectFormData();
+    var original = state.editingRecipe;
+
+    if (!original) {
+      // In creazione: controlla se è stato digitato qualcosa
+      if (current.name && current.name.trim() !== '') return true;
+      if (current.category && current.category.trim() !== '') return true;
+      if (current.description && current.description.trim() !== '') return true;
+      if (current.image) return true;
+      if (current.prepTime) return true;
+      if (current.cookTime) return true;
+      if (current.servings && current.servings !== 4 && current.servings !== '') return true;
+      
+      // Controlla ingredienti
+      var ingDirty = current.ingredients.some(function (ing) {
+        return (ing.name && ing.name.trim() !== '') || ing.quantity || ing.unit;
+      });
+      if (ingDirty) return true;
+
+      // Controlla passaggi
+      var stepDirty = current.steps.some(function (step) {
+        return step && step.trim() !== '';
+      });
+      if (stepDirty) return true;
+
+      return false;
+    } else {
+      // In modifica: controlla differenze rispetto alla ricetta originale
+      if ((current.name || '') !== (original.name || '')) return true;
+      if ((current.category || '') !== (original.category || '')) return true;
+      if ((current.description || '') !== (original.description || '')) return true;
+      if ((current.image || '') !== (original.image || '')) return true;
+      if ((current.prepTime || '') != (original.prepTime || '')) return true;
+      if ((current.cookTime || '') != (original.cookTime || '')) return true;
+      if ((current.servings || '') != (original.servings || '')) return true;
+      if ((current.difficulty || '') !== (original.difficulty || '')) return true;
+
+      // Ingredienti
+      if (current.ingredients.length !== original.ingredients.length) return true;
+      for (var i = 0; i < current.ingredients.length; i++) {
+        var cIng = current.ingredients[i];
+        var oIng = original.ingredients[i];
+        if (!oIng) return true;
+        if ((cIng.name || '') !== (oIng.name || '')) return true;
+        if ((cIng.quantity || '') !== (oIng.quantity || '')) return true;
+        if ((cIng.unit || '') !== (oIng.unit || '')) return true;
+      }
+
+      // Passaggi
+      if (current.steps.length !== original.steps.length) return true;
+      for (var j = 0; j < current.steps.length; j++) {
+        if ((current.steps[j] || '') !== (original.steps[j] || '')) return true;
+      }
+
+      return false;
+    }
+  }
+
   function showFormErrors(errors) {
     var switchTarget = null;
     errors.forEach(function (err) {
@@ -954,18 +1013,26 @@
 
         /* ── Form: cancel ── */
         case 'cancel-form': {
-          Views.showConfirmModal(
-            'Uscire dal modulo?',
-            'Sei sicuro di voler uscire? Le modifiche non salvate andranno perse.',
-            function () {
-              Views.hideModal();
-              if (state.editingRecipe) {
-                navigateTo('#detail/' + state.editingRecipe.id);
-              } else {
-                navigateTo('#home');
-              }
+          var performNavigate = function () {
+            if (state.editingRecipe) {
+              navigateTo('#detail/' + state.editingRecipe.id);
+            } else {
+              navigateTo('#home');
             }
-          );
+          };
+
+          if (isFormDirty()) {
+            Views.showConfirmModal(
+              'Uscire dal modulo?',
+              'Sei sicuro di voler uscire? Le modifiche non salvate andranno perse.',
+              function () {
+                Views.hideModal();
+                performNavigate();
+              }
+            );
+          } else {
+            performNavigate();
+          }
           break;
         }
 
