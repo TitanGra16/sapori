@@ -2,6 +2,8 @@
 
 **Sapori** è una Progressive Web App (PWA) per gestire le tue ricette preferite. Funziona offline, è installabile su qualsiasi dispositivo e salva tutti i dati localmente.
 
+🚀 **Provala subito online:** [https://titangra16.github.io/sapori/](https://titangra16.github.io/sapori/)
+
 ## ✨ Funzionalità
 
 - 📝 **Crea e modifica ricette** con ingredienti, passaggi, foto e altro
