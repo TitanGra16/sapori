@@ -586,35 +586,6 @@
     }
   }
 
-  function updateServings(delta) {
-    var countEl = document.getElementById('servings-count');
-    if (!countEl) return;
-
-    var currentVal = parseInt(countEl.textContent, 10);
-    var originalVal = parseInt(countEl.getAttribute('data-original'), 10) || 4;
-    var newVal = currentVal + delta;
-
-    if (newVal < 1) return; // Limita a minimo 1 porzione
-
-    countEl.textContent = newVal;
-
-    // Ricalcola tutti gli ingredienti visualizzati nel DOM
-    var ratio = newVal / originalVal;
-    var items = document.querySelectorAll('.ingredient-item');
-    items.forEach(function (item) {
-      var baseQtyAttr = item.getAttribute('data-qty');
-      if (baseQtyAttr) {
-        var baseQty = parseFloat(baseQtyAttr);
-        var newQty = baseQty * ratio;
-        var formattedQty = Utils.formatQuantity(newQty);
-        var qtySpan = item.querySelector('.ing-qty');
-        if (qtySpan) {
-          qtySpan.textContent = formattedQty;
-        }
-      }
-    });
-  }
-
   async function importData() {
     var fileInput = document.getElementById('import-file-input');
     if (fileInput) fileInput.click();
@@ -761,16 +732,6 @@
         }
         case 'export-pdf': {
           window.print();
-          break;
-        }
-        case 'servings-dec': {
-          e.stopPropagation();
-          updateServings(-1);
-          break;
-        }
-        case 'servings-inc': {
-          e.stopPropagation();
-          updateServings(1);
           break;
         }
 

@@ -369,14 +369,7 @@ window.Views = (function () {
         '<div class="recipe-detail__info-item"><span>' + Icons.clock + '</span><span>Prep: ' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + Icons.flame + '</span><span>Cottura: ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + esc(diffEmoji) + '</span><span>' + esc(recipe.difficulty || 'facile') + '</span></div>' +
-        '<div class="recipe-detail__info-item recipe-detail__info-item--servings"><span>' + Icons.users + '</span>' +
-          '<div class="servings-control">' +
-            '<button type="button" class="btn-servings-dec" data-action="servings-dec" aria-label="Riduci porzioni">−</button>' +
-            '<span class="servings-count" id="servings-count" data-original="' + (recipe.servings || 4) + '">' + (recipe.servings || 4) + '</span>' +
-            '<button type="button" class="btn-servings-inc" data-action="servings-inc" aria-label="Aumenta porzioni">+</button>' +
-          '</div>' +
-          '<span>porzioni</span>' +
-        '</div>' +
+        '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span><span>' + (recipe.servings || 4) + ' porzioni</span></div>' +
       '</div>';
 
     // Description
@@ -397,22 +390,11 @@ window.Views = (function () {
         '<ul class="ingredient-list">';
     if (recipe.ingredients && recipe.ingredients.length > 0) {
       recipe.ingredients.forEach(function (ing) {
-        var qty = parseFloat(ing.quantity);
-        var isNumeric = !isNaN(qty) && isFinite(ing.quantity);
-
-        html += '<li class="ingredient-item" ' + 
-                (isNumeric ? 'data-qty="' + qty + '"' : '') + '>';
-        
         var parts = [];
-        if (ing.quantity) {
-          parts.push('<span class="ing-qty">' + esc(ing.quantity) + '</span>');
-        }
-        if (ing.unit) {
-          parts.push('<span class="ing-unit">' + esc(ing.unit) + '</span>');
-        }
-        parts.push('<span class="ing-name">' + esc(ing.name) + '</span>');
-        
-        html += '• ' + parts.join(' ') + '</li>';
+        if (ing.quantity) parts.push(esc(ing.quantity));
+        if (ing.unit) parts.push(esc(ing.unit));
+        parts.push(esc(ing.name));
+        html += '<li class="ingredient-item">• ' + parts.join(' ') + '</li>';
       });
     }
     html += '</ul></div>';
