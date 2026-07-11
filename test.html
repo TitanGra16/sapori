@@ -513,6 +513,33 @@
     });
 
 
+    /* ==================== 6. STORAGE & DOM VISIBILITY ==================== */
+    test('Storage & DOM', 'Storage Persistenza - controlla supporto e integrità API', async () => {
+      const isStorageSupported = !!(navigator.storage && navigator.storage.persist);
+      assert(typeof isStorageSupported === 'boolean', 'Il valore di supporto dell\'API deve essere booleano');
+      if (isStorageSupported) {
+        const persisted = await navigator.storage.persisted();
+        assert(typeof persisted === 'boolean', 'Lo stato di persistenza attuale deve essere un valore booleano');
+      }
+    });
+
+    test('Storage & DOM', 'Modal Overlay - si mostra correttamente rimuovendo la classe hidden', () => {
+      const modal = document.getElementById('warning-modal');
+      assert(modal !== null, 'L\'elemento warning-modal deve essere presente nel DOM');
+      
+      // Simula visualizzazione modal
+      modal.classList.remove('hidden');
+      assert(!modal.classList.contains('hidden'), 'Il modal deve essere privo della classe hidden');
+      
+      // Controlla che le regole CSS del foglio di stile permettano la visibilità
+      const styles = window.getComputedStyle(modal);
+      assert(styles.position === 'fixed', 'La proprietà position dell\'overlay deve essere fixed');
+      
+      // Ripristina stato
+      modal.classList.add('hidden');
+    });
+
+
     /* ==================== TEST RUNNER ENGINE ==================== */
     const container = document.getElementById('test-sections-container');
     const logsPanel = document.getElementById('logs-panel');
