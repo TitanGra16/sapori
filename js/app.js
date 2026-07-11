@@ -1022,12 +1022,91 @@
         }
       }
     });
+
+    // PWA Custom Install Prompt setup
+    setupInstallPrompt();
   }
 
   /* ── Handle clicks on elements without data-action ── */
   function handleNonActionClick(e) {
     // Recipe card click (the card itself is the data-action element, handled above)
     // Nothing extra needed here
+  }
+
+  /* ──────────────────── PWA INSTALL PROMPT ──────────────────── */
+
+  function setupInstallPrompt() {
+    var deferredPrompt;
+    var installPrompt = document.getElementById('install-prompt');
+    var btnInstallConfirm = document.getElementById('btn-install-confirm');
+    var btnInstallCancel = document.getElementById('btn-install-cancel');
+
+    // Intercetta l'evento di installazione standard (Android/Chrome/Edge/Windows)
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      var dismissedTime = localStorage.getItem('sapori-install-dismissed');
+      var now = Date.now();
+      
+      // Mostra il prompt se non è stato rifiutato di recente (negli ultimi 7 giorni)
+      if (!dismissedTime || (now - parseInt(dismissedTime, 10)) > 7 * 24 * 60 * 60 * 1000) {
+        if (installPrompt) {
+          installPrompt.classList.remove('hidden');
+        }
+      }
+    });
+
+    // Gestione installazione su iOS Safari (Aggiungi alla Home manuale)
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    var isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+    if (isIOS && !isStandalone) {
+      var dismissedTime = localStorage.getItem('sapori-install-dismissed');
+      var now = Date.now();
+      if (!dismissedTime || (now - parseInt(dismissedTime, 10)) > 7 * 24 * 60 * 60 * 1000) {
+        var promptTitle = document.querySelector('.install-prompt__title');
+        var promptDesc = document.querySelector('.install-prompt__description');
+        var promptConfirm = document.getElementById('btn-install-confirm');
+        
+        if (promptTitle) promptTitle.textContent = "Installa Sapori su iPhone";
+        if (promptDesc) promptDesc.innerHTML = "Tocca il tasto di **Condivisione** <span style=\"font-size:1.1rem;\">⎋</span> in Safari e seleziona **\"Aggiungi alla schermata Home\"**.";
+        
+        if (promptConfirm) promptConfirm.style.display = 'none';
+        if (btnInstallCancel) btnInstallCancel.textContent = "Ho capito";
+        
+        if (installPrompt) {
+          installPrompt.classList.remove('hidden');
+        }
+      }
+    }
+
+    if (btnInstallConfirm) {
+      btnInstallConfirm.addEventListener('click', function () {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function (choiceResult) {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('Installazione accettata');
+          } else {
+            console.log('Installazione rifiutata');
+          }
+          deferredPrompt = null;
+          if (installPrompt) {
+            installPrompt.classList.add('hidden');
+          }
+        });
+      });
+    }
+
+    if (btnInstallCancel) {
+      btnInstallCancel.addEventListener('click', function () {
+        if (installPrompt) {
+          installPrompt.classList.add('hidden');
+        }
+        localStorage.setItem('sapori-install-dismissed', Date.now().toString());
+      });
+    }
   }
 
   /* ──────────────────── SERVICE WORKER ──────────────────── */

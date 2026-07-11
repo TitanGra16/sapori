@@ -2084,6 +2084,90 @@
   }
 }
 
+/* Install Prompt Banner */
+.install-prompt {
+  position: fixed;
+  bottom: 80px; /* Positioned just above the bottom nav */
+  left: var(--space-md);
+  right: var(--space-md);
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  z-index: var(--z-modal);
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.4s ease both;
+  transition: opacity var(--transition-normal), transform var(--transition-normal);
+}
+
+.install-prompt.hidden {
+  display: none !important;
+}
+
+.install-prompt__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.install-prompt__icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.install-prompt__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.install-prompt__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.install-prompt__title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.install-prompt__description {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.install-prompt__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.install-prompt__actions .btn {
+  padding: 8px 16px;
+  font-size: 0.8rem;
+}
+
+@media (min-width: 768px) {
+  .install-prompt {
+    bottom: 24px;
+  }
+}
+
 /* ============================================================
    PRINT MEDIA STYLES (Professional Cookbook Export)
    ============================================================ */
@@ -2104,7 +2188,7 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide app bar, bottom navigation, floating buttons, back/favorite overlays, action buttons, dates, video tutorial */
+  /* Hide app bar, bottom navigation, floating buttons, back/favorite overlays, action buttons, dates, video tutorial, install prompt */
   #app-header,
   #bottom-nav,
   .recipe-detail__back,
@@ -2116,7 +2200,8 @@
   .modal-overlay,
   #modal-overlay,
   .btn-servings-dec,
-  .btn-servings-inc {
+  .btn-servings-inc,
+  .install-prompt {
     display: none !important;
   }
 
