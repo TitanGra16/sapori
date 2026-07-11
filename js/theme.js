@@ -12,10 +12,13 @@ window.Theme = {
    * Keyed by palette, then by mode.
    */
   _themeColors: {
-    classico: { light: '#E85D3A', dark: '#FF7F5C' },
-    oceano:   { light: '#0EA5E9', dark: '#38BDF8' },
-    bosco:    { light: '#16A34A', dark: '#4ADE80' },
-    tramonto: { light: '#DB2777', dark: '#F472B6' }
+    classico:  { light: '#E85D3A', dark: '#FF7F5C' },
+    oceano:    { light: '#0EA5E9', dark: '#38BDF8' },
+    bosco:     { light: '#16A34A', dark: '#4ADE80' },
+    tramonto:  { light: '#DB2777', dark: '#F472B6' },
+    ametista:  { light: '#8B5CF6', dark: '#A78BFA' },
+    autunno:   { light: '#8C5A3C', dark: '#D4A373' },
+    zafferano: { light: '#D97706', dark: '#F59E0B' }
   },
 
   /**
