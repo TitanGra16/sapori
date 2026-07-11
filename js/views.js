@@ -375,14 +375,17 @@ window.Views = (function () {
     // Description
     if (recipe.description) {
       html +=
-        '<div class="recipe-detail__section">' +
+        '<div class="recipe-detail__section recipe-detail__description-section">' +
           '<p>' + esc(recipe.description) + '</p>' +
         '</div>';
     }
 
+    // Wrap ingredients and steps in a layout container for desktop side-by-side / cookbook print layout
+    html += '<div class="recipe-detail__body-layout">';
+
     // Ingredienti
     html +=
-      '<div class="recipe-detail__section">' +
+      '<div class="recipe-detail__section recipe-detail__ingredients-section">' +
         '<h2 class="recipe-detail__section-title">Ingredienti</h2>' +
         '<ul class="ingredient-list">';
     if (recipe.ingredients && recipe.ingredients.length > 0) {
@@ -398,7 +401,7 @@ window.Views = (function () {
 
     // Preparazione
     html +=
-      '<div class="recipe-detail__section">' +
+      '<div class="recipe-detail__section recipe-detail__steps-section">' +
         '<h2 class="recipe-detail__section-title">Preparazione</h2>' +
         '<ol class="step-list">';
     if (recipe.steps && recipe.steps.length > 0) {
@@ -412,16 +415,19 @@ window.Views = (function () {
     }
     html += '</ol></div>';
 
+    html += '</div>'; // close recipe-detail__body-layout
+
     // Action buttons
     html +=
-      '<div class="recipe-detail__section" style="display:flex;gap:.75rem;flex-wrap:wrap">' +
+      '<div class="recipe-detail__section recipe-detail__actions-row" style="display:flex;gap:.75rem;flex-wrap:wrap">' +
         '<button type="button" class="btn btn--secondary" data-action="edit-recipe" data-id="' + esc(recipe.id) + '">' + Icons.edit + ' Modifica</button>' +
+        '<button type="button" class="btn btn--secondary" data-action="export-pdf" data-id="' + esc(recipe.id) + '">' + Icons.download + ' Esporta PDF</button>' +
         '<button type="button" class="btn btn--danger" data-action="delete-recipe" data-id="' + esc(recipe.id) + '">' + Icons.trash + ' Elimina</button>' +
       '</div>';
 
     // Dates
     html +=
-      '<div class="recipe-detail__section" style="font-size:.8rem;opacity:.6">' +
+      '<div class="recipe-detail__section recipe-detail__dates-row" style="font-size:.8rem;opacity:.6">' +
         '<p>Creata il ' + esc(Utils.formatDateTime(recipe.createdAt)) + '</p>' +
         (recipe.updatedAt && recipe.updatedAt !== recipe.createdAt
           ? '<p>Modificata il ' + esc(Utils.formatDateTime(recipe.updatedAt)) + '</p>'

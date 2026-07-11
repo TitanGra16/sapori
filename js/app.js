@@ -624,6 +624,10 @@
           if (editId) navigateTo('#edit/' + editId);
           break;
         }
+        case 'export-pdf': {
+          window.print();
+          break;
+        }
 
         /* ── Favorite toggle ── */
         case 'toggle-fav': {

@@ -795,6 +795,80 @@
   margin-bottom: var(--space-lg);
 }
 
+/* Body layout for desktop/print side-by-side */
+.recipe-detail__body-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+@media (min-width: 768px) {
+  .recipe-detail__body-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.8fr;
+    gap: var(--space-xl);
+    align-items: start;
+  }
+}
+
+/* Ingredient list (custom) */
+.ingredient-list {
+  list-style: none;
+  margin-bottom: var(--space-lg);
+}
+
+.ingredient-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.ingredient-item:last-child {
+  border-bottom: none;
+}
+
+/* Step list (custom) */
+.step-list {
+  list-style: none;
+  margin-bottom: var(--space-lg);
+}
+
+.step-item {
+  position: relative;
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.step-item:last-child {
+  border-bottom: none;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  background: var(--gradient);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 /* ============================================================
    BUTTONS
    ============================================================ */
@@ -2005,5 +2079,182 @@
 @media (min-width: 1280px) {
   .recipe-grid {
     grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ============================================================
+   PRINT MEDIA STYLES (Professional Cookbook Export)
+   ============================================================ */
+@media print {
+  /* Set light colors and clean background for ink-saving */
+  :root, html, body {
+    --bg-primary: #ffffff !important;
+    --bg-secondary: #ffffff !important;
+    --bg-tertiary: #f9f6f3 !important;
+    --text-primary: #1a0f0a !important;
+    --text-secondary: #403028 !important;
+    --text-muted: #7d685e !important;
+    --border: rgba(93, 64, 55, 0.15) !important;
+    background-color: #ffffff !important;
+    color: #1a0f0a !important;
+    font-size: 11.5pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide app bar, bottom navigation, floating buttons, back/favorite overlays, action buttons, dates */
+  #app-header,
+  #bottom-nav,
+  .recipe-detail__back,
+  .recipe-detail__actions,
+  .recipe-detail__actions-row,
+  .recipe-detail__dates-row,
+  .btn--fab,
+  .modal-overlay,
+  #modal-overlay {
+    display: none !important;
+  }
+
+  /* Remove page padding, margins, shadows and scroll behaviors */
+  body, #app-content, .view, .recipe-detail {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  /* Cookbook Page Margins */
+  @page {
+    size: A4;
+    margin: 1.8cm 2cm 2cm 2cm;
+  }
+
+  /* Hero Image styling for print */
+  .recipe-detail__hero {
+    height: 7.5cm !important;
+    aspect-ratio: auto !important;
+    border-radius: var(--radius-md) !important;
+    margin-bottom: 1.2cm !important;
+    box-shadow: none !important;
+    border: 1px solid var(--border) !important;
+    page-break-inside: avoid !important;
+  }
+
+  .recipe-detail__hero img {
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .recipe-detail__hero-placeholder {
+    height: 3.5cm !important;
+    border-radius: var(--radius-md) !important;
+    margin-bottom: 1.2cm !important;
+    border: 1px solid var(--border) !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Elegant Recipe Title */
+  .recipe-detail__title {
+    font-family: var(--font-heading) !important;
+    font-size: 26pt !important;
+    font-weight: 800 !important;
+    color: var(--primary) !important;
+    margin: 0 0 0.3cm 0 !important;
+    page-break-after: avoid !important;
+  }
+
+  /* Category badge */
+  .recipe-card__category {
+    display: inline-flex !important;
+    margin: 0 0 1cm 0 !important;
+    border: 1px solid var(--primary) !important;
+    color: var(--primary) !important;
+    background: transparent !important;
+    font-size: 9.5pt !important;
+    font-weight: 700 !important;
+    padding: 0.1cm 0.4cm !important;
+    border-radius: var(--radius-full) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Info Bar */
+  .recipe-detail__info-bar {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 0.5cm !important;
+    padding: 0.4cm !important;
+    margin-bottom: 1.2cm !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--bg-tertiary) !important;
+    page-break-inside: avoid !important;
+  }
+
+  .recipe-detail__info-item {
+    flex-direction: column !important;
+    gap: 0.1cm !important;
+    text-align: center !important;
+    font-size: 10pt !important;
+  }
+
+  .recipe-detail__info-item svg {
+    width: 22px !important;
+    height: 22px !important;
+    color: var(--primary) !important;
+  }
+
+  /* Grid layout for Ingredients and Steps side-by-side */
+  .recipe-detail__body-layout {
+    display: grid !important;
+    grid-template-columns: 1fr 1.6fr !important;
+    gap: 2.2cm !important;
+    align-items: start !important;
+    margin-bottom: 0 !important;
+  }
+
+  .recipe-detail__ingredients-section,
+  .recipe-detail__steps-section {
+    page-break-inside: auto !important;
+  }
+
+  .recipe-detail__section-title {
+    font-family: var(--font-heading) !important;
+    font-size: 15pt !important;
+    font-weight: 700 !important;
+    border-bottom: 1.5px solid var(--primary) !important;
+    padding-bottom: 0.2cm !important;
+    margin-bottom: 0.5cm !important;
+    page-break-after: avoid !important;
+  }
+
+  .ingredient-item {
+    font-size: 10.5pt !important;
+    padding: 8px 0 !important;
+    border-bottom: 1px dashed var(--border) !important;
+    page-break-inside: avoid !important;
+  }
+
+  .step-item {
+    padding: var(--space-sm) 0 !important;
+    border-bottom: 1px dashed var(--border) !important;
+    page-break-inside: avoid !important;
+  }
+
+  .step-number {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    background: var(--primary) !important;
+    color: #ffffff !important;
+    font-size: 9.5pt !important;
+  }
+
+  .step-item p {
+    font-size: 10.5pt !important;
+    line-height: 1.6 !important;
   }
 }
