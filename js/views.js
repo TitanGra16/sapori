@@ -293,7 +293,7 @@ window.Views = (function () {
     });
     html += '</select>';
     if (total > 1) {
-      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi">✕</button>';
+      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
     }
     html += '</div></div>';
     return html;
@@ -306,7 +306,7 @@ window.Views = (function () {
         '<span class="step-number">' + (index + 1) + '</span>' +
         '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio...">' + esc(step || '') + '</textarea>';
     if (total > 1) {
-      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">✕</button>';
+      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
     }
     html += '</div>';
     return html;
