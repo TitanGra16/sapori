@@ -374,6 +374,27 @@
     inputs.forEach(function (el) { el.classList.remove('error'); });
   }
 
+  function switchFormTab(targetId) {
+    var tabs = document.querySelectorAll('.form-tab');
+    var navBtns = document.querySelectorAll('.form-steps-btn');
+    
+    tabs.forEach(function (tab) {
+      if (tab.id === targetId) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    navBtns.forEach(function (btn) {
+      if (btn.getAttribute('data-target') === targetId) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
   function showFormErrors(errors) {
     errors.forEach(function (err) {
       // err is a string like "Il nome è obbligatorio"
@@ -904,6 +925,23 @@
         case 'remove-image': {
           e.stopPropagation();
           removeImage();
+          break;
+        }
+
+        /* ── Form: tabs ── */
+        case 'next-tab': {
+          var nextId = actionEl.getAttribute('data-next');
+          if (nextId) switchFormTab(nextId);
+          break;
+        }
+        case 'prev-tab': {
+          var prevId = actionEl.getAttribute('data-prev');
+          if (prevId) switchFormTab(prevId);
+          break;
+        }
+        case 'switch-tab': {
+          var targetId = actionEl.getAttribute('data-target');
+          if (targetId) switchFormTab(targetId);
           break;
         }
 

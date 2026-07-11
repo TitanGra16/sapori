@@ -2381,3 +2381,128 @@
     page-break-before: avoid;
   }
 }
+
+/* ============================================================
+   MULTI-STEP FORM
+   ============================================================ */
+.form-steps-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  padding: 0 var(--space-sm);
+  position: relative;
+}
+
+.form-steps-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.form-steps-btn .step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  color: var(--text-secondary);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all var(--transition-fast) ease;
+}
+
+.form-steps-btn .step-lbl {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color var(--transition-fast) ease;
+}
+
+.form-steps-btn.active .step-num {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #FFFFFF;
+  box-shadow: 0 0 10px rgba(232, 93, 58, 0.3);
+}
+
+.form-steps-btn.active .step-lbl {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.form-steps-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin: 0 var(--space-sm);
+  margin-bottom: 22px; /* Aligns with step circles */
+}
+
+/* Form Tabs */
+.form-tab {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.form-tab.active {
+  display: flex;
+  animation: fadeIn var(--transition-normal) ease both;
+}
+
+.form-tab-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+}
+
+/* Ingredient Inputs Grid Layout */
+.ingredient-inputs {
+  display: grid;
+  grid-template-columns: 2.2fr 0.8fr 1fr auto;
+  gap: var(--space-xs);
+  width: 100%;
+  align-items: center;
+}
+
+@media (max-width: 480px) {
+  .ingredient-inputs {
+    grid-template-columns: 1fr 1fr auto;
+    grid-template-areas:
+      "name name name"
+      "qty unit remove";
+    gap: var(--space-sm) var(--space-xs);
+  }
+  
+  .ingredient-inputs [data-field="ing-name"] {
+    grid-area: name;
+  }
+  
+  .ingredient-inputs [data-field="ing-qty"] {
+    grid-area: qty;
+    max-width: none !important;
+  }
+  
+  .ingredient-inputs [data-field="ing-unit"] {
+    grid-area: unit;
+    max-width: none !important;
+  }
+  
+  .ingredient-inputs [data-action="remove-ingredient"] {
+    grid-area: remove;
+    justify-self: end;
+  }
+}

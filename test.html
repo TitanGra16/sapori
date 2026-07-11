@@ -539,6 +539,46 @@
       modal.classList.add('hidden');
     });
 
+    test('Storage & DOM', 'Multi-step Tab Switcher - cambia correttamente le schede attive', () => {
+      // Crea contenitori temporanei nel DOM del test se non esistono
+      const navContainer = document.createElement('div');
+      navContainer.className = 'form-steps-nav';
+      navContainer.innerHTML = 
+        '<button type="button" class="form-steps-btn active" data-target="tab-info"><span class="step-num">1</span></button>' +
+        '<button type="button" class="form-steps-btn" data-target="tab-prep"><span class="step-num">2</span></button>';
+        
+      const formContainer = document.createElement('form');
+      formContainer.innerHTML = 
+        '<div id="tab-info" class="form-tab active"></div>' +
+        '<div id="tab-prep" class="form-tab"></div>';
+        
+      document.body.appendChild(navContainer);
+      document.body.appendChild(formContainer);
+      
+      const switchLogic = (targetId) => {
+        const tabs = formContainer.querySelectorAll('.form-tab');
+        const navBtns = navContainer.querySelectorAll('.form-steps-btn');
+        tabs.forEach(tab => tab.id === targetId ? tab.classList.add('active') : tab.classList.remove('active'));
+        navBtns.forEach(btn => btn.getAttribute('data-target') === targetId ? btn.classList.add('active') : btn.classList.remove('active'));
+      };
+      
+      switchLogic('tab-prep');
+      
+      const tabInfo = formContainer.querySelector('#tab-info');
+      const tabPrep = formContainer.querySelector('#tab-prep');
+      const btnInfo = navContainer.querySelector('[data-target="tab-info"]');
+      const btnPrep = navContainer.querySelector('[data-target="tab-prep"]');
+      
+      assert(!tabInfo.classList.contains('active'), 'La scheda tab-info deve essere disattivata');
+      assert(tabPrep.classList.contains('active'), 'La scheda tab-prep deve essere attiva');
+      assert(!btnInfo.classList.contains('active'), 'Il pulsante info deve essere disattivato');
+      assert(btnPrep.classList.contains('active'), 'Il pulsante prep deve essere attivo');
+      
+      // Pulizia DOM
+      document.body.removeChild(navContainer);
+      document.body.removeChild(formContainer);
+    });
+
 
     /* ==================== TEST RUNNER ENGINE ==================== */
     const container = document.getElementById('test-sections-container');

@@ -154,6 +154,26 @@ window.Views = (function () {
 
     var html = '<div class="view animate-fade-in">';
     html += '<div class="view-header"><h1 class="view-header__title">' + esc(title) + '</h1></div>';
+    
+    // Step Navigation Header
+    html +=
+      '<div class="form-steps-nav">' +
+        '<button type="button" class="form-steps-btn active" data-action="switch-tab" data-target="tab-info" aria-label="Informazioni generali">' +
+          '<span class="step-num">1</span>' +
+          '<span class="step-lbl">Info</span>' +
+        '</button>' +
+        '<div class="form-steps-line"></div>' +
+        '<button type="button" class="form-steps-btn" data-action="switch-tab" data-target="tab-prep" aria-label="Ingredienti e preparazione">' +
+          '<span class="step-num">2</span>' +
+          '<span class="step-lbl">Preparazione</span>' +
+        '</button>' +
+        '<div class="form-steps-line"></div>' +
+        '<button type="button" class="form-steps-btn" data-action="switch-tab" data-target="tab-cook" aria-label="Dettagli di cottura">' +
+          '<span class="step-num">3</span>' +
+          '<span class="step-lbl">Cottura</span>' +
+        '</button>' +
+      '</div>';
+
     html += '<form id="recipe-form" class="recipe-form" novalidate>';
 
     // Hidden field for ID in edit mode
@@ -161,6 +181,9 @@ window.Views = (function () {
       html += '<input type="hidden" id="input-id" value="' + esc(r.id) + '">';
     }
 
+    // ──────────────────── TAB 1: INFO ────────────────────
+    html += '<div id="tab-info" class="form-tab active">';
+    
     // Nome
     html +=
       '<div class="form-group">' +
@@ -210,6 +233,17 @@ window.Views = (function () {
     html += '<input type="hidden" id="input-image-data" value="' + esc(r.image || '') + '">';
     html += '</div>';
 
+    // Tab 1 Actions
+    html +=
+      '<div class="form-tab-actions">' +
+        '<button type="button" class="btn btn--primary" data-action="next-tab" data-next="tab-prep">Avanti</button>' +
+      '</div>';
+
+    html += '</div>'; // close tab-info
+
+    // ──────────────────── TAB 2: PREPARATION ────────────────────
+    html += '<div id="tab-prep" class="form-tab">';
+
     // Ingredienti
     html +=
       '<div class="form-group">' +
@@ -235,6 +269,18 @@ window.Views = (function () {
     html += '</div>';
     html += '<button type="button" class="dynamic-list__add btn btn--ghost btn--small" data-action="add-step">' + Icons.plus + ' Aggiungi passaggio</button>';
     html += '</div>';
+
+    // Tab 2 Actions
+    html +=
+      '<div class="form-tab-actions">' +
+        '<button type="button" class="btn btn--ghost" data-action="prev-tab" data-prev="tab-info">Indietro</button>' +
+        '<button type="button" class="btn btn--primary" data-action="next-tab" data-next="tab-cook">Avanti</button>' +
+      '</div>';
+
+    html += '</div>'; // close tab-prep
+
+    // ──────────────────── TAB 3: COOKING ────────────────────
+    html += '<div id="tab-cook" class="form-tab">';
 
     // Tempo preparazione
     html +=
@@ -268,12 +314,15 @@ window.Views = (function () {
         '<input type="number" class="form-input" id="input-servings" min="1" placeholder="4" value="' + (r.servings || '') + '">' +
       '</div>';
 
-    // Buttons
+    // Tab 3 Actions
     html +=
-      '<div class="form-group" style="display:flex;gap:.75rem;padding-top:.5rem">' +
+      '<div class="form-tab-actions" style="display:flex;gap:.75rem;padding-top:.5rem">' +
+        '<button type="button" class="btn btn--ghost" data-action="prev-tab" data-prev="tab-prep">Indietro</button>' +
         '<button type="submit" class="btn btn--primary" style="flex:1">' + Icons.save + (isEdit ? ' Salva Modifiche' : ' Salva Ricetta') + '</button>' +
         '<button type="button" class="btn btn--ghost" data-action="cancel-form" style="flex:0 0 auto">Annulla</button>' +
       '</div>';
+
+    html += '</div>'; // close tab-cook
 
     html += '</form></div>';
     container.innerHTML = html;
