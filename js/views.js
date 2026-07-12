@@ -345,11 +345,12 @@ window.Views = (function () {
     var esc = Utils.escapeHtml;
     var html =
       '<div class="dynamic-list__item ingredient-row" data-index="' + index + '">' +
-        '<div class="ingredient-inputs">' +
-          '<input type="text" class="form-input" placeholder="Ingrediente" data-field="ing-name" value="' + esc(ing.name || '') + '">' +
-          '<input type="text" class="form-input" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
-          '<select class="form-select" data-field="ing-unit" style="max-width:6rem">' +
-            '<option value="">—</option>';
+        '<div class="ingredient-row-container" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
+          '<div class="ingredient-inputs">' +
+            '<input type="text" class="form-input" placeholder="Ingrediente *" data-field="ing-name" value="' + esc(ing.name || '') + '" required>' +
+            '<input type="text" class="form-input" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
+            '<select class="form-select" data-field="ing-unit" style="max-width:6rem">' +
+              '<option value="">—</option>';
     Recipes.UNITS.forEach(function (u) {
       html += '<option value="' + esc(u) + '"' + (ing.unit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
     });
@@ -357,16 +358,26 @@ window.Views = (function () {
     if (total > 1) {
       html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
     }
-    html += '</div></div>';
+    html += '</div>';
+    html += '<div class="ingredient-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
+              '<input type="text" class="form-input" placeholder="Note per questo ingrediente (es. tiepido, setacciato)" data-field="ing-notes" value="' + esc(ing.notes || '') + '">' +
+            '</div>' +
+        '</div>' +
+      '</div>';
     return html;
   }
 
-  function stepRowHTML(step, index, total) {
+  function stepRowHTML(stepVal, index, total) {
     var esc = Utils.escapeHtml;
+    var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
+    var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
     var html =
       '<div class="dynamic-list__item step-item" data-index="' + index + '">' +
         '<span class="step-number">' + (index + 1) + '</span>' +
-        '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio...">' + esc(step || '') + '</textarea>';
+        '<div class="step-inputs" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
+          '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" required>' + esc(stepText || '') + '</textarea>' +
+          '<input type="text" class="form-input" placeholder="Note per questo passaggio (es. attenzione a non far bollire)" data-field="step-notes" value="' + esc(stepNotes || '') + '">' +
+        '</div>';
     if (total > 1) {
       html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
     }
@@ -466,7 +477,8 @@ window.Views = (function () {
         if (ing.quantity) parts.push(esc(ing.quantity));
         if (ing.unit) parts.push(esc(ing.unit));
         parts.push(esc(ing.name));
-        html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + '</li>';
+        var notesHTML = ing.notes ? ' <span class="ingredient-item__notes">(' + esc(ing.notes) + ')</span>' : '';
+        html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + notesHTML + '</li>';
       });
     }
     html += '</ul></div>';
@@ -477,11 +489,17 @@ window.Views = (function () {
         '<h2 class="recipe-detail__section-title">Preparazione</h2>' +
         '<ol class="step-list">';
     if (recipe.steps && recipe.steps.length > 0) {
-      recipe.steps.forEach(function (step, idx) {
+      recipe.steps.forEach(function (stepVal, idx) {
+        var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
+        var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
+        var notesHTML = stepNotes ? '<span class="step-item__notes">Note: ' + esc(stepNotes) + '</span>' : '';
         html +=
           '<li class="step-item animate-slide-up stagger-' + ((idx % 8) + 1) + '">' +
             '<span class="step-number">' + (idx + 1) + '</span>' +
-            '<p>' + esc(step) + '</p>' +
+            '<div class="step-content">' +
+              '<p>' + esc(stepText) + '</p>' +
+              notesHTML +
+            '</div>' +
           '</li>';
       });
     }

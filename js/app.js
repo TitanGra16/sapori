@@ -330,8 +330,9 @@
       var ingName = row.querySelector('[data-field="ing-name"]').value.trim();
       var ingQty = row.querySelector('[data-field="ing-qty"]').value.trim();
       var ingUnit = row.querySelector('[data-field="ing-unit"]').value;
+      var ingNotes = row.querySelector('[data-field="ing-notes"]').value.trim();
       if (ingName) {
-        ingredients.push({ name: ingName, quantity: ingQty, unit: ingUnit });
+        ingredients.push({ name: ingName, quantity: ingQty, unit: ingUnit, notes: ingNotes });
       }
     });
 
@@ -340,8 +341,9 @@
     var steps = [];
     stepRows.forEach(function (row) {
       var text = row.querySelector('[data-field="step-text"]').value.trim();
+      var notes = row.querySelector('[data-field="step-notes"]').value.trim();
       if (text) {
-        steps.push(text);
+        steps.push({ text: text, notes: notes });
       }
     });
 
@@ -414,13 +416,15 @@
       
       // Controlla ingredienti
       var ingDirty = current.ingredients.some(function (ing) {
-        return (ing.name && ing.name.trim() !== '') || ing.quantity || ing.unit;
+        return (ing.name && ing.name.trim() !== '') || ing.quantity || ing.unit || (ing.notes && ing.notes.trim() !== '');
       });
       if (ingDirty) return true;
 
       // Controlla passaggi
       var stepDirty = current.steps.some(function (step) {
-        return step && step.trim() !== '';
+        var stepText = typeof step === 'object' ? step.text : step;
+        var stepNotes = typeof step === 'object' ? step.notes : '';
+        return (stepText && stepText.trim() !== '') || (stepNotes && stepNotes.trim() !== '');
       });
       if (stepDirty) return true;
 
@@ -446,12 +450,20 @@
         if ((cIng.name || '') !== (oIng.name || '')) return true;
         if ((cIng.quantity || '') !== (oIng.quantity || '')) return true;
         if ((cIng.unit || '') !== (oIng.unit || '')) return true;
+        if ((cIng.notes || '') !== (oIng.notes || '')) return true;
       }
 
       // Passaggi
       if (current.steps.length !== original.steps.length) return true;
       for (var j = 0; j < current.steps.length; j++) {
-        if ((current.steps[j] || '') !== (original.steps[j] || '')) return true;
+        var cStep = current.steps[j];
+        var oStep = original.steps[j];
+        var cText = typeof cStep === 'object' ? cStep.text : cStep;
+        var cNotes = typeof cStep === 'object' ? cStep.notes : '';
+        var oText = typeof oStep === 'object' ? oStep.text : oStep;
+        var oNotes = typeof oStep === 'object' ? oStep.notes : '';
+        if ((cText || '') !== (oText || '')) return true;
+        if ((cNotes || '') !== (oNotes || '')) return true;
       }
 
       return false;
@@ -747,7 +759,8 @@
             if (ing.quantity) parts.push(esc(ing.quantity));
             if (ing.unit) parts.push(esc(ing.unit));
             parts.push(esc(ing.name));
-            html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + '</li>';
+            var notesHTML = ing.notes ? ' <span class="ingredient-item__notes">(' + esc(ing.notes) + ')</span>' : '';
+            html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + notesHTML + '</li>';
           });
         }
         html += '</ul></div>';
@@ -758,11 +771,17 @@
             '<h2 class="recipe-detail__section-title">Preparazione</h2>' +
             '<ol class="step-list">';
         if (recipe.steps && recipe.steps.length > 0) {
-          recipe.steps.forEach(function (step, idx) {
+          recipe.steps.forEach(function (stepVal, idx) {
+            var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
+            var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
+            var notesHTML = stepNotes ? '<span class="step-item__notes">Note: ' + esc(stepNotes) + '</span>' : '';
             html +=
               '<li class="step-item">' +
                 '<span class="step-number">' + (idx + 1) + '</span>' +
-                '<p>' + esc(step) + '</p>' +
+                '<div class="step-content">' +
+                  '<p>' + esc(stepText) + '</p>' +
+                  notesHTML +
+                '</div>' +
               '</li>';
           });
         }

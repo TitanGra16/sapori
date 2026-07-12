@@ -915,6 +915,13 @@
   font-weight: bold;
 }
 
+.ingredient-item__notes {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
 /* Step list (custom) */
 .step-list {
   list-style: none;
@@ -933,6 +940,19 @@
   overflow-wrap: break-word;
   word-wrap: break-word;
   word-break: break-word;
+}
+
+.step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-item__notes {
+  display: block;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--text-muted);
+  margin-top: 4px;
 }
 
 .step-item:last-child {
@@ -2562,6 +2582,13 @@
     margin-right: 6px !important;
   }
 
+  .ingredient-item__notes {
+    font-size: 10pt !important;
+    font-style: italic !important;
+    color: var(--text-muted) !important;
+    margin-left: 6px !important;
+  }
+
   .step-list {
     counter-reset: step-counter-print !important;
     padding: 0 !important;
@@ -2595,6 +2622,19 @@
     color: #1a0f0a !important;
     margin: 0 !important;
     display: inline !important;
+  }
+
+  .step-content {
+    display: inline !important;
+  }
+
+  .step-item__notes {
+    display: block !important;
+    font-size: 9.5pt !important;
+    font-style: italic !important;
+    color: var(--primary) !important;
+    margin-top: 4px !important;
+    padding-left: 20px !important;
   }
 
   /* Print-only footer (matches RICETTARIO UFFICIALE.pdf bottom layout) */
