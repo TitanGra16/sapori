@@ -1009,6 +1009,24 @@
           break;
         }
 
+        /* ── Form: custom category select ── */
+        case 'select-form-category': {
+          var selectedCat = actionEl.getAttribute('data-category');
+          var hiddenInput = document.getElementById('input-category');
+          if (hiddenInput) {
+            hiddenInput.value = selectedCat;
+            hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          var grid = actionEl.closest('.category-selector-grid');
+          if (grid) {
+            grid.querySelectorAll('.category-select-btn').forEach(function (btn) {
+              btn.classList.remove('active');
+            });
+          }
+          actionEl.classList.add('active');
+          break;
+        }
+
         /* ── Form: dynamic rows ── */
         case 'add-ingredient': {
           addIngredientRow();

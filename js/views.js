@@ -197,14 +197,18 @@ window.Views = (function () {
     // Categoria
     html +=
       '<div class="form-group">' +
-        '<label class="form-label" for="input-category">Categoria *</label>' +
-        '<select class="form-select" id="input-category" required>';
-    html += '<option value="">Seleziona categoria...</option>';
+        '<label class="form-label">Categoria *</label>' +
+        '<input type="hidden" id="input-category" value="' + esc(r.category || '') + '" required>' +
+        '<div class="category-selector-grid">';
     Recipes.CATEGORIES.forEach(function (cat) {
-      var sel = r.category === cat.id ? ' selected' : '';
-      html += '<option value="' + esc(cat.id) + '"' + sel + '>' + esc(cat.icon) + ' ' + esc(cat.label) + '</option>';
+      var activeClass = r.category === cat.id ? ' active' : '';
+      html +=
+        '<button type="button" class="category-select-btn' + activeClass + '" data-action="select-form-category" data-category="' + esc(cat.id) + '">' +
+          '<span class="category-select-btn__icon">' + esc(cat.icon) + '</span>' +
+          '<span class="category-select-btn__label">' + esc(cat.label) + '</span>' +
+        '</button>';
     });
-    html += '</select><span class="form-error" id="error-category"></span></div>';
+    html += '</div><span class="form-error" id="error-category"></span></div>';
 
     // Descrizione
     html +=
