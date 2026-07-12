@@ -657,6 +657,17 @@
 }
 
 /* Description Section */
+.recipe-detail__description-title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  margin-top: 0;
+  margin-bottom: var(--space-xs);
+}
+
 .recipe-detail__description-section {
   font-size: 1.05rem;
   line-height: 1.6;

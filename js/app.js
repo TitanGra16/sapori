@@ -714,7 +714,10 @@
 
         // Description
         if (recipe.description) {
-          html += '<div class="recipe-detail__section recipe-detail__description-section"><p>' + esc(recipe.description) + '</p></div>';
+          html += '<div class="recipe-detail__section recipe-detail__description-section">' +
+                    '<h3 class="recipe-detail__description-title">Descrizione</h3>' +
+                    '<p>' + esc(recipe.description) + '</p>' +
+                  '</div>';
         }
 
         // Body layout: ingredients + steps side-by-side
