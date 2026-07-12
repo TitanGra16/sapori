@@ -1,0 +1,152 @@
+[
+  {
+    "name": "Spaghetti alla Carbonara",
+    "category": "primi",
+    "description": "Il piatto romano per eccellenza, cremoso e saporito, preparato con uova fresche, guanciale croccante e pecorino romano.",
+    "notes": "Non usare mai la panna! Se la crema risulta troppo densa, allungala con un cucchiaio di acqua di cottura della pasta prima di servire.",
+    "prepTime": 10,
+    "cookTime": 15,
+    "difficulty": "media",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Spaghetti", "quantity": "320", "unit": "g" },
+      { "name": "Guanciale", "quantity": "150", "unit": "g" },
+      { "name": "Tuorli d'uovo freschi", "quantity": "4", "unit": "pz" },
+      { "name": "Pecorino Romano DOP", "quantity": "50", "unit": "g" },
+      { "name": "Pepe nero macinato fresco", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Tagliare il guanciale a listarelle sottili e rosolarlo in una padella senza olio finché non diventa croccante. Mettere da parte il guanciale e conservare il grasso rilasciato.",
+      "Sbattere i tuorli d'uovo in una ciotola capiente insieme al Pecorino Romano grattugiato e a un'abbondante macinata di pepe nero, creando una crema densa.",
+      "Cuocere gli spaghetti in abbondante acqua salata. Scolarli al dente tenendo da parte un bicchiere di acqua di cottura.",
+      "Versare la pasta calda nella padella con il grasso del guanciale e mescolare bene a fuoco spento per farla insaporire.",
+      "Trasferire la pasta nella ciotola con la crema di uova e pecorino, unire il guanciale croccante e mescolare energicamente per creare l'emulsione cremosa. Se necessario, aggiungere poca acqua di cottura."
+    ]
+  },
+  {
+    "name": "Tiramisù Classico",
+    "category": "dolci",
+    "description": "Il dolce al cucchiaio italiano più famoso al mondo, a base di savoiardi bagnati nel caffè e una vellutata crema al mascarpone.",
+    "notes": "Lascia riposare il tiramisù in frigorifero per almeno 4 ore prima di servire per far amalgamare al meglio tutti i sapori.",
+    "prepTime": 20,
+    "cookTime": 0,
+    "difficulty": "facile",
+    "servings": 6,
+    "ingredients": [
+      { "name": "Savoiardi", "quantity": "300", "unit": "g" },
+      { "name": "Mascarpone fresco", "quantity": "500", "unit": "g" },
+      { "name": "Uova freschissime", "quantity": "4", "unit": "pz" },
+      { "name": "Zucchero semolato", "quantity": "100", "unit": "g" },
+      { "name": "Caffè espresso forte", "quantity": "300", "unit": "ml" },
+      { "name": "Cacao amaro in polvere", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Separare i tuorli dagli albumi. Montare i tuorli con metà dello zucchero finché non diventano chiari e spumosi.",
+      "Aggiungere il mascarpone ai tuorli montati e lavorare la crema con le fruste a bassa velocità fino a renderla omogenea.",
+      "Montare gli albumi a neve ferma con lo zucchero rimanente e incorporarli delicatamente alla crema di mascarpone, muovendo la spatola dal basso verso l'alto.",
+      "Bagnare rapidamente i savoiardi nel caffè tiepido e disporli ordinatamente sul fondo di una pirofila rettangolare.",
+      "Stendere uno strato abbondante di crema al mascarpone sopra i savoiardi.",
+      "Creare un secondo strato di savoiardi inzuppati e coprire con la crema rimanente. Spolverizzare la superficie con abbondante cacao amaro prima di riporre in frigo."
+    ]
+  },
+  {
+    "name": "Saltimbocca alla Romana",
+    "category": "secondi",
+    "description": "Fettine di vitello tenerissime guarnite con prosciutto crudo saporito e foglioline di salvia, sfumate al vino bianco.",
+    "notes": "Servire caldissimi insieme al loro fondo di cottura lucido e saporito.",
+    "prepTime": 10,
+    "cookTime": 10,
+    "difficulty": "facile",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Fettine di vitello", "quantity": "4", "unit": "pz" },
+      { "name": "Prosciutto crudo saporito", "quantity": "4", "unit": "fette" },
+      { "name": "Foglie di salvia fresca", "quantity": "4", "unit": "pz" },
+      { "name": "Burro", "quantity": "50", "unit": "g" },
+      { "name": "Vino bianco secco", "quantity": "100", "unit": "ml" },
+      { "name": "Farina 00", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Adagiare una fetta di prosciutto crudo e una foglia di salvia su ogni fettina di vitello. Fissare il tutto al centro inserendo uno stuzzicadenti.",
+      "Infarinare leggermente solo la parte inferiore delle fettine di carne (quella senza prosciutto).",
+      "Sciogliere il burro in una padella capiente a fuoco medio.",
+      "Disporre la carne in padella prima sul lato infarinato e cuocere per 2 minuti, poi girarla sul lato del prosciutto e cuocere per 1 minuto.",
+      "Sfumare con il vino bianco secco a fiamma alta, lasciar evaporare l'alcol e servire irrorando la carne con il sughetto cremoso."
+    ]
+  },
+  {
+    "name": "Bruschetta Classica al Pomodoro",
+    "category": "antipasti",
+    "description": "Fette di pane casereccio bruscato sulla griglia, strofinato con aglio e arricchito con pomodorini succosi e basilico fresco.",
+    "notes": "Usa pomodori ramati o datterini ben maturi e olio extravergine d'oliva di ottima qualità.",
+    "prepTime": 10,
+    "cookTime": 5,
+    "difficulty": "facile",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Pane casereccio o toscano", "quantity": "4", "unit": "fette" },
+      { "name": "Pomodorini maturi datterini", "quantity": "250", "unit": "g" },
+      { "name": "Aglio fresco", "quantity": "1", "unit": "spicchio" },
+      { "name": "Basilico fresco profumato", "quantity": "6", "unit": "foglie" },
+      { "name": "Olio extravergine d'oliva", "quantity": "qb", "unit": "" },
+      { "name": "Sale e pepe", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Lavare e tagliare i pomodorini a cubetti piccoli. Condirli in una ciotola con olio, sale, pepe e foglie di basilico spezzettate a mano. Lasciar riposare per 10 minuti.",
+      "Tostare le fette di pane sulla griglia o in forno fino a renderle dorate e croccanti su entrambi i lati.",
+      "Strofinare leggermente lo spicchio d'aglio sbucciato sulla superficie calda del pane croccante.",
+      "Irrorare le fette di pane con un filo d'olio, quindi guarnirle generosamente con i pomodorini marinati e servire subito."
+    ]
+  },
+  {
+    "name": "Parmigiana di Melanzane",
+    "category": "secondi",
+    "description": "Un grande classico del Sud Italia: strati di melanzane fritte, salsa di pomodoro profumata al basilico, mozzarella filante e parmigiano.",
+    "notes": "Puoi prepararla in anticipo ed infornarla poco prima di servire. È ottima anche consumata tiepida il giorno dopo.",
+    "prepTime": 30,
+    "cookTime": 40,
+    "difficulty": "media",
+    "servings": 6,
+    "ingredients": [
+      { "name": "Melanzane ovali nere", "quantity": "1", "unit": "kg" },
+      { "name": "Passata di pomodoro", "quantity": "700", "unit": "ml" },
+      { "name": "Mozzarella o fior di latte", "quantity": "300", "unit": "g" },
+      { "name": "Parmigiano Reggiano grattugiato", "quantity": "80", "unit": "g" },
+      { "name": "Cipolla", "quantity": "1/2", "unit": "pz" },
+      { "name": "Olio di semi per friggere", "quantity": "qb", "unit": "" },
+      { "name": "Olio extravergine, sale e basilico", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Affettare le melanzane a uno spessore di circa 1 cm. Disporle a strati in uno scolapasta con sale grosso e lasciarle spurgare per 1 ora, poi sciacquarle e asciugarle.",
+      "Preparare il sugo soffriggendo la cipolla tritata con un filo d'olio d'oliva, unire la passata di pomodoro, salare e cuocere per 15 minuti aggiungendo basilico fresco.",
+      "Friggere le melanzane in abbondante olio di semi bollente finché non sono dorate, quindi scolarle su carta assorbente.",
+      "In una pirofila, fare uno strato di sugo di pomodoro, disporre le fette di melanzane fritte, aggiungere mozzarella a dadini e una generosa spolverata di Parmigiano Reggiano.",
+      "Ripetere gli strati fino a esaurimento degli ingredienti, terminando con pomodoro, mozzarella e parmigiano.",
+      "Infornare in forno preriscaldato a 200°C per circa 30-40 minuti, finché in superficie non si forma una bella crosticina dorata."
+    ]
+  },
+  {
+    "name": "Spritz Veneziano",
+    "category": "bevande",
+    "description": "L'aperitivo italiano per eccellenza, fresco e frizzante, preparato secondo la ricetta ufficiale IBA.",
+    "notes": "Servire ben freddo in un calice da vino riempito di ghiaccio, guarnito con una fetta d'arancia.",
+    "prepTime": 5,
+    "cookTime": 0,
+    "difficulty": "facile",
+    "servings": 1,
+    "ingredients": [
+      { "name": "Prosecco D.O.C.", "quantity": "90", "unit": "ml" },
+      { "name": "Aperol o Campari", "quantity": "60", "unit": "ml" },
+      { "name": "Soda o Acqua frizzante", "quantity": "30", "unit": "ml" },
+      { "name": "Ghiaccio a cubetti", "quantity": "qb", "unit": "" },
+      { "name": "Arancia fresca", "quantity": "1", "unit": "fetta" }
+    ],
+    "steps": [
+      "Riempire un calice da vino capiente con abbondante ghiaccio a cubetti.",
+      "Versare delicatamente il Prosecco D.O.C.",
+      "Aggiungere l'Aperol (o il Campari per una versione più amara) con un movimento circolare per favorire la miscelazione.",
+      "Completare con uno spruzzo di soda o acqua gassata.",
+      "Mescolare leggermente con un cucchiaio da bar, guarnire con una fetta d'arancia e servire."
+    ]
+  }
+]
