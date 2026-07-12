@@ -2283,11 +2283,7 @@
   }
 
   .recipe-detail__hero-placeholder {
-    height: 3.5cm !important;
-    border-radius: var(--radius-md) !important;
-    margin-bottom: 1.2cm !important;
-    border: 1px solid var(--border) !important;
-    page-break-inside: avoid !important;
+    display: none !important;
   }
 
   /* Elegant Recipe Title */
