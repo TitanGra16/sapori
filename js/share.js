@@ -256,7 +256,7 @@
             '</div>' +
           '</div>' +
           '<div class="modal__footer" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:16px;">' +
-            '<button type="button" class="btn btn--primary" id="btn-share-native">' + Icons.shareLg + ' Condividi</button>' +
+            '<button type="button" class="btn btn--primary" id="btn-share-native">' + Icons.share + ' Condividi</button>' +
             '<button type="button" class="btn btn--secondary" id="btn-share-download">' + Icons.download + ' Scarica</button>' +
             '<button type="button" class="btn btn--ghost" id="btn-share-copy-text">Copia Testo</button>' +
           '</div>' +

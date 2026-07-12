@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sapori-v25';
+const CACHE_NAME = 'sapori-v26';
 
 const STATIC_ASSETS = [
   './',
