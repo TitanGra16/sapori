@@ -2441,30 +2441,31 @@
     margin-right: 6px !important;
   }
 
+  .step-list {
+    counter-reset: step-counter-print !important;
+    padding: 0 !important;
+  }
+
   .step-item {
+    display: block !important;
     padding: 12px 0 !important;
     border-bottom: 1.5px dotted var(--primary) !important;
     color: #1a0f0a !important;
     page-break-inside: avoid !important;
+    counter-increment: step-counter-print !important;
   }
 
   .step-number {
-    display: inline-block !important;
-    width: auto !important;
-    height: auto !important;
-    min-width: auto !important;
-    background: transparent !important;
-    color: var(--primary) !important;
-    font-size: 11pt !important;
-    font-weight: 700 !important;
-    margin-right: 6px !important;
-    margin-top: 0 !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
+    display: none !important; /* Hide step circle badge in print */
   }
 
-  .step-number::after {
-    content: ")" !important;
+  .step-item::before {
+    content: counter(step-counter-print) ") " !important;
+    font-weight: 700 !important;
+    color: var(--primary) !important;
+    font-size: 11pt !important;
+    margin-right: 6px !important;
+    display: inline !important;
   }
 
   .step-item p {
