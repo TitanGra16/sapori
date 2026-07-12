@@ -18,7 +18,7 @@
      * @param {Object} recipe - The recipe object to share
      */
     async openShareMenu(recipe) {
-      Utils.showToast('Generazione cartolina in corso... 🎨', 'info');
+      Utils.showToast('Generazione cartolina gourmet in corso... 🎨', 'info');
       try {
         var dataUrl = await this.generateCardDataURL(recipe);
         this._showShareModal(recipe, dataUrl);
@@ -48,10 +48,10 @@
 
         // Colors
         var gradColors = self._gradients[palette] || self._gradients.classico;
-        var cardBg = isDark ? '#1e1e1e' : '#ffffff';
-        var textColor = isDark ? '#ffffff' : '#1e1e1e';
-        var textMuted = isDark ? '#aaaaaa' : '#666666';
-        var borderCol = isDark ? '#333333' : '#e0e0e0';
+        var cardBg = isDark ? '#18181b' : '#ffffff';
+        var textColor = isDark ? '#f4f4f5' : '#18181b';
+        var textMuted = isDark ? '#a1a1aa' : '#71717a';
+        var borderCol = isDark ? '#27272a' : '#f4f4f5';
 
         // 1. Draw outer gradient background
         var bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -60,32 +60,42 @@
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 2. Draw brand header
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('🍴 SAPORI — IL TUO RICETTARIO', canvas.width / 2, 50);
+        // 2. Draw geometric background details for depth
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.beginPath();
+        ctx.arc(0, canvas.height, 380, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(canvas.width, 100, 280, 0, Math.PI * 2);
+        ctx.fill();
 
-        // 3. Draw central card background (rounded rectangle)
-        var cardX = 50;
-        var cardY = 80;
-        var cardW = 700;
+        // 3. Draw central card with drop shadow
+        var cardX = 45;
+        var cardY = 100;
+        var cardW = 710;
         var cardH = 840;
-        self._drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 24, cardBg);
 
-        // 4. Load and draw recipe image
-        var imageY = cardY + 30;
-        var imageH = 340;
-        var imageW = cardW - 60;
-        var imageX = cardX + 30;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+        ctx.shadowBlur = 40;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 16;
+        self._drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28, cardBg);
+        ctx.restore();
+
+        // 4. Load and draw recipe image (Hero format: full width of card at the top)
+        var imageX = cardX;
+        var imageY = cardY;
+        var imageW = cardW;
+        var imageH = 380;
 
         var img = new Image();
         img.crossOrigin = 'anonymous';
 
         img.onload = function () {
-          // Draw image cropped & centered with rounded corners
+          // Clip with rounded corners ONLY at the top (match card radius)
           ctx.save();
-          self._drawRoundedRectPath(ctx, imageX, imageY, imageW, imageH, 16);
+          self._drawRoundedRectPathComplex(ctx, imageX, imageY, imageW, imageH, 28, 28, 0, 0);
           ctx.clip();
           
           var imgRatio = img.width / img.height;
@@ -106,25 +116,39 @@
           ctx.drawImage(img, drawX, drawY, drawW, drawH);
           ctx.restore();
 
-          // Continue drawing texts after image loads
-          self._drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, imageY + imageH + 30, textColor, textMuted, borderCol);
+          // Overlay gradient on bottom of image for text readability
+          var overlayGrad = ctx.createLinearGradient(0, imageY + imageH - 120, 0, imageY + imageH);
+          overlayGrad.addColorStop(0, 'rgba(0,0,0,0)');
+          overlayGrad.addColorStop(1, 'rgba(0,0,0,0.5)');
+          ctx.fillStyle = overlayGrad;
+          ctx.fillRect(imageX, imageY + imageH - 120, imageW, 120);
+
+          // Draw logo watermark in header area
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText('🍴 SAPORI', cardX + cardW - 30, cardY + 35);
+
+          // Continue drawing texts below image
+          self._drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, imageY + imageH + 30, textColor, textMuted, borderCol, gradColors[0]);
           resolve(canvas.toDataURL('image/png'));
         };
 
         img.onerror = function () {
           // Fallback if image fails to load or does not exist
-          ctx.fillStyle = isDark ? '#2e2e2e' : '#f5f5f5';
-          self._drawRoundedRect(ctx, imageX, imageY, imageW, imageH, 16, ctx.fillStyle);
+          ctx.fillStyle = isDark ? '#27272a' : '#f4f4f5';
+          self._drawRoundedRectComplex(ctx, imageX, imageY, imageW, imageH, 28, 28, 0, 0, ctx.fillStyle);
           
           ctx.fillStyle = textMuted;
           ctx.font = '64px system-ui, sans-serif';
-          ctx.fillText('🍳', imageX + imageW / 2, imageY + imageH / 2 + 10);
+          ctx.textAlign = 'center';
+          ctx.fillText('🍽️', imageX + imageW / 2, imageY + imageH / 2 + 10);
           
-          ctx.font = '16px system-ui, sans-serif';
-          ctx.fillText('Nessuna foto disponibile', imageX + imageW / 2, imageY + imageH / 2 + 50);
+          ctx.font = 'bold 15px system-ui, sans-serif';
+          ctx.fillText('Sapori — Il Tuo Ricettario Personale', imageX + imageW / 2, imageY + imageH / 2 + 60);
 
           // Continue drawing texts
-          self._drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, imageY + imageH + 30, textColor, textMuted, borderCol);
+          self._drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, imageY + imageH + 30, textColor, textMuted, borderCol, gradColors[0]);
           resolve(canvas.toDataURL('image/png'));
         };
 
@@ -136,31 +160,64 @@
     /**
      * Draw text details inside the card
      */
-    _drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, startY, textColor, textMuted, borderCol) {
+    _drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, startY, textColor, textMuted, borderCol, themePrimary) {
       var self = this;
       ctx.textAlign = 'left';
 
-      // Category tag (Pill)
+      // 1. Category tag (Pill Badge)
       var cat = window.Recipes ? window.Recipes.CATEGORIES.find(c => c.id === recipe.category) : null;
-      var catLabel = (cat ? cat.icon + ' ' + cat.label : 'Cucina').toUpperCase();
+      var catLabel = (cat ? cat.icon + ' ' + cat.label : 'CUCINA').toUpperCase();
       
-      ctx.fillStyle = 'rgba(232, 93, 58, 0.15)';
-      self._drawRoundedRect(ctx, cardX + 30, startY, 150, 32, 8, ctx.fillStyle);
+      // Calculate label width dynamic sizing
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      var textMetrics = ctx.measureText(catLabel);
+      var badgeW = textMetrics.width + 24;
+      var badgeH = 24;
+
+      ctx.fillStyle = 'rgba(232, 93, 58, 0.1)';
+      self._drawRoundedRect(ctx, cardX + 30, startY, badgeW, badgeH, 6, ctx.fillStyle);
       
       ctx.fillStyle = '#E85D3A';
-      ctx.font = 'bold 12px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(catLabel, cardX + 30 + 75, startY + 20);
+      ctx.fillText(catLabel, cardX + 30 + (badgeW / 2), startY + 16);
 
-      // Recipe Title
+      // 2. Recipe Title
       ctx.textAlign = 'left';
       ctx.fillStyle = textColor;
-      ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
-      var titleY = startY + 80;
-      var titleHeight = self._drawTextWrapped(ctx, recipe.name, cardX + 30, titleY, cardW - 60, 42);
+      ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
+      var titleY = startY + 60;
+      var titleHeight = self._drawTextWrapped(ctx, recipe.name, cardX + 30, titleY, cardW - 60, 38);
 
-      // Divider line
-      var dividerY = titleY + titleHeight + 10;
+      // 3. Metadata Capsules Row
+      var capsuleY = titleY + titleHeight + 15;
+      var capsuleH = 42;
+      var totalCapsuleW = cardW - 60;
+      var colW = (totalCapsuleW - 36) / 4; // 12px gap between columns
+
+      var difficultyLabel = self._getDifficultyLabel(recipe.difficulty);
+      var metaItems = [
+        { val: (recipe.prepTime || '0') + ' min', icon: '⏱️' },
+        { val: (recipe.cookTime || '0') + ' min', icon: '🍳' },
+        { val: (recipe.servings || '4') + ' porz.', icon: '👥' },
+        { val: difficultyLabel, icon: '⭐' }
+      ];
+
+      metaItems.forEach(function (item, idx) {
+        var x = cardX + 30 + (idx * (colW + 12));
+        
+        // Draw soft capsule
+        ctx.fillStyle = 'rgba(113, 113, 122, 0.06)';
+        self._drawRoundedRect(ctx, x, capsuleY, colW, capsuleH, 10, ctx.fillStyle);
+        
+        // Label
+        ctx.fillStyle = textColor;
+        ctx.font = 'bold 13px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(item.icon + '  ' + item.val, x + (colW / 2), capsuleY + 26);
+      });
+
+      // 4. Divider Line
+      var dividerY = capsuleY + capsuleH + 28;
       ctx.strokeStyle = borderCol;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -168,71 +225,68 @@
       ctx.lineTo(cardX + cardW - 30, dividerY);
       ctx.stroke();
 
-      // Meta Info Grid (Prep time, Cook time, Difficulty, Servings)
-      var metaY = dividerY + 35;
-      ctx.font = '16px system-ui, sans-serif';
-      
-      // Items list
-      var metaItems = [
-        { label: 'Preparazione', val: (recipe.prepTime || '0') + ' min', icon: '⏱️' },
-        { label: 'Cottura', val: (recipe.cookTime || '0') + ' min', icon: '🍳' },
-        { label: 'Porzioni', val: (recipe.servings || '4') + ' pers.', icon: '👥' },
-        { label: 'Difficoltà', val: self._getDifficultyLabel(recipe.difficulty), icon: '⭐' }
-      ];
-
-      var colW = (cardW - 60) / 4;
-      metaItems.forEach(function (item, idx) {
-        var x = cardX + 30 + (idx * colW) + 10;
-        
-        ctx.fillStyle = textMuted;
-        ctx.font = '13px system-ui, sans-serif';
-        ctx.fillText(item.label, x, metaY);
-        
-        ctx.fillStyle = textColor;
-        ctx.font = 'bold 15px system-ui, sans-serif';
-        ctx.fillText(item.icon + ' ' + item.val, x, metaY + 24);
-      });
-
-      // Divider line 2
-      var divider2Y = metaY + 50;
-      ctx.strokeStyle = borderCol;
-      ctx.beginPath();
-      ctx.moveTo(cardX + 30, divider2Y);
-      ctx.lineTo(cardX + cardW - 30, divider2Y);
-      ctx.stroke();
-
-      // Ingredients preview title
-      var ingTitleY = divider2Y + 40;
+      // 5. Ingredients Section
+      var ingTitleY = dividerY + 38;
+      ctx.textAlign = 'left';
       ctx.fillStyle = textColor;
-      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.font = 'bold 13px system-ui, sans-serif';
+      // Subtle header styling (uppercase, letter-spaced effect via drawing)
       ctx.fillText('INGREDIENTI PRINCIPALI', cardX + 30, ingTitleY);
 
-      // Ingredients list
+      var ingY = ingTitleY + 32;
       ctx.font = '15px system-ui, sans-serif';
-      ctx.fillStyle = textMuted;
-      var ingY = ingTitleY + 30;
       
       if (recipe.ingredients && recipe.ingredients.length > 0) {
         var maxIng = 4;
         var shown = recipe.ingredients.slice(0, maxIng);
         shown.forEach(function (ing, idx) {
-          var ingText = '• ' + ing.name;
-          if (ing.quantity) ingText += ' (' + ing.quantity + ' ' + (ing.unit || '') + ')';
-          ctx.fillText(ingText, cardX + 30, ingY + (idx * 28));
+          var y = ingY + (idx * 30);
+          
+          // Draw a small bullet circle matching primary color
+          ctx.fillStyle = '#E85D3A';
+          ctx.beginPath();
+          ctx.arc(cardX + 34, y - 5, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Ingredient Text
+          ctx.fillStyle = textColor;
+          ctx.fillText(ing.name, cardX + 52, y);
+
+          // Quantity (aligned to the right or styled text)
+          if (ing.quantity) {
+            ctx.fillStyle = textMuted;
+            ctx.textAlign = 'right';
+            ctx.fillText(ing.quantity + ' ' + (ing.unit || ''), cardX + cardW - 30, y);
+            ctx.textAlign = 'left'; // reset
+          }
         });
 
         if (recipe.ingredients.length > maxIng) {
-          ctx.fillText('• ... e altri ' + (recipe.ingredients.length - maxIng) + ' ingredienti', cardX + 30, ingY + (maxIng * 28));
+          ctx.fillStyle = textMuted;
+          ctx.font = 'italic 14px system-ui, sans-serif';
+          ctx.fillText('• ... e altri ' + (recipe.ingredients.length - maxIng) + ' ingredienti', cardX + 30, ingY + (maxIng * 30));
         }
       } else {
-        ctx.fillText('Nessun ingrediente elencato', cardX + 30, ingY);
+        ctx.fillStyle = textMuted;
+        ctx.fillText('Nessun ingrediente inserito', cardX + 30, ingY);
       }
 
-      // App Promo watermark
+      // 6. Card Footer Watermark
+      var footerY = cardY + cardH - 30;
+      ctx.strokeStyle = borderCol;
+      ctx.beginPath();
+      ctx.moveTo(cardX + 30, footerY - 20);
+      ctx.lineTo(cardX + cardW - 30, footerY - 20);
+      ctx.stroke();
+
+      ctx.fillStyle = textMuted;
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.fillText('Creato con amore su Sapori App', cardX + 30, footerY);
+
       ctx.fillStyle = '#E85D3A';
-      ctx.font = 'bold 14px system-ui, sans-serif';
+      ctx.font = 'bold 13px system-ui, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText('Cucina con Sapori App 📱', cardX + cardW - 30, cardY + cardH - 30);
+      ctx.fillText('titangra16.github.io/sapori', cardX + cardW - 30, footerY);
     },
 
     /**
@@ -246,12 +300,12 @@
       overlay.innerHTML =
         '<div class="modal animate-slide-up" style="max-width: 500px;">' +
           '<div class="modal__header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">' +
-            '<h3 style="margin:0;">Condividi Ricetta</h3>' +
+            '<h3 style="margin:0; font-size:1.15rem; font-weight:700;">Condividi Ricetta</h3>' +
             '<button type="button" class="btn btn--icon" data-action="modal-cancel" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:none; background:transparent; cursor:pointer;">' + Icons.x + '</button>' +
           '</div>' +
           '<div class="modal__body" style="text-align:center; padding:10px 0;">' +
-            '<p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Ecco la tua cartolina pronta! Tieni premuto sull\'immagine per salvarla o usa i pulsanti sotto.</p>' +
-            '<div class="share-card-preview-wrapper" style="box-shadow:var(--shadow-lg); border-radius:12px; overflow:hidden; display:inline-block; border:1px solid var(--border); max-width:100%;">' +
+            '<p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:16px;">Tieni premuto sull\'immagine per salvarla in galleria, oppure usa le opzioni rapide:</p>' +
+            '<div class="share-card-preview-wrapper" style="box-shadow:var(--shadow-lg); border-radius:16px; overflow:hidden; display:inline-block; border:1px solid var(--border); max-width:100%; transition: transform 0.2s ease;">' +
               '<img src="' + dataUrl + '" alt="Cartolina Condivisione" style="display:block; max-width:100%; max-height:420px; object-fit:contain;">' +
             '</div>' +
           '</div>' +
@@ -417,6 +471,27 @@
     },
 
     /**
+     * Helper to draw filled rounded rect with different corner radii
+     */
+    _drawRoundedRectComplex(ctx, x, y, width, height, topLeft, topRight, bottomLeft, bottomRight, fill) {
+      ctx.beginPath();
+      ctx.moveTo(x + topLeft, y);
+      ctx.lineTo(x + width - topRight, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + topRight);
+      ctx.lineTo(x + width, y + height - bottomRight);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - bottomRight, y + height);
+      ctx.lineTo(x + bottomLeft, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - bottomLeft);
+      ctx.lineTo(x, y + topLeft);
+      ctx.quadraticCurveTo(x, y, x + topLeft, y);
+      ctx.closePath();
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+    },
+
+    /**
      * Helper path generator for clipping rounded rectangles
      */
     _drawRoundedRectPath(ctx, x, y, width, height, radius) {
@@ -430,6 +505,23 @@
       ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
       ctx.lineTo(x, y + radius);
       ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    },
+
+    /**
+     * Complex path generator for clipping rounded rectangles with specific corner radii
+     */
+    _drawRoundedRectPathComplex(ctx, x, y, width, height, topLeft, topRight, bottomLeft, bottomRight) {
+      ctx.beginPath();
+      ctx.moveTo(x + topLeft, y);
+      ctx.lineTo(x + width - topRight, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + topRight);
+      ctx.lineTo(x + width, y + height - bottomRight);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - bottomRight, y + height);
+      ctx.lineTo(x + bottomLeft, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - bottomLeft);
+      ctx.lineTo(x, y + topLeft);
+      ctx.quadraticCurveTo(x, y, x + topLeft, y);
       ctx.closePath();
     }
   };
