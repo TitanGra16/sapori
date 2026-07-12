@@ -575,6 +575,7 @@
   max-width: 800px;
   margin: 0 auto;
   animation: fadeIn 0.4s ease both;
+  overflow-x: hidden;
 }
 
 /* Hero image */
@@ -650,10 +651,26 @@
   font-weight: 800;
   color: var(--text-primary);
   margin-bottom: var(--space-sm);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Description Section */
+.recipe-detail__description-section {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-line;
 }
 
 /* Info bar with icons */
-.recipe-detail__info {
+.recipe-detail__info,
+.recipe-detail__info-bar {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-md);
@@ -670,6 +687,9 @@
   gap: var(--space-sm);
   font-size: 0.875rem;
   color: var(--text-secondary);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .recipe-detail__info-item svg,
@@ -678,6 +698,7 @@
   height: 20px;
   font-size: 20px;
   color: var(--primary);
+  flex-shrink: 0;
 }
 
 .recipe-detail__info-item strong {
@@ -710,7 +731,7 @@
 
 .recipe-detail__ingredients li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-md);
   padding: var(--space-sm) 0;
   border-bottom: 1px solid var(--border);
@@ -718,6 +739,9 @@
   color: var(--text-secondary);
   cursor: pointer;
   transition: opacity var(--transition-fast);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .recipe-detail__ingredients li:last-child {
@@ -733,6 +757,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: 2px;
+  flex-shrink: 0;
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast);
@@ -766,6 +792,9 @@
   line-height: 1.7;
   color: var(--text-secondary);
   counter-increment: step-counter;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .recipe-detail__steps li:last-child {
