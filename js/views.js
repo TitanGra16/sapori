@@ -213,6 +213,13 @@ window.Views = (function () {
         '<textarea class="form-textarea" id="input-description" rows="3" placeholder="Una breve descrizione della ricetta...">' + esc(r.description || '') + '</textarea>' +
       '</div>';
 
+    // Note
+    html +=
+      '<div class="form-group">' +
+        '<label class="form-label" for="input-notes">Note</label>' +
+        '<textarea class="form-textarea" id="input-notes" rows="3" placeholder="Annotazioni personali, consigli di conservazione, varianti...">' + esc(r.notes || '') + '</textarea>' +
+      '</div>';
+
     // Immagine
     html += '<div class="form-group">';
     html += '<label class="form-label">Foto</label>';
@@ -431,6 +438,15 @@ window.Views = (function () {
           '<p>' + esc(recipe.description) + '</p>' +
         '</div>';
     }
+
+    // Notes (replicates "NOTE" block in PDF export)
+    html +=
+      '<div class="recipe-detail__section recipe-detail__notes-section' + (recipe.notes ? '' : ' print-only') + '">' +
+        '<h3 class="recipe-detail__notes-title">Note</h3>' +
+        (recipe.notes 
+          ? '<p>' + esc(recipe.notes) + '</p>' 
+          : '<div class="print-dotted-line"></div><div class="print-dotted-line"></div><div class="print-dotted-line"></div>') +
+      '</div>';
 
     // Wrap ingredients and steps in a layout container for desktop side-by-side / cookbook print layout
     html += '<div class="recipe-detail__body-layout">';

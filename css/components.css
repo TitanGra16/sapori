@@ -679,6 +679,38 @@
   white-space: pre-line;
 }
 
+/* Notes Section */
+.recipe-detail__notes-section {
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--bg-secondary);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-sm);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.recipe-detail__notes-title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  margin-top: 0;
+  margin-bottom: var(--space-xs);
+}
+
+.recipe-detail__notes-section p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
 /* Info bar with icons */
 .recipe-detail__info,
 .recipe-detail__info-bar {
@@ -2230,8 +2262,9 @@
   }
 }
 
-/* Print-only footer hidden on screens */
-.print-footer-container {
+/* Print-only elements hidden on screens */
+.print-footer-container,
+.print-only {
   display: none !important;
 }
 
@@ -2352,8 +2385,36 @@
     display: none !important; /* Hide SVGs/Emojis for the clean notebook look */
   }
 
-  /* Description Section (Notebook "NOTE" Box) */
+  /* Description Section */
   .recipe-detail__description-section {
+    margin-top: 0.6cm !important;
+    margin-bottom: 0.8cm !important;
+    page-break-inside: avoid !important;
+  }
+
+  .recipe-detail__description-title {
+    font-family: var(--font-heading) !important;
+    font-size: 13pt !important;
+    font-weight: 800 !important;
+    color: var(--primary) !important;
+    margin-top: 0 !important;
+    margin-bottom: 0.2cm !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    visibility: visible !important;
+    position: static !important;
+  }
+
+  .recipe-detail__description-section p {
+    font-size: 11pt !important;
+    color: #1a0f0a !important;
+    margin: 0 !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Notes Section (Notebook "NOTE" Box) */
+  .recipe-detail__notes-section {
+    display: block !important;
     background: #fdfcfb !important;
     border: 1.5px solid var(--primary) !important;
     padding: 0.5cm !important;
@@ -2363,7 +2424,7 @@
     page-break-inside: avoid !important;
   }
 
-  .recipe-detail__description-title {
+  .recipe-detail__notes-title {
     font-size: 12pt !important;
     font-weight: 800 !important;
     color: var(--primary) !important;
@@ -2372,7 +2433,7 @@
     position: relative !important;
   }
 
-  .recipe-detail__description-title::after {
+  .recipe-detail__notes-title::after {
     content: "NOTE:" !important;
     visibility: visible !important;
     position: absolute !important;
@@ -2381,7 +2442,7 @@
     color: var(--primary) !important;
   }
 
-  .recipe-detail__description-section p {
+  .recipe-detail__notes-section p {
     font-size: 11pt !important;
     color: #1a0f0a !important;
     margin: 0 !important;

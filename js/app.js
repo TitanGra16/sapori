@@ -316,6 +316,7 @@
     var name = document.getElementById('input-name').value.trim();
     var category = document.getElementById('input-category').value;
     var description = (document.getElementById('input-description').value || '').trim();
+    var notes = (document.getElementById('input-notes').value || '').trim();
     var imageData = document.getElementById('input-image-data').value || '';
     var prepTime = parseInt(document.getElementById('input-preptime').value, 10) || 0;
     var cookTime = parseInt(document.getElementById('input-cooktime').value, 10) || 0;
@@ -350,6 +351,7 @@
       name: name,
       category: category,
       description: description,
+      notes: notes,
       ingredients: ingredients,
       steps: steps,
       prepTime: prepTime,
@@ -404,6 +406,7 @@
       if (current.name && current.name.trim() !== '') return true;
       if (current.category && current.category.trim() !== '') return true;
       if (current.description && current.description.trim() !== '') return true;
+      if (current.notes && current.notes.trim() !== '') return true;
       if (current.image) return true;
       if (current.prepTime) return true;
       if (current.cookTime) return true;
@@ -427,6 +430,7 @@
       if ((current.name || '') !== (original.name || '')) return true;
       if ((current.category || '') !== (original.category || '')) return true;
       if ((current.description || '') !== (original.description || '')) return true;
+      if ((current.notes || '') !== (original.notes || '')) return true;
       if ((current.image || '') !== (original.image || '')) return true;
       if ((current.prepTime || '') != (original.prepTime || '')) return true;
       if ((current.cookTime || '') != (original.cookTime || '')) return true;
@@ -719,6 +723,15 @@
                     '<p>' + esc(recipe.description) + '</p>' +
                   '</div>';
         }
+
+        // Notes (replicates "NOTE" block in PDF export)
+        html +=
+          '<div class="recipe-detail__section recipe-detail__notes-section' + (recipe.notes ? '' : ' print-only') + '">' +
+            '<h3 class="recipe-detail__notes-title">Note</h3>' +
+            (recipe.notes 
+              ? '<p>' + esc(recipe.notes) + '</p>' 
+              : '<div class="print-dotted-line"></div><div class="print-dotted-line"></div><div class="print-dotted-line"></div>') +
+          '</div>';
 
         // Body layout: ingredients + steps side-by-side
         html += '<div class="recipe-detail__body-layout">';
