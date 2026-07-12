@@ -857,6 +857,9 @@
   border-bottom: 1px solid var(--border);
   font-size: 0.95rem;
   color: var(--text-secondary);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .ingredient-item:last-child {
@@ -878,10 +881,22 @@
   font-size: 0.95rem;
   line-height: 1.7;
   color: var(--text-secondary);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .step-item:last-child {
   border-bottom: none;
+}
+
+.step-item p {
+  margin: 0;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
 }
 
 .step-number {
