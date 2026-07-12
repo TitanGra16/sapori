@@ -487,6 +487,20 @@ window.Views = (function () {
           : '') +
       '</div>';
 
+    // Print-only footer box (replicates the RICETTARIO UFFICIALE.pdf bottom layout)
+    html +=
+      '<div class="print-footer-container">' +
+        '<div class="print-photo-box">' +
+          (recipe.image ? '<img src="' + esc(recipe.image) + '" alt="Foto Ricetta">' : '<span class="print-photo-label">FOTO</span>') +
+        '</div>' +
+        '<div class="print-storage-box">' +
+          '<h4 class="print-storage-title">Conservazione:</h4>' +
+          '<div class="print-dotted-line"></div>' +
+          '<div class="print-dotted-line"></div>' +
+          '<div class="print-dotted-line"></div>' +
+        '</div>' +
+      '</div>';
+
     html += '</div>';
     container.innerHTML = html;
   }
