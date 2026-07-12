@@ -1178,6 +1178,11 @@
   /* ──────────────────── PWA INSTALL PROMPT ──────────────────── */
 
   function setupInstallPrompt() {
+    var isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone) {
+      return; // App già installata ed in esecuzione
+    }
+
     var deferredPrompt;
     var installPrompt = document.getElementById('install-prompt');
     var btnInstallConfirm = document.getElementById('btn-install-confirm');
@@ -1199,11 +1204,19 @@
       }
     });
 
+    // Rileva quando l'app viene installata con successo
+    window.addEventListener('appinstalled', function (e) {
+      console.log('Sapori installata con successo.');
+      if (installPrompt) {
+        installPrompt.classList.add('hidden');
+      }
+      deferredPrompt = null;
+    });
+
     // Gestione installazione su iOS Safari (Aggiungi alla Home manuale)
     var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    var isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
-    if (isIOS && !isStandalone) {
+    if (isIOS) {
       var dismissedTime = localStorage.getItem('sapori-install-dismissed');
       var now = Date.now();
       if (!dismissedTime || (now - parseInt(dismissedTime, 10)) > 7 * 24 * 60 * 60 * 1000) {
