@@ -3,7 +3,7 @@
     "name": "Spaghetti alla Carbonara",
     "category": "primi",
     "description": "Il piatto romano per eccellenza, cremoso e saporito, preparato con uova fresche, guanciale croccante e pecorino romano.",
-    "notes": "Non usare mai la panna! Se la crema risulta troppo densa, allungala con un cucchiaio di acqua di cottura della pasta prima di servire.",
+    "notes": "Non usare mai la panna! Se la crema risulta troppo densa, allungala con un cucchiaio di acqua di cottura della pasta.",
     "prepTime": 10,
     "cookTime": 15,
     "difficulty": "media",
@@ -147,6 +147,388 @@
       "Aggiungere l'Aperol (o il Campari per una versione più amara) con un movimento circolare per favorire la miscelazione.",
       "Completare con uno spruzzo di soda o acqua gassata.",
       "Mescolare leggermente con un cucchiaio da bar, guarnire con una fetta d'arancia e servire."
+    ]
+  },
+  {
+    "name": "Risotto alla Milanese",
+    "category": "primi",
+    "description": "Un raffinato e cremoso risotto allo zafferano, profumato e mantecato con burro e parmigiano, arricchito con midollo di bue.",
+    "notes": "Utilizza riso Carnaroli o Arborio per un rilascio ottimale di amido che rende il risotto naturalmente cremoso.",
+    "prepTime": 10,
+    "cookTime": 20,
+    "difficulty": "media",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Riso Carnaroli", "quantity": "320", "unit": "g" },
+      { "name": "Zafferano in pistilli o bustina", "quantity": "1", "unit": "bustina" },
+      { "name": "Cipolla bianca", "quantity": "1/2", "unit": "pz" },
+      { "name": "Brodo di carne bollente", "quantity": "1", "unit": "l" },
+      { "name": "Burro freddo", "quantity": "80", "unit": "g" },
+      { "name": "Vino bianco secco", "quantity": "100", "unit": "ml" },
+      { "name": "Parmigiano Reggiano grattugiato", "quantity": "50", "unit": "g" }
+    ],
+    "steps": [
+      "Tostare i pistilli di zafferano in poca acqua calda per circa 30 minuti prima dell'uso.",
+      "Soffriggere la cipolla tritata finemente in una casseruola con metà del burro.",
+      "Aggiungere il riso e tostarlo per 2 minuti finché i chicchi non diventano lucidi e traslucidi.",
+      "Sfumare con il vino bianco e lasciar evaporare a fuoco vivo.",
+      "Aggiungere il brodo bollente un mestolo alla volta, mescolando spesso e aspettando che venga assorbito prima di aggiungerne altro.",
+      "A metà cottura, unire l'acqua con lo zafferano.",
+      "Togliere dal fuoco a cottura ultimata (al dente) e mantecare energicamente con il burro freddo a cubetti e il parmigiano grattugiato."
+    ]
+  },
+  {
+    "name": "Panna Cotta al Caramello",
+    "category": "dolci",
+    "description": "Un classico dessert piemontese setoso e morbido, aromatizzato alla vaniglia e accompagnato da una salsa di caramello ambrata.",
+    "notes": "Puoi sostituire il caramello con un coulis di frutti di bosco o cioccolato fuso.",
+    "prepTime": 15,
+    "cookTime": 10,
+    "difficulty": "facile",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Panna fresca liquida", "quantity": "500", "unit": "ml" },
+      { "name": "Zucchero a velo", "quantity": "80", "unit": "g" },
+      { "name": "Gelatina in fogli (colla di pesce)", "quantity": "8", "unit": "g" },
+      { "name": "Baccello di vaniglia", "quantity": "1", "unit": "pz" },
+      { "name": "Zucchero per il caramello", "quantity": "100", "unit": "g" }
+    ],
+    "steps": [
+      "Ammollare i fogli di gelatina in acqua fredda per 10 minuti.",
+      "In un pentolino, scaldare la panna con lo zucchero a velo e i semi del baccello di vaniglia, sfiorando il bollore.",
+      "Strizzare la gelatina e scioglierla nella panna calda fuori dal fuoco, mescolando bene.",
+      "Filtrare il composto e versarlo negli stampini monoporzione. Mettere in frigo per almeno 4 ore.",
+      "Preparare il caramello scaldando lo zucchero in un pentolino con un cucchiaio d'acqua fino a farlo diventare dorato. Colare sul dolce sformato prima di servire."
+    ]
+  },
+  {
+    "name": "Tagliata di Manzo con Rucola e Grana",
+    "category": "secondi",
+    "description": "Un secondo di carne pregiato e succulento, scottato alla piastra ed arricchito con scaglie di Grana Padano, rucola fresca e glassa di aceto balsamico.",
+    "notes": "Tira fuori la carne dal frigo almeno 30 minuti prima di cuocerla per evitare sbalzi termici eccessivi.",
+    "prepTime": 10,
+    "cookTime": 6,
+    "difficulty": "facile",
+    "servings": 2,
+    "ingredients": [
+      { "name": "Costata o controfiletto di manzo", "quantity": "600", "unit": "g" },
+      { "name": "Rucola fresca", "quantity": "50", "unit": "g" },
+      { "name": "Grana Padano in scaglie", "quantity": "50", "unit": "g" },
+      { "name": "Olio extravergine d'oliva", "quantity": "qb", "unit": "" },
+      { "name": "Sale grosso e pepe nero", "quantity": "qb", "unit": "" },
+      { "name": "Glassa di aceto balsamico di Modena", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Riscaldare molto bene una piastra di ghisa.",
+      "Spennellare la carne con pochissimo olio extravergine d'oliva.",
+      "Cuocere la carne sulla piastra bollente per circa 3 minuti per lato, senza pungerla, per sigillare i succhi all'interno.",
+      "Rimuovere la carne, lasciarla riposare per 2 minuti avvolta in foglio d'alluminio.",
+      "Tagliare la carne a fettine oblique spesse 1.5 cm.",
+      "Disporre un letto di rucola su un piatto da portata, adagiarvi sopra le fettine di carne, cospargere con scaglie di Grana Padano, sale grosso, pepe nero ed un filo di glassa di aceto balsamico."
+    ]
+  },
+  {
+    "name": "Caprese di Bufala e Pomodorini",
+    "category": "antipasti",
+    "description": "Un antipasto freddo colorato e fresco che celebra la bandiera italiana con mozzarella di bufala campana DOP, pomodori ramati e basilico profumato.",
+    "notes": "Non conservare la mozzarella di bufala in frigo se la consumi in giornata; il freddo ne spegne i sapori lattici.",
+    "prepTime": 10,
+    "cookTime": 0,
+    "difficulty": "facile",
+    "servings": 2,
+    "ingredients": [
+      { "name": "Mozzarella di bufala campana DOP", "quantity": "250", "unit": "g" },
+      { "name": "Pomodori ramati grandi maturi", "quantity": "2", "unit": "pz" },
+      { "name": "Foglie di basilico fresco", "quantity": "10", "unit": "pz" },
+      { "name": "Olio extravergine d'oliva fruttato", "quantity": "qb", "unit": "" },
+      { "name": "Sale e origano secco", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Tagliare i pomodori a fette tonde spesse circa mezzo centimetro.",
+      "Tagliare la mozzarella di bufala a fette dello stesso spessore e lasciarla scolare leggermente del liquido in eccesso.",
+      "Alternare sul piatto di portata una fetta di pomodoro, una fetta di mozzarella e una foglia di basilico fresco.",
+      "Condire generosamente il tutto con un pizzico di sale, una spolverata di origano e un giro abbondante di olio extravergine d'oliva."
+    ]
+  },
+  {
+    "name": "Patate al Forno Profumate",
+    "category": "contorni",
+    "description": "Il contorno più amato da grandi e bambini: patate a cubetti croccanti fuori e morbide dentro, profumate al rosmarino e aglio in camicia.",
+    "notes": "Sbollentare le patate a cubetti per 5 minuti prima di infornarle garantisce una croccantezza imbattibile.",
+    "prepTime": 15,
+    "cookTime": 35,
+    "difficulty": "facile",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Patate a pasta gialla", "quantity": "1", "unit": "kg" },
+      { "name": "Rosmarino fresco", "quantity": "3", "unit": "rametti" },
+      { "name": "Aglio in camicia", "quantity": "3", "unit": "spicchi" },
+      { "name": "Olio extravergine d'oliva", "quantity": "4", "unit": "cucchiai" },
+      { "name": "Sale marino fino e pepe", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Sbucciare le patate e tagliarle a cubetti regolari di circa 2 cm.",
+      "Sbollentare le patate in acqua calda leggermente salata per 5 minuti, poi scolarle e lasciarle asciugare bene.",
+      "In una ciotola, condire le patate con l'olio extravergine d'oliva, sale, pepe, rosmarino e gli spicchi d'aglio schiacciati in camicia.",
+      "Versare le patate su una teglia da forno spaziosa senza sovrapporle.",
+      "Infornare in forno ventilato a 200°C per 35 minuti, mescolando delicatamente a metà cottura, finché non saranno ben dorate e croccanti."
+    ]
+  },
+  {
+    "name": "Negroni Sbagliato",
+    "category": "bevande",
+    "description": "La celebre variante milanese del Negroni classico, nata al Bar Basso negli anni '70 sostituendo il gin con lo spumante brut.",
+    "notes": "Mescolare delicatamente dal basso verso l'alto per non sgasare lo spumante.",
+    "prepTime": 5,
+    "cookTime": 0,
+    "difficulty": "facile",
+    "servings": 1,
+    "ingredients": [
+      { "name": "Spumante Brut o Prosecco", "quantity": "40", "unit": "ml" },
+      { "name": "Campari Bitter", "quantity": "40", "unit": "ml" },
+      { "name": "Vermouth rosso dolce", "quantity": "40", "unit": "ml" },
+      { "name": "Ghiaccio", "quantity": "qb", "unit": "" },
+      { "name": "Fetta d'arancia fresca", "quantity": "1", "unit": "fetta" }
+    ],
+    "steps": [
+      "Riempire un bicchiere tumbler basso (Rock) con abbondante ghiaccio.",
+      "Versare in parti uguali il Vermouth rosso e il Campari Bitter.",
+      "Aggiungere lo spumante brut fresco fino a colmare il bicchiere.",
+      "Mescolare leggermente con lo stirrer.",
+      "Guarnire con una fetta d'arancia fresca e servire immediatamente."
+    ]
+  },
+  {
+    "name": "Polpette della Nonna al Sugo",
+    "category": "secondi",
+    "description": "Polpettine morbidissime di carne mista di manzo e maiale, insaporite con parmigiano e pecorino, cotte lentamente in un ricco sugo di pomodoro.",
+    "notes": "Aggiungere all'impasto della mollica di pane bagnata nel latte rende le polpette incredibilmente morbide.",
+    "prepTime": 25,
+    "cookTime": 30,
+    "difficulty": "media",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Macinato di manzo", "quantity": "300", "unit": "g" },
+      { "name": "Macinato di maiale", "quantity": "200", "unit": "g" },
+      { "name": "Uova", "quantity": "2", "unit": "pz" },
+      { "name": "Mollica di pane", "quantity": "100", "unit": "g" },
+      { "name": "Latte intero", "quantity": "50", "unit": "ml" },
+      { "name": "Parmigiano Reggiano grattugiato", "quantity": "50", "unit": "g" },
+      { "name": "Passata di pomodoro", "quantity": "700", "unit": "ml" },
+      { "name": "Aglio, prezzemolo, sale e pepe", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Ammollare la mollica di pane nel latte per qualche minuto, poi strizzarla.",
+      "In una ciotola capiente, mescolare la carne macinata, le uova, la mollica strizzata, il parmigiano, il prezzemolo tritato, sale e pepe.",
+      "Lavorare bene l'impasto con le mani e formare delle polpette tonde grandi come una noce.",
+      "In un tegame soffriggere uno spicchio d'aglio con un filo d'olio, versare la passata di pomodoro e salare.",
+      "Portare il sugo a bollore leggero e tuffare delicatamente le polpette crude al suo interno.",
+      "Coprire e cuocere a fuoco lento per circa 30 minuti, rigirando le polpette a metà cottura."
+    ]
+  },
+  {
+    "name": "Gnocchi alla Sorrentina",
+    "category": "primi",
+    "description": "Morbidi gnocchi di patate conditi con sugo di pomodoro fresco, mozzarella di bufala e parmigiano, gratinati al forno in un tegamino di terracotta.",
+    "notes": "Cuoci gli gnocchi fino a quando non salgono a galla, poi scolali subito per evitare che diventino molli.",
+    "prepTime": 15,
+    "cookTime": 15,
+    "difficulty": "facile",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Gnocchi di patate freschi", "quantity": "800", "unit": "g" },
+      { "name": "Passata di pomodoro", "quantity": "600", "unit": "g" },
+      { "name": "Mozzarella o fior di latte", "quantity": "250", "unit": "g" },
+      { "name": "Parmigiano Reggiano", "quantity": "40", "unit": "g" },
+      { "name": "Aglio, olio e basilico fresco", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Preparare un sugo semplice facendo dorare l'aglio nell'olio, versando la passata e cuocendo per 10 minuti con abbondante basilico.",
+      "Tagliare la mozzarella a dadini piccoli.",
+      "Cuocere gli gnocchi in abbondante acqua salata e scolarli non appena salgono a galla.",
+      "Condire gli gnocchi in una ciotola con gran parte del sugo di pomodoro e metà della mozzarella.",
+      "Trasferire gli gnocchi in una pirofila da forno (o tegamini di terracotta), coprire con il sugo rimasto, la mozzarella e il parmigiano.",
+      "Gratinare in forno a 220°C per 10 minuti sotto il grill fino a creare una crosticina filante."
+    ]
+  },
+  {
+    "name": "Focaccia Barese Classica",
+    "category": "altro",
+    "description": "Focaccia tipica della Puglia, spessa e soffice dentro, croccante sul fondo, condita con pomodorini freschi e olive nere baresane.",
+    "notes": "L'uso di una patata bollita schiacciata nell'impasto è il segreto per mantenerla incredibilmente soffice per giorni.",
+    "prepTime": 120,
+    "cookTime": 25,
+    "difficulty": "media",
+    "servings": 6,
+    "ingredients": [
+      { "name": "Semola rimacinata di grano duro", "quantity": "300", "unit": "g" },
+      { "name": "Farina 0", "quantity": "200", "unit": "g" },
+      { "name": "Patata bollita e schiacciata", "quantity": "100", "unit": "g" },
+      { "name": "Lievito di birra fresco", "quantity": "10", "unit": "g" },
+      { "name": "Acqua tiepida", "quantity": "350", "unit": "ml" },
+      { "name": "Pomodori datterini o ciliegini", "quantity": "300", "unit": "g" },
+      { "name": "Olive nere baresane", "quantity": "15", "unit": "pz" },
+      { "name": "Olio extravergine d'oliva e sale", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Sciogliere il lievito nell'acqua tiepida.",
+      "In una ciotola mescolare le farine, la patata schiacciata, il lievito disciolto e 10g di sale, impastando fino ad ottenere un panetto morbido e appiccicoso.",
+      "Lasciar lievitare l'impasto coperto per circa 2 ore fino al raddoppio del volume.",
+      "Oliare generosamente una teglia di metallo rotonda da 32 cm.",
+      "Stendere l'impasto nella teglia picchiettando con le punta delle dita.",
+      "Schiacciare i pomodorini a metà direttamente sulla focaccia inserendoli nell'impasto, aggiungere le olive, sale grosso, origano e un giro abbondante di olio.",
+      "Cuocere in forno preriscaldato al massimo (250°C) per 20-25 minuti."
+    ]
+  },
+  {
+    "name": "Cantucci Toscani alle Mandorle",
+    "category": "dolci",
+    "description": "Biscotti secchi della tradizione toscana con mandorle intere, cotti due volte in forno e perfetti da inzuppare nel Vin Santo.",
+    "notes": "Taglia i biscotti in obliquo mentre il filoncino è ancora caldo per evitare che si sbriciolino.",
+    "prepTime": 15,
+    "cookTime": 25,
+    "difficulty": "facile",
+    "servings": 8,
+    "ingredients": [
+      { "name": "Farina 00", "quantity": "300", "unit": "g" },
+      { "name": "Zucchero", "quantity": "200", "unit": "g" },
+      { "name": "Mandorle intere non pelate", "quantity": "150", "unit": "g" },
+      { "name": "Uova", "quantity": "2", "unit": "pz" },
+      { "name": "Burro fuso", "quantity": "30", "unit": "g" },
+      { "name": "Lievito per dolci", "quantity": "1", "unit": "cucchiaino" },
+      { "name": "Scorza d'arancia grattugiata", "quantity": "1", "unit": "pz" }
+    ],
+    "steps": [
+      "In una ciotola, montare le uova con lo zucchero.",
+      "Unire il burro fuso tiepido, la scorza d'arancia e la farina setacciata con il lievito.",
+      "Aggiungere le mandorle intere e impastare brevemente fino ad amalgamare il tutto.",
+      "Dividere l'impasto e formare due filoncini larghi circa 3 cm e lunghi 30 cm. Disporli su una teglia da forno.",
+      "Cuocere in forno a 180°C per 20 minuti, poi sfornare.",
+      "Tagliare i filoncini caldi in diagonale a fette spesse 1.5 cm. Rimettere i biscotti sulla teglia e tostarli in forno per altri 5 minuti fino a renderli croccanti."
+    ]
+  },
+  {
+    "name": "Cocktail Bellini",
+    "category": "bevande",
+    "description": "Un aperitivo elegante e fruttato a base di spumante prosecco e purea di pesche bianche fresche frullate.",
+    "notes": "Utilizza esclusivamente pesche bianche; le pesche gialle cambierebbero il sapore ed il colore rosa tipico del Bellini.",
+    "prepTime": 10,
+    "cookTime": 0,
+    "difficulty": "facile",
+    "servings": 2,
+    "ingredients": [
+      { "name": "Pesche bianche fresche", "quantity": "2", "unit": "pz" },
+      { "name": "Prosecco spumante ghiacciato", "quantity": "200", "unit": "ml" },
+      { "name": "Ghiaccio tritato", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Sbucciare le pesche bianche e privarle del nocciolo.",
+      "Frullare la polpa delle pesche fino ad ottenere una purea liscissima, poi filtrarla con un colino per rimuovere i filamenti.",
+      "Mettere la purea in frigorifero a raffreddare per almeno 20 minuti.",
+      "In un mixing glass freddo, unire 1 parte di purea di pesca e 2 parti di Prosecco.",
+      "Mescolare molto delicatamente con ghiaccio e versare filtrando in bicchieri flûte ghiacciati."
+    ]
+  },
+  {
+    "name": "Verdure Grigliate Miste",
+    "category": "contorni",
+    "description": "Un contorno sano, leggero e colorato a base di zucchine, melanzane e peperoni grigliati sulla piastra e conditi con salmoriglio all'aglio e menta.",
+    "notes": "Taglia le verdure a fette regolari per garantire una cottura uniforme.",
+    "prepTime": 15,
+    "cookTime": 15,
+    "difficulty": "facile",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Zucchine medie", "quantity": "2", "unit": "pz" },
+      { "name": "Melanzane tonde", "quantity": "1", "unit": "pz" },
+      { "name": "Peperone rosso grande", "quantity": "1", "unit": "pz" },
+      { "name": "Olio extravergine d'oliva", "quantity": "4", "unit": "cucchiai" },
+      { "name": "Aglio, menta fresca e prezzemolo", "quantity": "qb", "unit": "" },
+      { "name": "Sale e succo di limone", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Tagliare le zucchine e le melanzane a fette longitudinali spesse circa 5 mm. Tagliare il peperone a falde larghe rimuovendo i semi.",
+      "Scaldare molto bene una piastra di ghisa rigata.",
+      "Grigliare le verdure per circa 3 minuti per lato finché non si formano le classiche striature nere.",
+      "Preparare il condimento emulsionando l'olio, il succo di limone, il sale, l'aglio tritato fine, il prezzemolo e la menta fresca.",
+      "Disporre le verdure a strati in una pirofila condendo ogni strato con l'emulsione preparata. Lasciar insaporire prima di servire."
+    ]
+  },
+  {
+    "name": "Penne all'Arrabbiata",
+    "category": "primi",
+    "description": "Un primo piatto romano rustico, velocissimo e piccante, condito con aglio, peperoncino rosso fresco e pomodori pelati.",
+    "notes": "Il nome 'arrabbiata' deriva dal fatto che, a causa del peperoncino forte, si rischia di diventare rossi in viso, proprio come quando ci si arrabbia.",
+    "prepTime": 5,
+    "cookTime": 10,
+    "difficulty": "facile",
+    "servings": 4,
+    "ingredients": [
+      { "name": "Penne rigate", "quantity": "360", "unit": "g" },
+      { "name": "Pomodori pelati schiacciati", "quantity": "400", "unit": "g" },
+      { "name": "Peperoncino rosso fresco piccante", "quantity": "2", "unit": "pz" },
+      { "name": "Spicchi d'aglio", "quantity": "2", "unit": "pz" },
+      { "name": "Prezzemolo fresco tritato", "quantity": "qb", "unit": "" },
+      { "name": "Olio extravergine d'oliva e sale", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Mettere a bollire abbondante acqua salata per la pasta.",
+      "In una padella capiente soffriggere gli spicchi d'aglio sbucciati e schiacciati e il peperoncino tagliato a rondelle nell'olio.",
+      "Aggiungere i pomodori pelati schiacciati con una forchetta e salare. Cuocere il sugo a fiamma viva per circa 10 minuti.",
+      "Cuocere le penne rigate e scolarle al dente direttamente nel sugo.",
+      "Saltare la pasta a fuoco vivo per 1 minuto, completare con abbondante prezzemolo fresco tritato e servire subito."
+    ]
+  },
+  {
+    "name": "Vitello Tonnato Classico",
+    "category": "antipasti",
+    "description": "Un antipasto piemontese freddo raffinato ed elegante: fette sottili di girello di vitello cotto al punto giusto, coperte da una morbida crema a base di tonno, capperi e acciughe.",
+    "notes": "Prepara la salsa tonnata frullando i tuorli sodi invece di usare la maionese pronta per un sapore tradizionale più vellutato.",
+    "prepTime": 30,
+    "cookTime": 45,
+    "difficulty": "media",
+    "servings": 6,
+    "ingredients": [
+      { "name": "Magatello o girello di vitello", "quantity": "800", "unit": "g" },
+      { "name": "Tonno sott'olio sgocciolato", "quantity": "160", "unit": "g" },
+      { "name": "Acciughe sott'olio", "quantity": "4", "unit": "filetti" },
+      { "name": "Capperi sotto sale dissalati", "quantity": "20", "unit": "g" },
+      { "name": "Uova sode (solo i tuorli)", "quantity": "3", "unit": "pz" },
+      { "name": "Sedano, carota e cipolla per il brodo", "quantity": "1", "unit": "pz" },
+      { "name": "Olio extravergine, aceto e limone", "quantity": "qb", "unit": "" }
+    ],
+    "steps": [
+      "Lessare la carne di vitello in abbondante acqua con carota, sedano, cipolla e un pizzico di sale per circa 45 minuti. Lasciar raffreddare la carne nel suo brodo.",
+      "Preparare la salsa frullando nel mixer il tonno, i capperi dissalati, i filetti di acciughe, i tuorli sodi, un cucchiaino di aceto e succo di limone.",
+      "Aggiungere olio extravergine a filo durante la frullatura fino ad ottenere una salsa liscia, densa e vellutata.",
+      "Tagliare il vitello ormai freddo a fettine molto sottili (preferibilmente con un'affettatrice o coltello ben affilato).",
+      "Disporre le fette di carne su un vassoio, coprirle completamente con la salsa tonnata e guarnire con qualche capperino intero prima di servire."
+    ]
+  },
+  {
+    "name": "Crostata di Visciole e Ricotta",
+    "category": "dolci",
+    "description": "Una specialità della cucina ebraico-romanesca, formata da un guscio di frolla friabile che racchiude crema di ricotta dolce e confettura di visciole aspre.",
+    "notes": "Le visciole sono ciliegie selvatiche aspre; se non le trovi, puoi sostituirle con una confettura di amarene di alta qualità.",
+    "prepTime": 40,
+    "cookTime": 45,
+    "difficulty": "media",
+    "servings": 8,
+    "ingredients": [
+      { "name": "Pasta frolla pronta o fatta in casa", "quantity": "500", "unit": "g" },
+      { "name": "Ricotta di pecora freschissima", "quantity": "400", "unit": "g" },
+      { "name": "Confettura di visciole o amarene", "quantity": "300", "unit": "g" },
+      { "name": "Zucchero a velo", "quantity": "120", "unit": "g" },
+      { "name": "Uovo (tuorlo per spennellare)", "quantity": "1", "unit": "pz" },
+      { "name": "Sambuca o liquore all'anice", "quantity": "1", "unit": "cucchiaio" }
+    ],
+    "steps": [
+      "Sgocciolare bene la ricotta e lavorarla a crema in una ciotola con lo zucchero a velo e il liquore all'anice.",
+      "Stendere 2/3 della pasta frolla e foderare uno stampo da crostata da 24 cm.",
+      "Spalmare la confettura di visciole sul fondo della frolla.",
+      "Coprire lo strato di visciole con la crema di ricotta livellando bene.",
+      "Stendere la frolla rimasta e coprire interamente la crostata sigillando bene i bordi, oppure creare le classiche strisce.",
+      "Spennellare la superficie con il tuorlo sbattuto e infornare a 180°C per 40-45 minuti finché la frolla non diventa ben dorata."
     ]
   }
 ]
