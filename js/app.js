@@ -922,6 +922,17 @@
           window.print();
           break;
         }
+        case 'share-recipe': {
+          var shareId = actionEl.getAttribute('data-id');
+          if (shareId) {
+            DB.getRecipe(shareId).then(function (recipe) {
+              if (recipe && window.Share) {
+                window.Share.openShareMenu(recipe);
+              }
+            });
+          }
+          break;
+        }
 
         /* ── Favorite toggle ── */
         case 'toggle-fav': {

@@ -292,6 +292,7 @@
   <script src="./js/utils.js?v=1.1.0"></script>
   <script src="./js/recipes.js?v=1.1.0"></script>
   <script src="./js/theme.js?v=1.1.0"></script>
+  <script src="./js/share.js?v=1.1.0"></script>
 </head>
 <body>
   <div class="container">
@@ -623,6 +624,30 @@
 
       document.body.removeChild(navContainer);
       document.body.removeChild(formContainer);
+    });
+
+    test('Storage & DOM', 'Share Module - verifica caricamento ed API di esportazione cartolina', () => {
+      assert(typeof window.Share === 'object', 'Il modulo Share deve essere registrato');
+      assert(typeof window.Share.openShareMenu === 'function', 'Deve contenere la funzione openShareMenu');
+      assert(typeof window.Share.generateCardDataURL === 'function', 'Deve contenere la funzione generateCardDataURL');
+    });
+
+    test('Storage & DOM', 'Share.generateCardDataURL - genera correttamente un URL immagine PNG in base64', async () => {
+      const mockRecipe = {
+        name: 'Torta del Test',
+        category: 'dolci',
+        description: 'Una torta per scopi di test',
+        prepTime: 10,
+        cookTime: 20,
+        servings: 4,
+        difficulty: 'facile',
+        ingredients: [{ name: 'Farina', quantity: '200', unit: 'g' }],
+        steps: ['Mescola tutto', 'Inforna']
+      };
+
+      const dataUrl = await window.Share.generateCardDataURL(mockRecipe);
+      assert(typeof dataUrl === 'string', 'L\'URL generato deve essere una stringa');
+      assert(dataUrl.startsWith('data:image/png;base64,'), 'Deve essere un URL immagine PNG codificato in base64');
     });
 
 

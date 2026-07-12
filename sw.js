@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sapori-v23';
+const CACHE_NAME = 'sapori-v25';
 
 const STATIC_ASSETS = [
   './',
@@ -15,6 +15,7 @@ const STATIC_ASSETS = [
   './js/recipes.js',
   './js/icons.js',
   './js/views.js',
+  './js/share.js',
   './js/app.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
