@@ -877,6 +877,12 @@
   border-bottom: none;
 }
 
+.ingredient-bullet {
+  color: var(--primary);
+  margin-right: 6px;
+  font-weight: bold;
+}
+
 /* Step list (custom) */
 .step-list {
   list-style: none;
@@ -2296,9 +2302,9 @@
     font-family: var(--font-heading) !important;
     font-size: 26pt !important;
     font-weight: 800 !important;
-    color: #1a0f0a !important;
+    color: var(--primary) !important;
     margin: 0 0 0.8cm 0 !important;
-    border-bottom: 2px solid #1a0f0a !important;
+    border-bottom: 2px solid var(--primary) !important;
     padding-bottom: 0.2cm !important;
     page-break-after: avoid !important;
   }
@@ -2307,8 +2313,8 @@
   .recipe-card__category {
     display: inline-flex !important;
     margin: 0 0 0.8cm 0 !important;
-    border: 1.5px solid #1a0f0a !important;
-    color: #1a0f0a !important;
+    border: 1.5px solid var(--primary) !important;
+    color: var(--primary) !important;
     background: transparent !important;
     font-size: 10pt !important;
     font-weight: 700 !important;
@@ -2337,7 +2343,7 @@
     gap: 0.2cm !important;
     font-size: 11pt !important;
     color: #1a0f0a !important;
-    border-bottom: 1.5px dotted #1a0f0a !important;
+    border-bottom: 1.5px dotted var(--primary) !important;
     padding-bottom: 0.1cm !important;
   }
 
@@ -2348,8 +2354,8 @@
 
   /* Description Section (Notebook "NOTE" Box) */
   .recipe-detail__description-section {
-    background: #f2f2f2 !important;
-    border: 1.5px solid #1a0f0a !important;
+    background: #fdfcfb !important;
+    border: 1.5px solid var(--primary) !important;
     padding: 0.5cm !important;
     margin-top: 0.8cm !important;
     margin-bottom: 1cm !important;
@@ -2360,7 +2366,7 @@
   .recipe-detail__description-title {
     font-size: 12pt !important;
     font-weight: 800 !important;
-    color: #1a0f0a !important;
+    color: var(--primary) !important;
     margin-bottom: 0.3cm !important;
     visibility: hidden !important;
     position: relative !important;
@@ -2372,6 +2378,7 @@
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
+    color: var(--primary) !important;
   }
 
   .recipe-detail__description-section p {
@@ -2402,29 +2409,62 @@
     font-family: var(--font-heading) !important;
     font-size: 15pt !important;
     font-weight: 700 !important;
-    border-bottom: 2px solid #1a0f0a !important;
+    border-bottom: 2px solid var(--primary) !important;
     padding-bottom: 0.2cm !important;
     margin-bottom: 0.6cm !important;
     page-break-after: avoid !important;
+    color: var(--primary) !important;
+  }
+
+  .ingredient-list {
+    counter-reset: ing-counter !important;
+    padding: 0 !important;
+  }
+
+  .ingredient-bullet {
+    display: none !important;
   }
 
   .ingredient-item {
     font-size: 11pt !important;
     padding: 10px 0 !important;
-    border-bottom: 1.5px dotted #1a0f0a !important;
+    border-bottom: 1.5px dotted var(--primary) !important;
     color: #1a0f0a !important;
     page-break-inside: avoid !important;
+    counter-increment: ing-counter !important;
+  }
+
+  .ingredient-item::before {
+    content: counter(ing-counter) ") " !important;
+    font-weight: 700 !important;
+    color: var(--primary) !important;
+    margin-right: 6px !important;
   }
 
   .step-item {
     padding: 12px 0 !important;
-    border-bottom: 1.5px dotted #1a0f0a !important;
+    border-bottom: 1.5px dotted var(--primary) !important;
     color: #1a0f0a !important;
     page-break-inside: avoid !important;
   }
 
   .step-number {
-    display: none !important; /* Hide step circle badge in print */
+    display: inline-block !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: auto !important;
+    background: transparent !important;
+    color: var(--primary) !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    margin-right: 6px !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .step-number::after {
+    content: ")" !important;
   }
 
   .step-item p {
@@ -2432,6 +2472,7 @@
     line-height: 1.7 !important;
     color: #1a0f0a !important;
     margin: 0 !important;
+    display: inline !important;
   }
 
   /* Print-only footer (matches RICETTARIO UFFICIALE.pdf bottom layout) */
@@ -2447,7 +2488,7 @@
   .print-photo-box {
     width: 6.5cm !important;
     height: 6.5cm !important;
-    border: 1.5px solid #1a0f0a !important;
+    border: 1.5px solid var(--primary) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -2465,7 +2506,7 @@
     font-family: var(--font-heading) !important;
     font-size: 14pt !important;
     font-weight: 800 !important;
-    color: #1a0f0a !important;
+    color: var(--primary) !important;
     letter-spacing: 0.1em !important;
   }
 
@@ -2481,12 +2522,12 @@
     font-family: var(--font-heading) !important;
     font-size: 12pt !important;
     font-weight: 700 !important;
-    color: #1a0f0a !important;
+    color: var(--primary) !important;
     margin: 0 !important;
   }
 
   .print-dotted-line {
-    border-bottom: 1.5px dotted #1a0f0a !important;
+    border-bottom: 1.5px dotted var(--primary) !important;
     height: 1px !important;
     width: 100% !important;
   }

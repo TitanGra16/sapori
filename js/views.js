@@ -446,7 +446,7 @@ window.Views = (function () {
         if (ing.quantity) parts.push(esc(ing.quantity));
         if (ing.unit) parts.push(esc(ing.unit));
         parts.push(esc(ing.name));
-        html += '<li class="ingredient-item">• ' + parts.join(' ') + '</li>';
+        html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + '</li>';
       });
     }
     html += '</ul></div>';
