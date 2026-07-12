@@ -53,51 +53,22 @@
         var textMuted = isDark ? '#a1a1aa' : '#71717a';
         var borderCol = isDark ? '#27272a' : '#f4f4f5';
 
-        // 1. Draw outer gradient background
-        var bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        bgGrad.addColorStop(0, gradColors[0]);
-        bgGrad.addColorStop(1, gradColors[1]);
-        ctx.fillStyle = bgGrad;
+        // 1. Draw full card background (fills the entire canvas)
+        ctx.fillStyle = cardBg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 2. Draw geometric background details for depth
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-        ctx.beginPath();
-        ctx.arc(0, canvas.height, 380, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(canvas.width, 100, 280, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 3. Draw central card with drop shadow
-        var cardX = 45;
-        var cardY = 100;
-        var cardW = 710;
-        var cardH = 840;
-
-        ctx.save();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-        ctx.shadowBlur = 40;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 16;
-        self._drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28, cardBg);
-        ctx.restore();
-
-        // 4. Load and draw recipe image (Hero format: full width of card at the top)
-        var imageX = cardX;
-        var imageY = cardY;
-        var imageW = cardW;
-        var imageH = 380;
+        // 2. Load and draw recipe image (Hero format: full width, full-bleed at the top)
+        var imageX = 0;
+        var imageY = 0;
+        var imageW = canvas.width;
+        var imageH = 430;
 
         var img = new Image();
         img.crossOrigin = 'anonymous';
 
         img.onload = function () {
-          // Clip with rounded corners ONLY at the top (match card radius)
+          // Draw full-bleed image (no rounded corners needed)
           ctx.save();
-          self._drawRoundedRectPathComplex(ctx, imageX, imageY, imageW, imageH, 28, 28, 0, 0);
-          ctx.clip();
-          
           var imgRatio = img.width / img.height;
           var containerRatio = imageW / imageH;
           var drawW, drawH, drawX, drawY;
@@ -127,17 +98,17 @@
           ctx.fillStyle = 'rgba(255,255,255,0.9)';
           ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText('🍴 SAPORI', cardX + cardW - 30, cardY + 35);
+          ctx.fillText('🍴 SAPORI', canvas.width - 40, 35);
 
-          // Continue drawing texts below image
-          self._drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, imageY + imageH + 30, textColor, textMuted, borderCol, gradColors[0]);
+          // Continue drawing texts below image (start at startY = 465)
+          self._drawCardDetails(ctx, recipe, 0, 0, canvas.width, canvas.height, imageY + imageH + 35, textColor, textMuted, borderCol, gradColors[0]);
           resolve(canvas.toDataURL('image/png'));
         };
 
         img.onerror = function () {
           // Fallback if image fails to load or does not exist
           ctx.fillStyle = isDark ? '#27272a' : '#f4f4f5';
-          self._drawRoundedRectComplex(ctx, imageX, imageY, imageW, imageH, 28, 28, 0, 0, ctx.fillStyle);
+          ctx.fillRect(imageX, imageY, imageW, imageH);
           
           ctx.fillStyle = textMuted;
           ctx.font = '64px system-ui, sans-serif';
@@ -148,7 +119,7 @@
           ctx.fillText('Sapori — Il Tuo Ricettario Personale', imageX + imageW / 2, imageY + imageH / 2 + 60);
 
           // Continue drawing texts
-          self._drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, imageY + imageH + 30, textColor, textMuted, borderCol, gradColors[0]);
+          self._drawCardDetails(ctx, recipe, 0, 0, canvas.width, canvas.height, imageY + imageH + 35, textColor, textMuted, borderCol, gradColors[0]);
           resolve(canvas.toDataURL('image/png'));
         };
 
@@ -158,10 +129,12 @@
     },
 
     /**
-     * Draw text details inside the card
+     * Draw text details inside the card (full-bleed layout)
      */
     _drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, startY, textColor, textMuted, borderCol, themePrimary) {
       var self = this;
+      var leftMargin = cardX + 40;
+      var contentW = cardW - 80;
       ctx.textAlign = 'left';
 
       // 1. Category tag (Pill Badge)
@@ -175,24 +148,23 @@
       var badgeH = 24;
 
       ctx.fillStyle = 'rgba(232, 93, 58, 0.1)';
-      self._drawRoundedRect(ctx, cardX + 30, startY, badgeW, badgeH, 6, ctx.fillStyle);
+      self._drawRoundedRect(ctx, leftMargin, startY, badgeW, badgeH, 6, ctx.fillStyle);
       
       ctx.fillStyle = '#E85D3A';
       ctx.textAlign = 'center';
-      ctx.fillText(catLabel, cardX + 30 + (badgeW / 2), startY + 16);
+      ctx.fillText(catLabel, leftMargin + (badgeW / 2), startY + 16);
 
       // 2. Recipe Title
       ctx.textAlign = 'left';
       ctx.fillStyle = textColor;
-      ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
-      var titleY = startY + 60;
-      var titleHeight = self._drawTextWrapped(ctx, recipe.name, cardX + 30, titleY, cardW - 60, 38);
+      ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+      var titleY = startY + 65;
+      var titleHeight = self._drawTextWrapped(ctx, recipe.name, leftMargin, titleY, contentW, 42);
 
       // 3. Metadata Capsules Row
       var capsuleY = titleY + titleHeight + 15;
       var capsuleH = 42;
-      var totalCapsuleW = cardW - 60;
-      var colW = (totalCapsuleW - 36) / 4; // 12px gap between columns
+      var colW = (contentW - 36) / 4; // 12px gap between columns
 
       var difficultyLabel = self._getDifficultyLabel(recipe.difficulty);
       var metaItems = [
@@ -203,7 +175,7 @@
       ];
 
       metaItems.forEach(function (item, idx) {
-        var x = cardX + 30 + (idx * (colW + 12));
+        var x = leftMargin + (idx * (colW + 12));
         
         // Draw soft capsule
         ctx.fillStyle = 'rgba(113, 113, 122, 0.06)';
@@ -221,8 +193,8 @@
       ctx.strokeStyle = borderCol;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(cardX + 30, dividerY);
-      ctx.lineTo(cardX + cardW - 30, dividerY);
+      ctx.moveTo(leftMargin, dividerY);
+      ctx.lineTo(leftMargin + contentW, dividerY);
       ctx.stroke();
 
       // 5. Ingredients Section
@@ -230,8 +202,7 @@
       ctx.textAlign = 'left';
       ctx.fillStyle = textColor;
       ctx.font = 'bold 13px system-ui, sans-serif';
-      // Subtle header styling (uppercase, letter-spaced effect via drawing)
-      ctx.fillText('INGREDIENTI PRINCIPALI', cardX + 30, ingTitleY);
+      ctx.fillText('INGREDIENTI PRINCIPALI', leftMargin, ingTitleY);
 
       var ingY = ingTitleY + 32;
       ctx.font = '15px system-ui, sans-serif';
@@ -245,18 +216,18 @@
           // Draw a small bullet circle matching primary color
           ctx.fillStyle = '#E85D3A';
           ctx.beginPath();
-          ctx.arc(cardX + 34, y - 5, 4, 0, Math.PI * 2);
+          ctx.arc(leftMargin + 4, y - 5, 4, 0, Math.PI * 2);
           ctx.fill();
 
           // Ingredient Text
           ctx.fillStyle = textColor;
-          ctx.fillText(ing.name, cardX + 52, y);
+          ctx.fillText(ing.name, leftMargin + 22, y);
 
           // Quantity (aligned to the right or styled text)
           if (ing.quantity) {
             ctx.fillStyle = textMuted;
             ctx.textAlign = 'right';
-            ctx.fillText(ing.quantity + ' ' + (ing.unit || ''), cardX + cardW - 30, y);
+            ctx.fillText(ing.quantity + ' ' + (ing.unit || ''), leftMargin + contentW, y);
             ctx.textAlign = 'left'; // reset
           }
         });
@@ -264,29 +235,29 @@
         if (recipe.ingredients.length > maxIng) {
           ctx.fillStyle = textMuted;
           ctx.font = 'italic 14px system-ui, sans-serif';
-          ctx.fillText('• ... e altri ' + (recipe.ingredients.length - maxIng) + ' ingredienti', cardX + 30, ingY + (maxIng * 30));
+          ctx.fillText('• ... e altri ' + (recipe.ingredients.length - maxIng) + ' ingredienti', leftMargin, ingY + (maxIng * 30));
         }
       } else {
         ctx.fillStyle = textMuted;
-        ctx.fillText('Nessun ingrediente inserito', cardX + 30, ingY);
+        ctx.fillText('Nessun ingrediente inserito', leftMargin, ingY);
       }
 
       // 6. Card Footer Watermark
-      var footerY = cardY + cardH - 30;
+      var footerY = cardH - 40;
       ctx.strokeStyle = borderCol;
       ctx.beginPath();
-      ctx.moveTo(cardX + 30, footerY - 20);
-      ctx.lineTo(cardX + cardW - 30, footerY - 20);
+      ctx.moveTo(leftMargin, footerY - 20);
+      ctx.lineTo(leftMargin + contentW, footerY - 20);
       ctx.stroke();
 
       ctx.fillStyle = textMuted;
       ctx.font = '13px system-ui, sans-serif';
-      ctx.fillText('Creato con amore su Sapori App', cardX + 30, footerY);
+      ctx.fillText('Creato con amore su Sapori App', leftMargin, footerY);
 
       ctx.fillStyle = '#E85D3A';
       ctx.font = 'bold 13px system-ui, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText('titangra16.github.io/sapori', cardX + cardW - 30, footerY);
+      ctx.fillText('titangra16.github.io/sapori', leftMargin + contentW, footerY);
     },
 
     /**
