@@ -125,7 +125,15 @@ window.Theme = {
   },
 
   get PALETTES() {
-    return Object.keys(this._themeColors);
+    return [
+      { id: 'classico', label: 'Classico', gradient: 'linear-gradient(135deg,#E85D3A,#FFA726)' },
+      { id: 'oceano', label: 'Oceano', gradient: 'linear-gradient(135deg,#0EA5E9,#06B6D4)' },
+      { id: 'bosco', label: 'Bosco', gradient: 'linear-gradient(135deg,#16A34A,#84CC16)' },
+      { id: 'tramonto', label: 'Tramonto', gradient: 'linear-gradient(135deg,#A855F7,#EC4899)' },
+      { id: 'ametista', label: 'Ametista', gradient: 'linear-gradient(135deg,#8B5CF6,#A78BFA)' },
+      { id: 'autunno', label: 'Autunno', gradient: 'linear-gradient(135deg,#8C5A3C,#D4A373)' },
+      { id: 'zafferano', label: 'Zafferano', gradient: 'linear-gradient(135deg,#D97706,#F59E0B)' }
+    ];
   },
 
   /**

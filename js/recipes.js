@@ -92,14 +92,15 @@ window.Recipes = {
       if (!Array.isArray(recipe.ingredients)) {
         errors.ingredients = 'Gli ingredienti devono essere una lista';
       } else {
-        // Filter out completely empty ingredient rows before validation
-        const nonEmptyIngredients = recipe.ingredients.filter(ing =>
-          ing && (
-            (ing.name && ing.name.trim()) ||
-            (ing.quantity && String(ing.quantity).trim()) ||
-            (ing.unit && ing.unit.trim())
-          )
-        );
+        // Filter out completely empty ingredient rows (where all properties are empty/undefined)
+        const nonEmptyIngredients = recipe.ingredients.filter(ing => {
+          if (!ing) return false;
+          const hasNameProp = ing.name !== undefined && ing.name !== null;
+          const qty = ing.quantity !== undefined && ing.quantity !== null ? String(ing.quantity).trim() : '';
+          const unit = ing.unit && typeof ing.unit === 'string' ? ing.unit.trim() : '';
+          const notes = ing.notes && typeof ing.notes === 'string' ? ing.notes.trim() : '';
+          return (hasNameProp && String(ing.name).length > 0) || qty.length > 0 || unit.length > 0 || notes.length > 0;
+        });
 
         for (let i = 0; i < nonEmptyIngredients.length; i++) {
           const ing = nonEmptyIngredients[i];

@@ -458,8 +458,8 @@ test('Theme Engine','init no throw',async()=>{await Theme.init();assert(true);})
 test('Theme Engine','Dopo init getCurrentTheme valido',async()=>{await Theme.init();const t=Theme.getCurrentTheme();assert(t.mode&&t.palette);});
 test('Theme Engine','setPalette tramonto aggiorna',async()=>{await Theme.setPalette('tramonto');assertEqual(Theme.currentPalette,'tramonto');await Theme.setPalette('classico');});
 test('Theme Engine','setPalette bosco aggiorna',async()=>{await Theme.setPalette('bosco');assertEqual(Theme.currentPalette,'bosco');await Theme.setPalette('classico');});
-test('Theme Engine','PALETTES contiene classico',()=>{const keys=Array.isArray(Theme.PALETTES)?Theme.PALETTES.map(p=>p.id):Object.keys(Theme.PALETTES);assert(keys.includes('classico'));});
-test('Theme Engine','PALETTES contiene oceano',()=>{const keys=Array.isArray(Theme.PALETTES)?Theme.PALETTES.map(p=>p.id):Object.keys(Theme.PALETTES);assert(keys.includes('oceano'));});
+test('Theme Engine','PALETTES contiene classico',()=>{const keys=Array.isArray(Theme.PALETTES)?Theme.PALETTES.map(p=>typeof p==='object'?p.id:p):Object.keys(Theme.PALETTES);assert(keys.includes('classico'));});
+test('Theme Engine','PALETTES contiene oceano',()=>{const keys=Array.isArray(Theme.PALETTES)?Theme.PALETTES.map(p=>typeof p==='object'?p.id:p):Object.keys(Theme.PALETTES);assert(keys.includes('oceano'));});
 
 // ── CAT 20: Icons Module (20) ──
 test('Icons Module','window.Icons esiste',()=>assert(typeof window.Icons==='object'));
@@ -756,16 +756,22 @@ async function runAll(){
   document.getElementById('btn-run').textContent='Esecuzione...';
   const start=performance.now();
   let ok=0,fail=0;
-  for(let i=0;i<TC.length;i++){
-    const tc=TC[i];
-    try{await tc.fn();results.push({tc,ok:true,err:null});ok++;}
-    catch(e){results.push({tc,ok:false,err:e.message});fail++;addLog('FAIL: ['+tc.cat+'] '+tc.name+' — '+e.message,'err');}
-    const pct=Math.round(((i+1)/TC.length)*100);
-    prog_el.style.width=pct+'%';
-    document.getElementById('st-ok').textContent=ok;
-    document.getElementById('st-err').textContent=fail;
-    document.getElementById('st-rate').textContent=Math.round((ok/(i+1))*100)+'%';
-    if(i%20===0){buildUI();await new Promise(r=>setTimeout(r,0));}
+  const origClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function() {}; // Prevent real file downloads during test execution
+  try {
+    for(let i=0;i<TC.length;i++){
+      const tc=TC[i];
+      try{await tc.fn();results.push({tc,ok:true,err:null});ok++;}
+      catch(e){results.push({tc,ok:false,err:e.message});fail++;addLog('FAIL: ['+tc.cat+'] '+tc.name+' — '+e.message,'err');}
+      const pct=Math.round(((i+1)/TC.length)*100);
+      prog_el.style.width=pct+'%';
+      document.getElementById('st-ok').textContent=ok;
+      document.getElementById('st-err').textContent=fail;
+      document.getElementById('st-rate').textContent=Math.round((ok/(i+1))*100)+'%';
+      if(i%20===0){buildUI();await new Promise(r=>setTimeout(r,0));}
+    }
+  } finally {
+    HTMLAnchorElement.prototype.click = origClick;
   }
   const dur=Math.round(performance.now()-start);
   document.getElementById('st-ms').textContent=dur+'ms';
