@@ -125,6 +125,9 @@
 
         // Trigger image load (use default placeholder if empty)
         img.src = recipe.image || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        if (img.complete && typeof img.onload === 'function') {
+          img.onload();
+        }
       });
     },
 

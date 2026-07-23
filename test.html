@@ -768,7 +768,7 @@ async function runAll(){
       document.getElementById('st-ok').textContent=ok;
       document.getElementById('st-err').textContent=fail;
       document.getElementById('st-rate').textContent=Math.round((ok/(i+1))*100)+'%';
-      if(i%20===0){buildUI();await new Promise(r=>setTimeout(r,0));}
+      if(i%5===0 || i===TC.length-1){buildUI(curFilter);await new Promise(r=>setTimeout(r,0));}
     }
   } finally {
     HTMLAnchorElement.prototype.click = origClick;
