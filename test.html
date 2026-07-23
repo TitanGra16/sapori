@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
@@ -667,6 +667,49 @@ test('Browser API','Blob disponibile',()=>assert(typeof Blob!=='undefined'));
 test('Browser API','Canvas 2D disponibile',()=>{const c=document.createElement('canvas');assert(c.getContext('2d')!==null);});
 test('Browser API','Image constructor disponibile',()=>assert(typeof Image!=='undefined'));
 test('Browser API','Promise disponibile',()=>assert(typeof Promise!=='undefined'&&typeof Promise.resolve==='function'));
+
+// ── CAT 32: Svuotafrigo Engine (15) ──
+test('Svuotafrigo Engine','matchPantry e\' funzione',()=>assert(typeof Recipes.matchPantry==='function'));
+test('Svuotafrigo Engine','Array vuoto -> array vuoto',()=>assertEqual(Recipes.matchPantry([],['Uova']).length,0));
+test('Svuotafrigo Engine','Ingredienti vuoti -> array vuoto',()=>assertEqual(Recipes.matchPantry(SL,[]).length,0));
+test('Svuotafrigo Engine','null -> array vuoto',()=>assertEqual(Recipes.matchPantry(null,['Uova']).length,0));
+test('Svuotafrigo Engine','Match 100% ingrediente unico',()=>{const r=Recipes.matchPantry(SL,['Acqua']);assert(r.length>0&&r[0].isComplete===true);});
+test('Svuotafrigo Engine','Match 100% multipli ingredienti',()=>{const r=Recipes.matchPantry(SL,['Guanciale','Uova']);assert(r.length>0&&r[0].recipe.name==='Spaghetti Carbonara'&&r[0].isComplete===true);});
+test('Svuotafrigo Engine','Match parziale -> isComplete false',()=>{const r=Recipes.matchPantry(SL,['Guanciale']);assert(r.length>0&&r[0].isComplete===false&&r[0].missingCount===1);});
+test('Svuotafrigo Engine','Case insensitive matching',()=>{const r=Recipes.matchPantry(SL,['guanciale','UOVA']);assert(r.length>0&&r[0].isComplete===true);});
+test('Svuotafrigo Engine','Accenti italiani normalizzati',()=>{const r=Recipes.matchPantry(SL,['mascarpone']);assert(r.some(m=>m.recipe.name==='Tiramisu'));});
+test('Svuotafrigo Engine','Nessun match -> array vuoto',()=>assertEqual(Recipes.matchPantry(SL,['Plutonio']).length,0));
+test('Svuotafrigo Engine','Ordinamento per matchRatio desc',()=>{const r=Recipes.matchPantry(SL,['Mascarpone','Guanciale']);assert(r.length>=2&&r[0].matchRatio>=r[1].matchRatio);});
+test('Svuotafrigo Engine','Oggetto risultato ha campi richiesti',()=>{const r=Recipes.matchPantry(SL,['Acqua'])[0];assert('recipe' in r && 'matchedCount' in r && 'missingCount' in r && 'isComplete' in r);});
+test('Svuotafrigo Engine','matchedNames contiene ingrediente trovato',()=>{const r=Recipes.matchPantry(SL,['Uova'])[0];assert(r.matchedNames.some(n=>n.toLowerCase().includes('uova')));});
+test('Svuotafrigo Engine','missingNames contiene ingrediente mancate',()=>{const r=Recipes.matchPantry(SL,['Guanciale'])[0];assert(r.missingNames.length>0);});
+test('Svuotafrigo Engine','Gestisce ricetta senza ingredienti no crash',()=>{const l=[{name:'X',category:'primi',ingredients:null}];assert(Recipes.matchPantry(l,['Uova']).length===0);});
+
+// ── CAT 33: Calcolatore Dosi (12) ──
+test('Calcolatore Dosi','scaleQuantity e\' funzione',()=>assert(typeof Utils.scaleQuantity==='function'));
+test('Calcolatore Dosi','Raddoppia 200 -> 400',()=>assertEqual(Utils.scaleQuantity('200',2),'400'));
+test('Calcolatore Dosi','Dimezza 200 -> 100',()=>assertEqual(Utils.scaleQuantity('200',0.5),'100'));
+test('Calcolatore Dosi','Decimale 1.5 * 2 -> 3',()=>assertEqual(Utils.scaleQuantity('1.5',2),'3'));
+test('Calcolatore Dosi','Decimale con virgola 1,5 * 2 -> 3',()=>assertEqual(Utils.scaleQuantity('1,5',2),'3'));
+test('Calcolatore Dosi','Testo non numerico "q.b." invariato',()=>assertEqual(Utils.scaleQuantity('q.b.',2),'q.b.'));
+test('Calcolatore Dosi','Testo "pizzico" invariato',()=>assertEqual(Utils.scaleQuantity('pizzico',2),'pizzico'));
+test('Calcolatore Dosi','Stringa vuota -> vuoto',()=>assertEqual(Utils.scaleQuantity('',2),''));
+test('Calcolatore Dosi','null -> vuoto o null',()=>assert(Utils.scaleQuantity(null,2)===''));
+test('Calcolatore Dosi','Ratio 1 -> invariato',()=>assertEqual(Utils.scaleQuantity('250',1),'250'));
+test('Calcolatore Dosi','Arrotondamento a 2 decimali (100 / 3)',()=>assert(Utils.scaleQuantity('100',0.3333).startsWith('33.3')));
+test('Calcolatore Dosi','Formato con testo "200-300"',()=>assert(Utils.scaleQuantity('200-300',0.5).includes('100')));
+
+// ── CAT 34: Modalita Cucina Focus Mode (10) ──
+test('Modalita Cucina','showCookingModal e\' funzione',()=>assert(typeof Views.showCookingModal==='function'));
+test('Modalita Cucina','showCookingModal no throw con ricetta base',()=>{Views.showCookingModal({name:'Test',category:'dolci',steps:['Step 1']},0,{},false);assert(document.getElementById('modal-overlay').children.length>0);Views.hideModal();});
+test('Modalita Cucina','Modale contiene nome ricetta',()=>{Views.showCookingModal({name:'Carbonara Speciale',category:'primi',steps:['Passo 1']},0,{},false);assert(document.getElementById('modal-overlay').innerHTML.includes('Carbonara Speciale'));Views.hideModal();});
+test('Modalita Cucina','Modale contiene indicatore step',()=>{Views.showCookingModal({name:'T',category:'primi',steps:['Passo 1','Passo 2']},1,{},false);assert(document.getElementById('modal-overlay').innerHTML.includes('PASSAGGIO 2 DI 2'));Views.hideModal();});
+test('Modalita Cucina','Wake Lock attivo mostra icona ⚡',()=>{Views.showCookingModal({name:'T',category:'primi',steps:['Passo 1']},0,{},true);assert(document.getElementById('modal-overlay').innerHTML.includes('⚡'));Views.hideModal();});
+test('Modalita Cucina','Spunta ingrediente aggiunge classe line-through',()=>{Views.showCookingModal({name:'T',category:'primi',ingredients:[{name:'Uova',quantity:'2',unit:''}],steps:['Passo 1']},0,{0:true},false);assert(document.getElementById('modal-overlay').innerHTML.includes('line-through'));Views.hideModal();});
+test('Modalita Cucina','Step con nota mostra blocco nota',()=>{Views.showCookingModal({name:'T',category:'primi',steps:[{text:'Cuoci',notes:'Attenzione'}]},0,{},false);assert(document.getElementById('modal-overlay').innerHTML.includes('Attenzione'));Views.hideModal();});
+test('Modalita Cucina','Precedente disabilitato al primo step',()=>{Views.showCookingModal({name:'T',category:'primi',steps:['Passo 1','Passo 2']},0,{},false);assert(document.getElementById('modal-overlay').querySelector('[data-action="cooking-prev"]').hasAttribute('disabled'));Views.hideModal();});
+test('Modalita Cucina','Successivo disabilitato all ultimo step',()=>{Views.showCookingModal({name:'T',category:'primi',steps:['Passo 1','Passo 2']},1,{},false);assert(document.getElementById('modal-overlay').querySelector('[data-action="cooking-next"]').hasAttribute('disabled'));Views.hideModal();});
+test('Modalita Cucina','hideModal pulisce overlay',()=>{Views.showCookingModal({name:'T',category:'primi',steps:['P1']},0,{},false);Views.hideModal();assert(document.getElementById('modal-overlay').classList.contains('hidden'));});
 
 // ── TEST RUNNER ──
 const secs_el=document.getElementById('secs');
