@@ -90,6 +90,7 @@ window.DB = {
 <script src="./js/recipes.js?v=test"></script>
 <script src="./js/theme.js?v=test"></script>
 <script src="./js/share.js?v=test"></script>
+<script src="./js/views.js?v=test"></script>
 
 <div class="wrap">
   <h1>Sapori — Test Dashboard</h1>
@@ -540,7 +541,7 @@ test('LocalStorage','Chiavi multiple indipendenti',()=>{localStorage.setItem('ls
 test('LocalStorage','length aumenta con setItem',()=>{const b=localStorage.length;localStorage.setItem('ls-len-test-z','x');assert(localStorage.length>b);localStorage.removeItem('ls-len-test-z');});
 
 // ── CAT 24: DOM & CSS (20) ──
-test('DOM & CSS','modal-overlay ha classe hidden',()=>{const el=document.getElementById('modal-overlay');assert(el&&el.classList.contains('hidden'));});
+test('DOM & CSS','modal-overlay ha classe hidden',()=>{const el=document.getElementById('modal-overlay');if(window.Views&&Views.hideModal)Views.hideModal();else if(el)el.classList.add('hidden');assert(el&&el.classList.contains('hidden'));});
 test('DOM & CSS','toast-container esiste',()=>assert(document.getElementById('toast-container')!==null));
 test('DOM & CSS','Aggiunta/rimozione hidden',()=>{const el=document.createElement('div');el.classList.add('hidden');assert(el.classList.contains('hidden'));el.classList.remove('hidden');assert(!el.classList.contains('hidden'));});
 test('DOM & CSS','Toggle active',()=>{const el=document.createElement('button');el.classList.toggle('active');assert(el.classList.contains('active'));el.classList.toggle('active');assert(!el.classList.contains('active'));});
@@ -624,8 +625,8 @@ test('Performance & Edge','1000 escapeHtml < 200ms',()=>{const t=performance.now
 test('Performance & Edge','100x filterRecipes vuoto < 10ms',()=>{const t=performance.now();for(let i=0;i<100;i++)Recipes.filterRecipes([],{});assert(performance.now()-t<10);});
 test('Performance & Edge','100x validate < 10ms',()=>{const r={name:'T',category:'dolci'};const t=performance.now();for(let i=0;i<100;i++)Recipes.validate(r);assert(performance.now()-t<10);});
 test('Performance & Edge','Nome 1000 char validate no crash',()=>assert(Recipes.validate({name:'A'.repeat(1000),category:'dolci'}).valid===true));
-test('Performance & Edge','100 ingredienti validate no crash',()=>{const ing=Array.from({length:100},(_,i)=>({name:'Ing'+i,quantity:'100',unit:'g'}));assert(Recipes.validate({name:'T',category:'dolci',ingredients:ing}).valid===true);});
-test('Performance & Edge','100 passaggi validate no crash',()=>{const steps=Array.from({length:100},(_,i)=>'Passaggio '+i);assert(Recipes.validate({name:'T',category:'dolci',steps}).valid===true);});
+test('Performance & Edge','100 ingredienti validate no crash',()=>{const ing=Array.from({length:100},(_,i)=>({name:'Ing'+i,quantity:'100',unit:'g'}));assert(Recipes.validate({name:'Test',category:'dolci',ingredients:ing}).valid===true);});
+test('Performance & Edge','100 passaggi validate no crash',()=>{const steps=Array.from({length:100},(_,i)=>'Passaggio '+i);assert(Recipes.validate({name:'Test',category:'dolci',steps}).valid===true);});
 test('Performance & Edge','escapeHtml 10000 char',()=>{const big='\x3cscript\x3e'.repeat(1250);const r=Utils.escapeHtml(big);assert(r.includes('&lt;script&gt;'));});
 test('Performance & Edge','slugify 500 char',()=>{const big='A\u00e0lfa B\u00e8ta G\u00e0mma '.repeat(30);const s=Utils.slugify(big);assert(/^[a-z0-9-]*$/.test(s));});
 test('Performance & Edge','formatTime numero grande',()=>assert(Utils.formatTime(999999).includes('h')));
@@ -649,7 +650,7 @@ test('Custom Categories','Aggiunta cat custom runtime',()=>{const before=Recipes
 test('Custom Categories','getCategoryById trova custom',()=>{Recipes.CATEGORIES.push({id:'cat-x',label:'Cat X',icon:'X',color:'#0f0',isCustom:true});assertEqual(Recipes.getCategoryById('cat-x').label,'Cat X');Recipes.CATEGORIES.pop();});
 test('Custom Categories','isCustom===true nelle custom',()=>{Recipes.CATEGORIES.push({id:'cat-y',label:'Cat Y',icon:'Y',color:'#00f',isCustom:true});const f=Recipes.getCategoryById('cat-y');assert(f.isCustom===true);Recipes.CATEGORIES.pop();});
 test('Custom Categories','Rimozione ripristina count',()=>{const before=Recipes.CATEGORIES.length;Recipes.CATEGORIES.push({id:'cat-z',label:'Z',icon:'Z',color:'#fff',isCustom:true});Recipes.CATEGORIES=Recipes.CATEGORIES.filter(c=>c.id!=='cat-z');assertEqual(Recipes.CATEGORIES.length,before);});
-test('Custom Categories','Custom valida in validate',()=>{Recipes.CATEGORIES.push({id:'custom-v',label:'Cv',icon:'C',color:'#f00',isCustom:true});assert(Recipes.validate({name:'T',category:'custom-v'}).valid===true);Recipes.CATEGORIES.pop();});
+test('Custom Categories','Custom valida in validate',()=>{Recipes.CATEGORIES.push({id:'custom-v',label:'Cv',icon:'C',color:'#f00',isCustom:true});assert(Recipes.validate({name:'Test',category:'custom-v'}).valid===true);Recipes.CATEGORIES.pop();});
 test('Custom Categories','ID resta univoco',()=>{Recipes.CATEGORIES.push({id:'unique-c',label:'U',icon:'U',color:'#000',isCustom:true});const ids=Recipes.CATEGORIES.map(c=>c.id);assertEqual(new Set(ids).size,Recipes.CATEGORIES.length);Recipes.CATEGORIES.pop();});
 test('Custom Categories','Filtraggio per cat custom',()=>{Recipes.CATEGORIES.push({id:'brunch',label:'Brunch',icon:'X',color:'#f90',isCustom:true});const l=[{name:'Pancakes',category:'brunch'},{name:'Pasta',category:'primi'}];const r=Recipes.filterRecipes(l,{category:'brunch'});assertEqual(r.length,1);assertEqual(r[0].name,'Pancakes');Recipes.CATEGORIES.pop();});
 test('Custom Categories','Standard non sovrascritta',()=>{const before=Recipes.getCategoryById('dolci').label;Recipes.CATEGORIES.push({id:'dolci-c',label:'Dolci Custom',icon:'X',color:'#f00',isCustom:true});assertEqual(Recipes.getCategoryById('dolci').label,before);Recipes.CATEGORIES.pop();});

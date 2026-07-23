@@ -400,6 +400,7 @@
      * Helper to draw wrapped text inside canvas
      */
     _drawTextWrapped(ctx, text, x, y, maxWidth, lineHeight) {
+      if (!text || typeof text !== 'string') text = '';
       var words = text.split(' ');
       var line = '';
       var lines = [];
