@@ -444,7 +444,14 @@ window.Views = (function () {
         '<div class="recipe-detail__info-item"><span>' + Icons.clock + '</span><span>Prep: ' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + Icons.flame + '</span><span>Cottura: ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + esc(diffEmoji) + '</span><span>' + esc(recipe.difficulty || 'facile') + '</span></div>' +
-        '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span><span>' + (recipe.servings || 4) + ' porzioni</span></div>' +
+        '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span>' +
+          '<div style="display:inline-flex;align-items:center;gap:.3rem;">' +
+            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-down" aria-label="Riduci porzioni" style="width:22px;height:22px;min-width:22px;padding:0;font-size:12px;border:1px solid var(--border-color);border-radius:99px;line-height:1">-</button>' +
+            '<span id="detail-servings-val" data-base-servings="' + (recipe.servings || 4) + '" style="font-weight:700;">' + (recipe.servings || 4) + '</span>' +
+            '<span>porzioni</span>' +
+            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-up" aria-label="Aumenta porzioni" style="width:22px;height:22px;min-width:22px;padding:0;font-size:12px;border:1px solid var(--border-color);border-radius:99px;line-height:1">+</button>' +
+          '</div>' +
+        '</div>' +
       '</div>';
 
     // Start Cooking Mode Button
@@ -484,9 +491,9 @@ window.Views = (function () {
     if (recipe.ingredients && recipe.ingredients.length > 0) {
       recipe.ingredients.forEach(function (ing) {
         var parts = [];
-        if (ing.quantity) parts.push(esc(ing.quantity));
-        if (ing.unit) parts.push(esc(ing.unit));
-        parts.push(esc(ing.name));
+        if (ing.quantity) parts.push('<span class="ing-qty" data-base-qty="' + esc(ing.quantity) + '">' + esc(ing.quantity) + '</span>');
+        if (ing.unit) parts.push('<span class="ing-unit">' + esc(ing.unit) + '</span>');
+        parts.push('<span class="ing-name">' + esc(ing.name) + '</span>');
         var notesHTML = ing.notes ? ' <span class="ingredient-item__notes">(' + esc(ing.notes) + ')</span>' : '';
         html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + notesHTML + '</li>';
       });

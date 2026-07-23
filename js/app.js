@@ -36,6 +36,25 @@
     }
   }
 
+  function updateServingsScale(delta) {
+    var valEl = document.getElementById('detail-servings-val');
+    if (!valEl) return;
+    var baseServings = parseInt(valEl.getAttribute('data-base-servings'), 10) || 4;
+    var currentVal = parseInt(valEl.textContent, 10) || baseServings;
+    var newVal = Math.max(1, currentVal + delta);
+    valEl.textContent = newVal;
+
+    var ratio = newVal / baseServings;
+
+    var qtyEls = document.querySelectorAll('.ingredient-list .ing-qty');
+    qtyEls.forEach(function (el) {
+      var baseQty = el.getAttribute('data-base-qty');
+      if (baseQty) {
+        el.textContent = Utils.scaleQuantity(baseQty, ratio);
+      }
+    });
+  }
+
   /* ──────────────────── DOM REFERENCES ──────────────────── */
 
   var appContent = document.getElementById('app-content');
@@ -1039,6 +1058,14 @@
         case 'close-cooking': {
           releaseWakeLock();
           Views.hideModal();
+          break;
+        }
+        case 'scale-servings-down': {
+          updateServingsScale(-1);
+          break;
+        }
+        case 'scale-servings-up': {
+          updateServingsScale(1);
           break;
         }
         case 'go-pantry': {

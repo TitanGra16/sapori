@@ -245,6 +245,27 @@ window.Utils = {
   },
 
   /**
+   * Scale a quantity string by a given ratio.
+   * Examples: "200" * 0.5 -> "100", "1.5" * 2 -> "3", "q.b." -> "q.b."
+   * @param {string} qtyStr
+   * @param {number} ratio
+   * @returns {string}
+   */
+  scaleQuantity(qtyStr, ratio) {
+    if (!qtyStr || typeof qtyStr !== 'string' || !ratio || ratio <= 0) return qtyStr || '';
+    const trimmed = qtyStr.trim();
+    if (!trimmed) return '';
+
+    return trimmed.replace(/(\d+(?:[\.,]\d+)?)/g, (match) => {
+      const num = parseFloat(match.replace(',', '.'));
+      if (isNaN(num)) return match;
+      const scaled = num * ratio;
+      const rounded = Math.round(scaled * 100) / 100;
+      return String(rounded);
+    });
+  },
+
+  /**
    * Escape HTML special characters to prevent XSS.
    * @param {string} str
    * @returns {string}
