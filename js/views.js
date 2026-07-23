@@ -447,6 +447,14 @@ window.Views = (function () {
         '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span><span>' + (recipe.servings || 4) + ' porzioni</span></div>' +
       '</div>';
 
+    // Start Cooking Mode Button
+    html +=
+      '<div style="padding:0 1rem;margin-bottom:1rem">' +
+        '<button type="button" class="btn btn--primary" data-action="start-cooking" data-id="' + esc(recipe.id) + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:1.05rem;padding:.85rem;border-radius:var(--radius-md);font-weight:700">' +
+          Icons.flame + ' Avvia Modalità Cucina (Schermo Attivo)' +
+        '</button>' +
+      '</div>';
+
     // Description
     if (recipe.description) {
       html +=
@@ -850,6 +858,83 @@ window.Views = (function () {
     return html;
   }
 
+  function showCookingModal(recipe, stepIndex, checkedIngredients, wakeLockActive) {
+    stepIndex = stepIndex || 0;
+    checkedIngredients = checkedIngredients || {};
+    var esc = Utils.escapeHtml;
+    var overlay = document.getElementById('modal-overlay');
+    var totalSteps = (recipe.steps && recipe.steps.length) || 0;
+
+    var stepVal = (recipe.steps && recipe.steps[stepIndex]) || '';
+    var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
+    var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
+
+    var html = '<div class="cooking-modal" style="background:var(--surface-color);color:var(--text-main);width:100%;max-width:700px;border-radius:var(--radius-lg);padding:1.5rem;box-shadow:0 20px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:1.25rem;max-height:90vh;overflow-y:auto">';
+    
+    // Header
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-color);padding-bottom:.85rem">';
+    html += '<div><div style="font-size:.78rem;text-transform:uppercase;color:var(--primary-color);font-weight:700;letter-spacing:.05em">👨‍🍳 Modalità Cucina</div>';
+    html += '<h2 style="font-size:1.3rem;margin:0;font-weight:800">' + esc(recipe.name) + '</h2></div>';
+    html += '<button type="button" class="btn btn--icon" data-action="close-cooking" aria-label="Chiudi Modalità Cucina" style="width:36px;height:36px;border-radius:99px;border:1px solid var(--border-color);background:var(--glass-bg);display:flex;align-items:center;justify-content:center">' + Icons.x + '</button>';
+    html += '</div>';
+
+    // Wake Lock indicator
+    var wlText = wakeLockActive ? '⚡ Schermo sempre acceso' : '📱 Schermo standard';
+    var wlBg = wakeLockActive ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)';
+    var wlColor = wakeLockActive ? '#10B981' : '#94A3B8';
+    html += '<div style="background:' + wlBg + ';color:' + wlColor + ';font-size:.78rem;font-weight:600;padding:4px 12px;border-radius:99px;align-self:flex-start;display:flex;align-items:center;gap:.4rem">' + wlText + '</div>';
+
+    // Section 1: Ingredients Checklist
+    if (recipe.ingredients && recipe.ingredients.length > 0) {
+      html += '<div style="background:var(--bg-color);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:.85rem">';
+      html += '<div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Ingredienti (tocca per spuntare):</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:.4rem">';
+      recipe.ingredients.forEach(function(ing, idx) {
+        var isChecked = !!checkedIngredients[idx];
+        var style = isChecked 
+          ? 'background:rgba(16,185,129,0.15);color:var(--text-muted);text-decoration:line-through;border:1px solid rgba(16,185,129,0.3);' 
+          : 'background:var(--surface-color);color:var(--text-main);border:1px solid var(--border-color);';
+        var parts = [];
+        if (ing.quantity) parts.push(esc(ing.quantity));
+        if (ing.unit) parts.push(esc(ing.unit));
+        parts.push(esc(ing.name));
+        html += '<button type="button" class="btn btn--small" data-action="toggle-cooking-ing" data-index="' + idx + '" style="' + style + 'border-radius:99px;font-size:.82rem;padding:4px 10px;cursor:pointer">';
+        html += (isChecked ? '✓ ' : '') + parts.join(' ');
+        html += '</button>';
+      });
+      html += '</div></div>';
+    }
+
+    // Section 2: Current Step Big Card
+    if (totalSteps > 0) {
+      html += '<div style="background:var(--bg-color);border:2px solid var(--primary-color);border-radius:var(--radius-md);padding:1.5rem;display:flex;flex-direction:column;gap:.75rem">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+      html += '<span style="background:var(--primary-color);color:#fff;font-weight:800;font-size:.85rem;padding:3px 12px;border-radius:99px">PASSAGGIO ' + (stepIndex + 1) + ' DI ' + totalSteps + '</span>';
+      html += '</div>';
+
+      html += '<p style="font-size:1.3rem;line-height:1.6;font-weight:500;margin:0;color:var(--text-main)">' + esc(stepText) + '</p>';
+
+      if (stepNotes) {
+        html += '<div style="font-size:.9rem;color:var(--primary-color);background:rgba(232,93,58,0.1);padding:.6rem 1rem;border-radius:var(--radius-sm);font-style:italic"><strong>Nota:</strong> ' + esc(stepNotes) + '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Navigation Controls
+    html += '<div style="display:flex;gap:.75rem;margin-top:.5rem">';
+    var prevDisabled = stepIndex === 0 ? ' disabled style="opacity:.4;flex:1"' : ' style="flex:1"';
+    var nextDisabled = stepIndex >= totalSteps - 1 ? ' disabled style="opacity:.4;flex:1"' : ' style="flex:1"';
+
+    html += '<button type="button" class="btn btn--secondary" data-action="cooking-prev" data-step="' + (stepIndex - 1) + '"' + prevDisabled + '>⬅️ Precedente</button>';
+    html += '<button type="button" class="btn btn--primary" data-action="cooking-next" data-step="' + (stepIndex + 1) + '"' + nextDisabled + '>Successivo ➡️</button>';
+    html += '</div>';
+
+    html += '</div>';
+
+    overlay.innerHTML = html;
+    overlay.classList.remove('hidden');
+  }
+
   function showConfirmModal(title, message, onConfirm) {
     var esc = Utils.escapeHtml;
     var overlay = document.getElementById('modal-overlay');
@@ -886,6 +971,7 @@ window.Views = (function () {
     renderFavorites: renderFavorites,
     renderSettings: renderSettings,
     renderPantry: renderPantry,
+    showCookingModal: showCookingModal,
     showConfirmModal: showConfirmModal,
     hideModal: hideModal
   };

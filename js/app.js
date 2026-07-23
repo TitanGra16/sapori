@@ -11,8 +11,30 @@
     currentView: 'home',
     filters: { search: '', category: '', sortBy: 'recent' },
     editingRecipe: null,
-    pantryIngredients: []
+    pantryIngredients: [],
+    cooking: { recipe: null, stepIndex: 0, checkedIngredients: {}, wakeLockSentinel: null }
   };
+
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        state.cooking.wakeLockSentinel = await navigator.wakeLock.request('screen');
+        console.log('Screen Wake Lock attivato.');
+      } catch (err) {
+        console.warn('Wake Lock error:', err);
+        state.cooking.wakeLockSentinel = null;
+      }
+    }
+  }
+
+  function releaseWakeLock() {
+    if (state.cooking && state.cooking.wakeLockSentinel) {
+      try {
+        state.cooking.wakeLockSentinel.release();
+      } catch (e) {}
+      state.cooking.wakeLockSentinel = null;
+    }
+  }
 
   /* ──────────────────── DOM REFERENCES ──────────────────── */
 
@@ -975,6 +997,48 @@
         }
         case 'go-create': {
           navigateTo('#create');
+          break;
+        }
+        case 'start-cooking': {
+          var cookId = actionEl.getAttribute('data-id');
+          if (cookId) {
+            DB.getRecipe(cookId).then(async function (r) {
+              if (r) {
+                state.cooking = { recipe: r, stepIndex: 0, checkedIngredients: {}, wakeLockSentinel: null };
+                await requestWakeLock();
+                Views.showCookingModal(r, 0, state.cooking.checkedIngredients, !!state.cooking.wakeLockSentinel);
+              }
+            });
+          }
+          break;
+        }
+        case 'cooking-prev': {
+          var pStep = parseInt(actionEl.getAttribute('data-step'), 10);
+          if (!isNaN(pStep) && pStep >= 0 && state.cooking && state.cooking.recipe) {
+            state.cooking.stepIndex = pStep;
+            Views.showCookingModal(state.cooking.recipe, pStep, state.cooking.checkedIngredients, !!state.cooking.wakeLockSentinel);
+          }
+          break;
+        }
+        case 'cooking-next': {
+          var nStep = parseInt(actionEl.getAttribute('data-step'), 10);
+          if (!isNaN(nStep) && state.cooking && state.cooking.recipe && nStep < state.cooking.recipe.steps.length) {
+            state.cooking.stepIndex = nStep;
+            Views.showCookingModal(state.cooking.recipe, nStep, state.cooking.checkedIngredients, !!state.cooking.wakeLockSentinel);
+          }
+          break;
+        }
+        case 'toggle-cooking-ing': {
+          var cIdx = parseInt(actionEl.getAttribute('data-index'), 10);
+          if (!isNaN(cIdx) && state.cooking) {
+            state.cooking.checkedIngredients[cIdx] = !state.cooking.checkedIngredients[cIdx];
+            Views.showCookingModal(state.cooking.recipe, state.cooking.stepIndex, state.cooking.checkedIngredients, !!state.cooking.wakeLockSentinel);
+          }
+          break;
+        }
+        case 'close-cooking': {
+          releaseWakeLock();
+          Views.hideModal();
           break;
         }
         case 'go-pantry': {
