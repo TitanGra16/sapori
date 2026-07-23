@@ -161,7 +161,7 @@ test('Utils.escapeHtml','Stringa vuota rimane vuota',()=>assertEqual(Utils.escap
 test('Utils.escapeHtml','null -> vuoto',()=>assertEqual(Utils.escapeHtml(null),''));
 test('Utils.escapeHtml','undefined -> vuoto',()=>assertEqual(Utils.escapeHtml(undefined),''));
 test('Utils.escapeHtml','Testo normale invariato',()=>assertEqual(Utils.escapeHtml('ciao mondo'),'ciao mondo'));
-test('Utils.escapeHtml','<script> escapato',()=>assertEqual(Utils.escapeHtml('<script>'),'&lt;script&gt;'));
+test('Utils.escapeHtml','script tag escapato',()=>assertEqual(Utils.escapeHtml('\x3cscript\x3e'),'&lt;script&gt;'));
 test('Utils.escapeHtml','XSS neutralizzato',()=>{const r=Utils.escapeHtml('<img src=x onerror="alert(1)">');assert(!r.includes('<img')&&r.includes('&lt;img'));});
 test('Utils.escapeHtml','Apice e virgolette',()=>{const r=Utils.escapeHtml("It's \"fine\"");assert(r.includes('&#039;')&&r.includes('&quot;'));});
 test('Utils.escapeHtml','Numero 42 -> "42"',()=>assertEqual(Utils.escapeHtml(42),'42'));
@@ -269,7 +269,7 @@ test('Utils.showToast','Classe toast--info',()=>{Utils.showToast('i','info');ass
 test('Utils.showToast','Classe toast--success',()=>{Utils.showToast('ok','success');assert(document.querySelectorAll('.toast--success').length>0);});
 test('Utils.showToast','Classe toast--error',()=>{Utils.showToast('err','error');assert(document.querySelectorAll('.toast--error').length>0);});
 test('Utils.showToast','Contiene messaggio',()=>{const m='MSG_UNICO_XYZ';Utils.showToast(m,'info');assert(document.getElementById('toast-container').innerHTML.includes(m));});
-test('Utils.showToast','Escapa HTML',()=>{Utils.showToast('<script>','error');assert(!document.getElementById('toast-container').innerHTML.includes('<script>'));});
+test('Utils.showToast','Escapa HTML',()=>{Utils.showToast('\x3cscript\x3e','error');assert(!document.getElementById('toast-container').innerHTML.includes('\x3cscript\x3e'));});
 test('Utils.showToast','Ha role=alert',()=>{Utils.showToast('Role','info');assert(document.querySelectorAll('[role="alert"]').length>0);});
 test('Utils.showToast','No throw con messaggio vuoto',()=>{Utils.showToast('','info');assert(true);});
 
@@ -614,19 +614,19 @@ test('Notes (Item-Level)','Ingrediente senza notes HTML vuoto',()=>{const i={nam
 test('Notes (Item-Level)','Step notes non influisce su text',()=>{const s={text:'Principale',notes:'Nota'};assertEqual(s.text,'Principale');assertEqual(s.notes,'Nota');});
 test('Notes (Item-Level)','isFormDirty: ingr con note dirty',()=>{const i={name:'',quantity:'',unit:'',notes:'Nota'};const d=(i.name&&i.name.trim()!=='')||i.quantity||i.unit||(i.notes&&i.notes.trim()!=='');assert(d===true);});
 test('Notes (Item-Level)','isFormDirty: step obj con testo dirty',()=>{const s={text:'Cuoci',notes:''};const t=typeof s==='object'?s.text:s;const n=typeof s==='object'?s.notes:'';const d=(t&&t.trim()!=='')||(n&&n.trim()!=='');assert(d===true);});
-test('Notes (Item-Level)','Note ingr con HTML escapate',()=>{const note='<script>alert(1)</script>';const e=Utils.escapeHtml(note);assert(!e.includes('<script>')&&e.includes('&lt;script&gt;'));});
+test('Notes (Item-Level)','Note ingr con HTML escapate',()=>{const note='\x3cscript\x3ealert(1)\x3c/script\x3e';const e=Utils.escapeHtml(note);assert(!e.includes('\x3cscript\x3e')&&e.includes('&lt;script&gt;'));});
 test('Notes (Item-Level)','Note step con HTML escapate',()=>{const note='"Test" & <b>Bold</b>';const e=Utils.escapeHtml(note);assert(e.includes('&quot;')&&e.includes('&amp;'));});
 
 // ── CAT 28: Performance & Edge Cases (15) ──
 test('Performance & Edge','1000 ricette filterRecipes < 500ms',()=>{const big=Array.from({length:1000},(_,i)=>({name:'R'+i,category:i%2===0?'dolci':'primi',description:'D'+i,ingredients:[{name:'Ing'+i}],createdAt:i}));const t=performance.now();Recipes.filterRecipes(big,{search:'R5',sortBy:'name_asc'});assert(performance.now()-t<500);});
 test('Performance & Edge','1000 generateId < 500ms',()=>{const t=performance.now();for(let i=0;i<1000;i++)Utils.generateId();assert(performance.now()-t<500);});
-test('Performance & Edge','1000 escapeHtml < 200ms',()=>{const t=performance.now();for(let i=0;i<1000;i++)Utils.escapeHtml('<script>alert(1)</script>');assert(performance.now()-t<200);});
+test('Performance & Edge','1000 escapeHtml < 200ms',()=>{const t=performance.now();for(let i=0;i<1000;i++)Utils.escapeHtml('\x3cscript\x3ealert(1)\x3c/script\x3e');assert(performance.now()-t<200);});
 test('Performance & Edge','100x filterRecipes vuoto < 10ms',()=>{const t=performance.now();for(let i=0;i<100;i++)Recipes.filterRecipes([],{});assert(performance.now()-t<10);});
 test('Performance & Edge','100x validate < 10ms',()=>{const r={name:'T',category:'dolci'};const t=performance.now();for(let i=0;i<100;i++)Recipes.validate(r);assert(performance.now()-t<10);});
 test('Performance & Edge','Nome 1000 char validate no crash',()=>assert(Recipes.validate({name:'A'.repeat(1000),category:'dolci'}).valid===true));
 test('Performance & Edge','100 ingredienti validate no crash',()=>{const ing=Array.from({length:100},(_,i)=>({name:'Ing'+i,quantity:'100',unit:'g'}));assert(Recipes.validate({name:'T',category:'dolci',ingredients:ing}).valid===true);});
 test('Performance & Edge','100 passaggi validate no crash',()=>{const steps=Array.from({length:100},(_,i)=>'Passaggio '+i);assert(Recipes.validate({name:'T',category:'dolci',steps}).valid===true);});
-test('Performance & Edge','escapeHtml 10000 char',()=>{const big='<script>'.repeat(1250);const r=Utils.escapeHtml(big);assert(r.includes('&lt;script&gt;'));});
+test('Performance & Edge','escapeHtml 10000 char',()=>{const big='\x3cscript\x3e'.repeat(1250);const r=Utils.escapeHtml(big);assert(r.includes('&lt;script&gt;'));});
 test('Performance & Edge','slugify 500 char',()=>{const big='A\u00e0lfa B\u00e8ta G\u00e0mma '.repeat(30);const s=Utils.slugify(big);assert(/^[a-z0-9-]*$/.test(s));});
 test('Performance & Edge','formatTime numero grande',()=>assert(Utils.formatTime(999999).includes('h')));
 test('Performance & Edge','getTotalTime numeri grandi',()=>assert(Utils.getTotalTime(10000,20000).includes('h')));
