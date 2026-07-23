@@ -112,16 +112,22 @@ window.Recipes = {
       }
     }
 
-    // Steps: if present, each must be a non-empty string
+    // Steps: if present, each must be a non-empty string or object with non-empty text
     if (recipe.steps !== undefined && recipe.steps !== null) {
       if (!Array.isArray(recipe.steps)) {
         errors.steps = 'I passaggi devono essere una lista';
       } else {
-        // Filter out empty steps before validation
-        const nonEmptySteps = recipe.steps.filter(s => s && typeof s === 'string' && s.trim());
+        const nonEmptySteps = recipe.steps.filter(s => {
+          if (!s) return false;
+          if (typeof s === 'string') return s.trim().length > 0;
+          if (typeof s === 'object' && s.text) return String(s.text).trim().length > 0;
+          return false;
+        });
 
         for (let i = 0; i < nonEmptySteps.length; i++) {
-          if (typeof nonEmptySteps[i] !== 'string' || !nonEmptySteps[i].trim()) {
+          const stepVal = nonEmptySteps[i];
+          const text = typeof stepVal === 'object' ? stepVal.text : stepVal;
+          if (typeof text !== 'string' || !text.trim()) {
             errors[`step_${i}`] = `Passaggio ${i + 1}: il testo è obbligatorio`;
           }
         }

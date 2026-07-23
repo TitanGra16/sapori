@@ -298,7 +298,7 @@ window.Utils = {
     return slug
       .toLowerCase()
       .trim()
-      .replace(/[^a-z0-9\s-]/g, '')  // Remove non-alphanumeric (except spaces and hyphens)
+      .replace(/[^a-z0-9\s_-]/g, '')  // Remove non-alphanumeric (except spaces, underscores, hyphens)
       .replace(/[\s_]+/g, '-')         // Replace spaces/underscores with hyphens
       .replace(/-+/g, '-')             // Collapse consecutive hyphens
       .replace(/^-|-$/g, '');          // Trim leading/trailing hyphens

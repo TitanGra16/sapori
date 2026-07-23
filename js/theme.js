@@ -103,7 +103,16 @@ window.Theme = {
    * @returns {Promise<string>} The new mode ('light' or 'dark')
    */
   async toggleDarkMode() {
-    this.currentMode = this.currentMode === 'light' ? 'dark' : 'light';
+    return this.setDarkMode(this.currentMode === 'light');
+  },
+
+  /**
+   * Set dark mode explicitly.
+   * @param {boolean} isDark
+   * @returns {Promise<string>}
+   */
+  async setDarkMode(isDark) {
+    this.currentMode = isDark ? 'dark' : 'light';
     this.apply();
 
     try {
@@ -113,6 +122,10 @@ window.Theme = {
     }
 
     return this.currentMode;
+  },
+
+  get PALETTES() {
+    return Object.keys(this._themeColors);
   },
 
   /**
