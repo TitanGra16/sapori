@@ -10,7 +10,8 @@
   var state = {
     currentView: 'home',
     filters: { search: '', category: '', sortBy: 'recent' },
-    editingRecipe: null
+    editingRecipe: null,
+    pantryIngredients: []
   };
 
   /* ──────────────────── DOM REFERENCES ──────────────────── */
@@ -210,6 +211,12 @@
         updateNav('settings');
         showHeader(true);
         Views.renderSettings(appContent);
+        break;
+
+      case 'pantry':
+        updateNav('');
+        showHeader(false);
+        Views.renderPantry(appContent, state.pantryIngredients);
         break;
 
       default:
@@ -928,6 +935,21 @@
       }
     });
 
+    document.addEventListener('submit', function (e) {
+      if (e.target.id === 'pantry-form') {
+        e.preventDefault();
+        var input = document.getElementById('pantry-input');
+        if (input && input.value.trim().length > 0) {
+          var val = input.value.trim();
+          if (!state.pantryIngredients.some(function(u){ return u.toLowerCase() === val.toLowerCase(); })) {
+            state.pantryIngredients.push(val);
+            Views.renderPantry(appContent, state.pantryIngredients);
+          }
+          input.value = '';
+        }
+      }
+    });
+
     // Global delegated click handler for dynamic content
     document.addEventListener('click', function (e) {
       var target = e.target;
@@ -953,6 +975,31 @@
         }
         case 'go-create': {
           navigateTo('#create');
+          break;
+        }
+        case 'go-pantry': {
+          navigateTo('#pantry');
+          break;
+        }
+        case 'add-quick-pantry': {
+          var quickIng = actionEl.getAttribute('data-ingredient');
+          if (quickIng && !state.pantryIngredients.some(function(u){ return u.toLowerCase() === quickIng.toLowerCase(); })) {
+            state.pantryIngredients.push(quickIng);
+            Views.renderPantry(appContent, state.pantryIngredients);
+          }
+          break;
+        }
+        case 'remove-pantry-ingredient': {
+          var pIdx = parseInt(actionEl.getAttribute('data-index'), 10);
+          if (!isNaN(pIdx) && pIdx >= 0 && pIdx < state.pantryIngredients.length) {
+            state.pantryIngredients.splice(pIdx, 1);
+            Views.renderPantry(appContent, state.pantryIngredients);
+          }
+          break;
+        }
+        case 'clear-pantry': {
+          state.pantryIngredients = [];
+          Views.renderPantry(appContent, state.pantryIngredients);
           break;
         }
         case 'go-back': {

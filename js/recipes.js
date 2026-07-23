@@ -313,5 +313,72 @@ window.Recipes = {
     }
 
     return exported;
+  },
+
+  /**
+   * Match available ingredients against a list of recipes (Svuotafrigo mode).
+   * @param {Array} recipes
+   * @param {Array<string>} userIngredients
+   * @returns {Array<{recipe: Object, matchedCount: number, totalCount: number, missingCount: number, matchRatio: number, matchedNames: Array, missingNames: Array, isComplete: boolean}>}
+   */
+  matchPantry(recipes, userIngredients) {
+    if (!Array.isArray(recipes) || !Array.isArray(userIngredients) || userIngredients.length === 0) {
+      return [];
+    }
+
+    const normUser = userIngredients
+      .map(i => window.Utils ? window.Utils.slugify(i) : String(i).toLowerCase().trim())
+      .filter(i => i.length > 0);
+
+    if (normUser.length === 0) return [];
+
+    const results = [];
+
+    recipes.forEach(r => {
+      if (!r || !r.ingredients || !Array.isArray(r.ingredients) || r.ingredients.length === 0) {
+        return;
+      }
+
+      const totalIngs = r.ingredients.filter(ing => ing && ing.name && String(ing.name).trim().length > 0);
+      if (totalIngs.length === 0) return;
+
+      let matchedCount = 0;
+      const matchedNames = [];
+      const missingNames = [];
+
+      totalIngs.forEach(ing => {
+        const slugName = window.Utils ? window.Utils.slugify(ing.name) : String(ing.name).toLowerCase().trim();
+        const isMatched = normUser.some(u => slugName.includes(u) || u.includes(slugName));
+        if (isMatched) {
+          matchedCount++;
+          matchedNames.push(ing.name);
+        } else {
+          missingNames.push(ing.name);
+        }
+      });
+
+      if (matchedCount > 0) {
+        const matchRatio = matchedCount / totalIngs.length;
+        const missingCount = totalIngs.length - matchedCount;
+        results.push({
+          recipe: r,
+          matchedCount,
+          totalCount: totalIngs.length,
+          missingCount,
+          matchRatio,
+          matchedNames,
+          missingNames,
+          isComplete: missingCount === 0
+        });
+      }
+    });
+
+    results.sort((a, b) => {
+      if (b.matchRatio !== a.matchRatio) return b.matchRatio - a.matchRatio;
+      if (a.missingCount !== b.missingCount) return a.missingCount - b.missingCount;
+      return a.recipe.name.localeCompare(b.recipe.name, 'it-IT');
+    });
+
+    return results;
   }
 };

@@ -67,6 +67,8 @@ window.Views = (function () {
   function categoryChipsHTML(activeCategory) {
     var esc = Utils.escapeHtml;
     var html = '<div class="filter-bar">';
+    html += '<button type="button" class="filter-chip filter-chip--pantry" data-action="go-pantry" style="background:linear-gradient(135deg,#E85D3A,#FFA726);color:#fff;font-weight:600;border:none;">' +
+              '👨‍🍳 Svuotafrigo</button>';
     html += '<button type="button" class="filter-chip' + (activeCategory === '' ? ' active' : '') + '" data-action="filter-category" data-category="">' +
               '🍽️ Tutte</button>';
     Recipes.CATEGORIES.forEach(function (cat) {
@@ -728,6 +730,126 @@ window.Views = (function () {
 
   /* ──────────────────── MODAL ──────────────────── */
 
+  /* ──────────────────── PANTRY / SVUOTAFRIGO VIEW ──────────────────── */
+
+  async function renderPantry(container, userIngredients) {
+    userIngredients = userIngredients || [];
+    var esc = Utils.escapeHtml;
+    var recipes = await DB.getAllRecipes();
+    var matches = Recipes.matchPantry(recipes, userIngredients);
+
+    var html = '<div class="view pantry-view animate-fade-in" style="padding-bottom:2rem">';
+    
+    // Header
+    html += '<div class="view-header" style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">';
+    html += '<button type="button" class="btn btn--icon" data-action="go-home" aria-label="Torna indietro" style="border:1px solid var(--border);background:var(--glass-bg);width:40px;height:40px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;">' + Icons.arrowLeft + '</button>';
+    html += '<div><h1 class="view-header__title" style="margin:0;font-size:1.5rem">👨‍🍳 Modalità Svuotafrigo</h1>';
+    html += '<p style="margin:0;font-size:.85rem;color:var(--text-muted)">Inserisci gli ingredienti che hai in casa per scoprire cosa cucinare</p></div></div>';
+
+    // Input form for ingredients
+    html += '<div class="pantry-card" style="background:var(--surface-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem">';
+    html += '<form id="pantry-form" style="display:flex;gap:.5rem;margin-bottom:1rem">';
+    html += '<input type="text" id="pantry-input" class="form-input" placeholder="Es. uova, guanciale, mascarpone..." style="flex:1" autocomplete="off">';
+    html += '<button type="submit" class="btn btn--primary" data-action="add-pantry-ingredient">' + Icons.plus + ' Aggiungi</button>';
+    html += '</form>';
+
+    // Quick suggestions
+    var quicks = ['Uova', 'Farina', 'Latte', 'Pomodoro', 'Burro', 'Pasta', 'Riso', 'Carne', 'Zucchine', 'Patate', 'Formaggio', 'Olio'];
+    html += '<div style="margin-bottom:1rem"><span style="font-size:.75rem;color:var(--text-muted);display:block;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em">Suggerimenti rapidi:</span>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:.4rem">';
+    quicks.forEach(function(q) {
+      var isAdded = userIngredients.some(function(u){ return u.toLowerCase() === q.toLowerCase(); });
+      if (!isAdded) {
+        html += '<button type="button" class="btn btn--ghost btn--small" data-action="add-quick-pantry" data-ingredient="' + esc(q) + '" style="font-size:.78rem;padding:4px 10px;border-radius:99px">+ ' + esc(q) + '</button>';
+      }
+    });
+    html += '</div></div>';
+
+    // Selected ingredient chips
+    if (userIngredients.length > 0) {
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">';
+      html += '<span style="font-size:.85rem;font-weight:600">Ingredienti selezionati (' + userIngredients.length + '):</span>';
+      html += '<button type="button" class="btn btn--ghost btn--small" data-action="clear-pantry" style="color:var(--error-color);font-size:.78rem">Pulisci tutti</button>';
+      html += '</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:.5rem">';
+      userIngredients.forEach(function(ing, idx) {
+        html += '<span class="pantry-chip" style="background:var(--primary-color);color:#fff;padding:6px 12px;border-radius:99px;font-size:.85rem;font-weight:500;display:inline-flex;align-items:center;gap:.4rem">';
+        html += esc(ing);
+        html += '<button type="button" data-action="remove-pantry-ingredient" data-index="' + idx + '" aria-label="Rimuovi" style="background:none;border:none;color:#fff;cursor:pointer;padding:0;display:flex;align-items:center">' + Icons.x + '</button>';
+        html += '</span>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.85rem;font-style:italic">Nessun ingrediente inserito. Aggiungine uno per iniziare la ricerca!</div>';
+    }
+
+    html += '</div>'; // close pantry-card
+
+    // Results section
+    if (userIngredients.length === 0) {
+      html += emptyStateHTML(Icons.searchLg, 'Svuota la tua dispensa!', 'Aggiungi gli ingredienti che hai a disposizione per trovare ricette gustose', null, null);
+    } else if (matches.length === 0) {
+      html += emptyStateHTML(Icons.frown, 'Nessuna ricetta trovata', 'Nessuna ricetta nel tuo ricettario contiene gli ingredienti selezionati', null, null);
+    } else {
+      var complete = matches.filter(function(m){ return m.isComplete; });
+      var partial = matches.filter(function(m){ return !m.isComplete; });
+
+      html += '<div class="pantry-results">';
+
+      if (complete.length > 0) {
+        html += '<h2 style="font-size:1.1rem;font-weight:700;color:var(--success-color);margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem">🟢 Pronti da cucinare (Hai tutti gli ingredienti - ' + complete.length + ')</h2>';
+        html += '<div class="recipe-grid" style="margin-bottom:1.5rem">';
+        complete.forEach(function(m) {
+          html += pantryCardHTML(m);
+        });
+        html += '</div>';
+      }
+
+      if (partial.length > 0) {
+        html += '<h2 style="font-size:1.1rem;font-weight:700;color:var(--warning-color);margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem">🟡 Ti manca pochissimo (' + partial.length + ')</h2>';
+        html += '<div class="recipe-grid">';
+        partial.forEach(function(m) {
+          html += pantryCardHTML(m);
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  function pantryCardHTML(matchItem) {
+    var esc = Utils.escapeHtml;
+    var r = matchItem.recipe;
+    var cat = Utils.getCategoryInfo(r.category);
+    var badgeColor = matchItem.isComplete ? '#10B981' : '#F59E0B';
+    var badgeText = matchItem.isComplete 
+      ? '🟢 100% Ingredienti' 
+      : '🟡 ' + matchItem.matchedCount + ' su ' + matchItem.totalCount + ' ingredienti';
+
+    var html = '<div class="recipe-card animate-fade-in" data-id="' + esc(r.id) + '">';
+    html += '<div class="recipe-card__body">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.4rem">';
+    html += '<span class="recipe-card__category" style="background:' + esc(cat.color) + '22;color:' + esc(cat.color) + '">' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>';
+    html += '<span style="background:' + badgeColor + '22;color:' + badgeColor + ';font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px">' + esc(badgeText) + '</span>';
+    html += '</div>';
+
+    html += '<h3 class="recipe-card__title" style="margin-bottom:.4rem">' + esc(r.name) + '</h3>';
+
+    if (matchItem.missingNames.length > 0) {
+      html += '<div style="font-size:.75rem;color:var(--error-color);margin-bottom:.6rem"><strong>Mancano:</strong> ' + esc(matchItem.missingNames.join(', ')) + '</div>';
+    } else {
+      html += '<div style="font-size:.75rem;color:var(--success-color);margin-bottom:.6rem"><strong>Includi:</strong> ' + esc(matchItem.matchedNames.join(', ')) + '</div>';
+    }
+
+    html += '<button type="button" class="btn btn--primary btn--small" data-action="open-recipe" data-id="' + esc(r.id) + '" style="width:100%">Vedi Ricetta</button>';
+    html += '</div></div>';
+    return html;
+  }
+
   function showConfirmModal(title, message, onConfirm) {
     var esc = Utils.escapeHtml;
     var overlay = document.getElementById('modal-overlay');
@@ -763,6 +885,7 @@ window.Views = (function () {
     renderDetail: renderDetail,
     renderFavorites: renderFavorites,
     renderSettings: renderSettings,
+    renderPantry: renderPantry,
     showConfirmModal: showConfirmModal,
     hideModal: hideModal
   };
