@@ -456,9 +456,11 @@ window.Views = (function () {
 
     // Start Cooking Mode Button
     html +=
-      '<div style="padding:0 1rem;margin-bottom:1rem">' +
-        '<button type="button" class="btn btn--primary" data-action="start-cooking" data-id="' + esc(recipe.id) + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:1.05rem;padding:.85rem;border-radius:var(--radius-md);font-weight:700">' +
-          Icons.flame + ' Avvia Modalità Cucina (Schermo Attivo)' +
+      '<div style="padding:0 1rem;margin-bottom:1.25rem">' +
+        '<button type="button" class="btn btn--primary" data-action="start-cooking" data-id="' + esc(recipe.id) + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;font-size:1.05rem;padding:1rem 1.25rem;border-radius:var(--radius-lg);font-weight:800;letter-spacing:.02em;background:var(--gradient);box-shadow:0 6px 20px var(--shadow);transition:all .2s;position:relative;overflow:hidden">' +
+          '<span style="font-size:1.3rem;line-height:1">🍳</span>' +
+          ' Inizia la Cottura' +
+          '<span style="font-size:.8rem;opacity:.75;margin-left:.25rem">(Schermo Attivo)</span>' +
         '</button>' +
       '</div>';
 
@@ -865,81 +867,193 @@ window.Views = (function () {
     return html;
   }
 
-  function showCookingModal(recipe, stepIndex, checkedIngredients, wakeLockActive) {
+  function showCookingModal(recipe, stepIndex, checkedIngredients, wakeLockActive, timerState, ingExpanded) {
     stepIndex = stepIndex || 0;
     checkedIngredients = checkedIngredients || {};
+    if (typeof ingExpanded === 'undefined') ingExpanded = true;
     var esc = Utils.escapeHtml;
     var overlay = document.getElementById('modal-overlay');
     var totalSteps = (recipe.steps && recipe.steps.length) || 0;
+    var isFinished = stepIndex >= totalSteps;
 
     var stepVal = (recipe.steps && recipe.steps[stepIndex]) || '';
     var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
     var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
 
-    var html = '<div class="cooking-modal" style="background:var(--surface-color);color:var(--text-main);width:100%;max-width:700px;border-radius:var(--radius-lg);padding:1.5rem;box-shadow:0 20px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:1.25rem;max-height:90vh;overflow-y:auto">';
-    
-    // Header
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-color);padding-bottom:.85rem">';
-    html += '<div><div style="font-size:.78rem;text-transform:uppercase;color:var(--primary-color);font-weight:700;letter-spacing:.05em">👨‍🍳 Modalità Cucina</div>';
-    html += '<h2 style="font-size:1.3rem;margin:0;font-weight:800">' + esc(recipe.name) + '</h2></div>';
-    html += '<button type="button" class="btn btn--icon" data-action="close-cooking" aria-label="Chiudi Modalità Cucina" style="width:36px;height:36px;border-radius:99px;border:1px solid var(--border-color);background:var(--glass-bg);display:flex;align-items:center;justify-content:center">' + Icons.x + '</button>';
+    // Progress
+    var pct = totalSteps > 0 ? Math.round((stepIndex / totalSteps) * 100) : 0;
+    var checkedCount = Object.values(checkedIngredients).filter(Boolean).length;
+    var totalIng = (recipe.ingredients && recipe.ingredients.length) || 0;
+
+    // Timer state
+    timerState = timerState || { minutes: 0, seconds: 0, running: false, totalSeconds: 0 };
+    var timerDisplay = (isNaN(timerState.minutes) ? '00' : String(timerState.minutes).padStart(2,'0')) +
+                       ':' +
+                       (isNaN(timerState.seconds) ? '00' : String(timerState.seconds).padStart(2,'0'));
+    var timerClass = timerState.running
+      ? (timerState.minutes === 0 && timerState.seconds <= 10 ? 'cooking-modal__timer-display--danger' :
+         timerState.minutes === 0 && timerState.seconds <= 30 ? 'cooking-modal__timer-display--warning' :
+         'cooking-modal__timer-display--running')
+      : '';
+
+    var html = '<div class="cooking-modal" id="cooking-modal-inner">';
+
+    // Accent bar
+    html += '<div class="cooking-modal__accent-bar"></div>';
+
+    // ── Header ──
+    var wlClass = wakeLockActive ? 'cooking-modal__wakelock--active' : 'cooking-modal__wakelock--inactive';
+    var wlText  = wakeLockActive ? '⚡ Schermo attivo' : '📱 Standard';
+    html += '<div class="cooking-modal__header">';
+    html +=   '<div class="cooking-modal__header-left">';
+    html +=     '<span class="cooking-modal__label">👨‍🍳 Modalità Cucina</span>';
+    html +=     '<h2 class="cooking-modal__title">' + esc(recipe.name) + '</h2>';
+    html +=   '</div>';
+    html +=   '<div class="cooking-modal__header-right">';
+    html +=     '<span class="cooking-modal__wakelock ' + wlClass + '">' + wlText + '</span>';
+    html +=     '<button type="button" class="cooking-modal__close" data-action="close-cooking" aria-label="Chiudi Modalità Cucina">' + Icons.x + '</button>';
+    html +=   '</div>';
     html += '</div>';
 
-    // Wake Lock indicator
-    var wlText = wakeLockActive ? '⚡ Schermo sempre acceso' : '📱 Schermo standard';
-    var wlBg = wakeLockActive ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)';
-    var wlColor = wakeLockActive ? '#10B981' : '#94A3B8';
-    html += '<div style="background:' + wlBg + ';color:' + wlColor + ';font-size:.78rem;font-weight:600;padding:4px 12px;border-radius:99px;align-self:flex-start;display:flex;align-items:center;gap:.4rem">' + wlText + '</div>';
-
-    // Section 1: Ingredients Checklist
-    if (recipe.ingredients && recipe.ingredients.length > 0) {
-      html += '<div style="background:var(--bg-color);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:.85rem">';
-      html += '<div style="font-size:.82rem;font-weight:700;margin-bottom:.5rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Ingredienti (tocca per spuntare):</div>';
-      html += '<div style="display:flex;flex-wrap:wrap;gap:.4rem">';
-      recipe.ingredients.forEach(function(ing, idx) {
-        var isChecked = !!checkedIngredients[idx];
-        var style = isChecked 
-          ? 'background:rgba(16,185,129,0.15);color:var(--text-muted);text-decoration:line-through;border:1px solid rgba(16,185,129,0.3);' 
-          : 'background:var(--surface-color);color:var(--text-main);border:1px solid var(--border-color);';
-        var parts = [];
-        if (ing.quantity) parts.push(esc(ing.quantity));
-        if (ing.unit) parts.push(esc(ing.unit));
-        parts.push(esc(ing.name));
-        html += '<button type="button" class="btn btn--small" data-action="toggle-cooking-ing" data-index="' + idx + '" style="' + style + 'border-radius:99px;font-size:.82rem;padding:4px 10px;cursor:pointer">';
-        html += (isChecked ? '✓ ' : '') + parts.join(' ');
-        html += '</button>';
-      });
-      html += '</div></div>';
-    }
-
-    // Section 2: Current Step Big Card
-    if (totalSteps > 0) {
-      html += '<div style="background:var(--bg-color);border:2px solid var(--primary-color);border-radius:var(--radius-md);padding:1.5rem;display:flex;flex-direction:column;gap:.75rem">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center">';
-      html += '<span style="background:var(--primary-color);color:#fff;font-weight:800;font-size:.85rem;padding:3px 12px;border-radius:99px">PASSAGGIO ' + (stepIndex + 1) + ' DI ' + totalSteps + '</span>';
+    if (!isFinished) {
+      // ── Progress bar ──
+      html += '<div class="cooking-modal__progress-wrap">';
+      html +=   '<div class="cooking-modal__progress-info">';
+      html +=     '<span class="cooking-modal__step-counter">Passaggio ' + (stepIndex + 1) + ' di ' + totalSteps + '</span>';
+      html +=     '<span class="cooking-modal__progress-pct">' + pct + '%</span>';
+      html +=   '</div>';
+      html +=   '<div class="cooking-modal__progress-bar-bg">';
+      html +=     '<div class="cooking-modal__progress-bar-fill" style="width:' + pct + '%"></div>';
+      html +=   '</div>';
       html += '</div>';
 
-      html += '<p style="font-size:1.3rem;line-height:1.6;font-weight:500;margin:0;color:var(--text-main)">' + esc(stepText) + '</p>';
+      // ── Step dots ──
+      if (totalSteps <= 20) {
+        html += '<div class="cooking-modal__dots">';
+        for (var d = 0; d < totalSteps; d++) {
+          var dotClass = d < stepIndex ? 'cooking-modal__dot cooking-modal__dot--done' :
+                         d === stepIndex ? 'cooking-modal__dot cooking-modal__dot--active' :
+                         'cooking-modal__dot';
+          var dotContent = d < stepIndex ? '✓' : (d + 1);
+          html += '<button type="button" class="' + dotClass + '" data-action="cooking-goto" data-step="' + d + '" aria-label="Vai al passaggio ' + (d+1) + '">' + dotContent + '</button>';
+        }
+        html += '</div>';
+      }
 
+      // ── Scrollable body ──
+      html += '<div class="cooking-modal__body">';
+
+      // Step card
+      html += '<div class="cooking-modal__step-card">';
+      html +=   '<span class="cooking-modal__step-badge">🔥 Passaggio ' + (stepIndex + 1) + ' / ' + totalSteps + '</span>';
+      html +=   '<p class="cooking-modal__step-text">' + esc(stepText) + '</p>';
       if (stepNotes) {
-        html += '<div style="font-size:.9rem;color:var(--primary-color);background:rgba(232,93,58,0.1);padding:.6rem 1rem;border-radius:var(--radius-sm);font-style:italic"><strong>Nota:</strong> ' + esc(stepNotes) + '</div>';
+        html += '<div class="cooking-modal__step-notes"><strong>💡 Nota:</strong>&nbsp;' + esc(stepNotes) + '</div>';
       }
       html += '</div>';
+
+      // Ingredients panel
+      if (totalIng > 0) {
+        var ingListClass = 'cooking-modal__ing-list' + (ingExpanded ? '' : ' cooking-modal__ing-list--collapsed');
+        var toggleClass  = 'cooking-modal__ing-toggle' + (ingExpanded ? ' cooking-modal__ing-toggle--open' : '');
+        var ingPct = totalIng > 0 ? checkedCount + '/' + totalIng : '';
+
+        html += '<div class="cooking-modal__ing-panel">';
+        html +=   '<div class="cooking-modal__ing-header" data-action="toggle-cooking-ing-panel">';
+        html +=     '<span class="cooking-modal__ing-title">🛒 Ingredienti';
+        if (ingPct) html += '&nbsp;<span class="cooking-modal__ing-progress">' + ingPct + ' ✓</span>';
+        html +=     '</span>';
+        html +=     '<span class="' + toggleClass + '">▼</span>';
+        html +=   '</div>';
+        html +=   '<div class="' + ingListClass + '" id="cooking-ing-list">';
+        recipe.ingredients.forEach(function(ing, idx) {
+          var isChecked = !!checkedIngredients[idx];
+          var chipClass = 'cooking-modal__ing-chip' + (isChecked ? ' cooking-modal__ing-chip--checked' : '');
+          var parts = [];
+          if (ing.quantity) parts.push(esc(ing.quantity));
+          if (ing.unit) parts.push(esc(ing.unit));
+          parts.push(esc(ing.name));
+          html += '<button type="button" class="' + chipClass + '" data-action="toggle-cooking-ing" data-index="' + idx + '">';
+          html +=   '<span class="ing-chip-check">' + (isChecked ? '✓' : '○') + '</span>';
+          html +=   parts.join(' ');
+          html += '</button>';
+        });
+        html += '</div>';
+        html += '</div>';
+      }
+
+      // Timer
+      html += '<div class="cooking-modal__timer">';
+      html +=   '<div>';
+      html +=     '<div class="cooking-modal__timer-label">⏱ Timer</div>';
+      html +=     '<div class="cooking-modal__timer-display ' + timerClass + '" id="cooking-timer-display">' + timerDisplay + '</div>';
+      html +=   '</div>';
+      html +=   '<div style="display:flex;flex-direction:column;align-items:center;gap:6px">';
+      html +=     '<div class="cooking-modal__timer-input-wrap">';
+      html +=       '<input type="number" class="cooking-modal__timer-input" id="cooking-timer-min" min="0" max="99" value="' + (timerState.minutes || 0) + '" aria-label="Minuti">';
+      html +=       '<span style="font-weight:700;color:var(--text-muted)">:</span>';
+      html +=       '<input type="number" class="cooking-modal__timer-input" id="cooking-timer-sec" min="0" max="59" value="' + (timerState.seconds || 0) + '" aria-label="Secondi">';
+      html +=     '</div>';
+      html +=     '<div class="cooking-modal__timer-controls">';
+      if (timerState.running) {
+        html +=   '<button type="button" class="cooking-modal__timer-btn" data-action="cooking-timer-pause" aria-label="Pausa timer">⏸</button>';
+      } else {
+        html +=   '<button type="button" class="cooking-modal__timer-btn cooking-modal__timer-btn--start" data-action="cooking-timer-start" aria-label="Avvia timer">▶</button>';
+      }
+      html +=     '<button type="button" class="cooking-modal__timer-btn" data-action="cooking-timer-reset" aria-label="Azzera timer">↺</button>';
+      html +=     '</div>';
+      html +=   '</div>';
+      html += '</div>';
+
+      // Swipe hint (only mobile)
+      html += '<div class="cooking-modal__swipe-hint">← scorri per cambiare passaggio →</div>';
+
+      html += '</div>'; // .cooking-modal__body
+
+      // ── Footer nav ──
+      html += '<div class="cooking-modal__footer">';
+      var prevDisabled = stepIndex === 0 ? ' disabled' : '';
+      var nextLabel = stepIndex >= totalSteps - 1 ? '🏁 Fine!' : 'Avanti →';
+      var nextClass = 'cooking-modal__nav-btn cooking-modal__nav-btn--primary';
+      html += '<button type="button" class="cooking-modal__nav-btn" data-action="cooking-prev" data-step="' + (stepIndex - 1) + '"' + prevDisabled + '>← Indietro</button>';
+      html += '<button type="button" class="' + nextClass + '" data-action="cooking-next" data-step="' + (stepIndex + 1) + '">' + nextLabel + '</button>';
+      html += '</div>';
+
+    } else {
+      // ── Finish screen ──
+      html += '<div class="cooking-modal__finish">';
+      html +=   '<div class="cooking-modal__finish-emoji">🎉</div>';
+      html +=   '<h2 class="cooking-modal__finish-title">Buon appetito!</h2>';
+      html +=   '<p class="cooking-modal__finish-subtitle">' + esc(recipe.name) + ' è pronto!</p>';
+      html +=   '<button type="button" class="cooking-modal__nav-btn cooking-modal__nav-btn--primary" data-action="close-cooking" style="max-width:260px;margin-top:8px">✓ Chiudi</button>';
+      html +=   '<button type="button" class="cooking-modal__nav-btn" data-action="cooking-prev" data-step="' + (totalSteps - 1) + '" style="max-width:260px">← Torna all\'ultimo passaggio</button>';
+      html += '</div>';
     }
 
-    // Navigation Controls
-    html += '<div style="display:flex;gap:.75rem;margin-top:.5rem">';
-    var prevDisabled = stepIndex === 0 ? ' disabled style="opacity:.4;flex:1"' : ' style="flex:1"';
-    var nextDisabled = stepIndex >= totalSteps - 1 ? ' disabled style="opacity:.4;flex:1"' : ' style="flex:1"';
-
-    html += '<button type="button" class="btn btn--secondary" data-action="cooking-prev" data-step="' + (stepIndex - 1) + '"' + prevDisabled + '>⬅️ Precedente</button>';
-    html += '<button type="button" class="btn btn--primary" data-action="cooking-next" data-step="' + (stepIndex + 1) + '"' + nextDisabled + '>Successivo ➡️</button>';
-    html += '</div>';
-
-    html += '</div>';
+    html += '</div>'; // .cooking-modal
 
     overlay.innerHTML = html;
     overlay.classList.remove('hidden');
+
+    // ── Touch swipe gesture (mobile) ──
+    var modal = document.getElementById('cooking-modal-inner');
+    if (modal) {
+      var touchStartX = 0;
+      var touchStartY = 0;
+      modal.addEventListener('touchstart', function(e) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+      modal.addEventListener('touchend', function(e) {
+        var dx = e.changedTouches[0].clientX - touchStartX;
+        var dy = e.changedTouches[0].clientY - touchStartY;
+        // Only fire if horizontal swipe is dominant and significant
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          var swipeBtn = document.querySelector(dx < 0 ? '[data-action="cooking-next"]' : '[data-action="cooking-prev"]');
+          if (swipeBtn && !swipeBtn.disabled) swipeBtn.click();
+        }
+      }, { passive: true });
+    }
   }
 
   function showConfirmModal(title, message, onConfirm) {

@@ -12,7 +12,14 @@
     filters: { search: '', category: '', sortBy: 'recent' },
     editingRecipe: null,
     pantryIngredients: [],
-    cooking: { recipe: null, stepIndex: 0, checkedIngredients: {}, wakeLockSentinel: null }
+    cooking: {
+      recipe: null,
+      stepIndex: 0,
+      checkedIngredients: {},
+      wakeLockSentinel: null,
+      ingExpanded: true,
+      timer: { minutes: 0, seconds: 0, running: false, intervalId: null }
+    }
   };
 
   async function requestWakeLock() {
@@ -33,6 +40,87 @@
         state.cooking.wakeLockSentinel.release();
       } catch (e) {}
       state.cooking.wakeLockSentinel = null;
+    }
+  }
+
+  /* ── Timer helpers ── */
+
+  function stopTimer() {
+    if (state.cooking.timer.intervalId) {
+      clearInterval(state.cooking.timer.intervalId);
+      state.cooking.timer.intervalId = null;
+    }
+    state.cooking.timer.running = false;
+  }
+
+  function startTimer() {
+    var minEl = document.getElementById('cooking-timer-min');
+    var secEl = document.getElementById('cooking-timer-sec');
+    if (minEl && secEl) {
+      state.cooking.timer.minutes = Math.max(0, parseInt(minEl.value, 10) || 0);
+      state.cooking.timer.seconds = Math.min(59, Math.max(0, parseInt(secEl.value, 10) || 0));
+    }
+    if (state.cooking.timer.minutes === 0 && state.cooking.timer.seconds === 0) return;
+    state.cooking.timer.running = true;
+    state.cooking.timer.intervalId = setInterval(function () {
+      if (state.cooking.timer.seconds > 0) {
+        state.cooking.timer.seconds--;
+      } else if (state.cooking.timer.minutes > 0) {
+        state.cooking.timer.minutes--;
+        state.cooking.timer.seconds = 59;
+      } else {
+        // Timer finished
+        stopTimer();
+        // Play notification sound if possible
+        try {
+          var ctx = new (window.AudioContext || window.webkitAudioContext)();
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.value = 880; gain.gain.value = 0.3;
+          osc.start(); osc.stop(ctx.currentTime + 0.5);
+        } catch(e) {}
+        rerenderCookingModal();
+        Utils.showToast('⏱ Timer terminato!', 'success');
+        return;
+      }
+      // Update timer display without full re-render
+      var display = document.getElementById('cooking-timer-display');
+      if (display) {
+        var m = state.cooking.timer.minutes;
+        var s = state.cooking.timer.seconds;
+        display.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        // Update CSS class
+        display.className = 'cooking-modal__timer-display';
+        if (state.cooking.timer.running) {
+          if (m === 0 && s <= 10) display.classList.add('cooking-modal__timer-display--danger');
+          else if (m === 0 && s <= 30) display.classList.add('cooking-modal__timer-display--warning');
+          else display.classList.add('cooking-modal__timer-display--running');
+        }
+      } else {
+        // Display gone, stop timer
+        stopTimer();
+      }
+    }, 1000);
+  }
+
+  function resetTimer() {
+    stopTimer();
+    state.cooking.timer.minutes = 0;
+    state.cooking.timer.seconds = 0;
+    rerenderCookingModal();
+  }
+
+  function rerenderCookingModal() {
+    if (state.cooking && state.cooking.recipe) {
+      Views.showCookingModal(
+        state.cooking.recipe,
+        state.cooking.stepIndex,
+        state.cooking.checkedIngredients,
+        !!state.cooking.wakeLockSentinel,
+        state.cooking.timer,
+        state.cooking.ingExpanded
+      );
     }
   }
 
@@ -953,6 +1041,8 @@
     // Modal overlay click (close)
     modalOverlay.addEventListener('click', function (e) {
       if (e.target === modalOverlay) {
+        stopTimer();
+        releaseWakeLock();
         Views.hideModal();
       }
     });
@@ -1023,9 +1113,20 @@
           if (cookId) {
             DB.getRecipe(cookId).then(async function (r) {
               if (r) {
-                state.cooking = { recipe: r, stepIndex: 0, checkedIngredients: {}, wakeLockSentinel: null };
+                // Stop any running timer before resetting state
+                if (state.cooking && state.cooking.timer && state.cooking.timer.intervalId) {
+                  clearInterval(state.cooking.timer.intervalId);
+                }
+                state.cooking = {
+                  recipe: r,
+                  stepIndex: 0,
+                  checkedIngredients: {},
+                  wakeLockSentinel: null,
+                  ingExpanded: true,
+                  timer: { minutes: 0, seconds: 0, running: false, intervalId: null }
+                };
                 await requestWakeLock();
-                Views.showCookingModal(r, 0, state.cooking.checkedIngredients, !!state.cooking.wakeLockSentinel);
+                rerenderCookingModal();
               }
             });
           }
@@ -1035,15 +1136,24 @@
           var pStep = parseInt(actionEl.getAttribute('data-step'), 10);
           if (!isNaN(pStep) && pStep >= 0 && state.cooking && state.cooking.recipe) {
             state.cooking.stepIndex = pStep;
-            Views.showCookingModal(state.cooking.recipe, pStep, state.cooking.checkedIngredients, !!state.cooking.wakeLockSentinel);
+            rerenderCookingModal();
           }
           break;
         }
         case 'cooking-next': {
           var nStep = parseInt(actionEl.getAttribute('data-step'), 10);
-          if (!isNaN(nStep) && state.cooking && state.cooking.recipe && nStep < state.cooking.recipe.steps.length) {
+          if (!isNaN(nStep) && state.cooking && state.cooking.recipe) {
+            // Allow going to finish screen (nStep === totalSteps)
             state.cooking.stepIndex = nStep;
-            Views.showCookingModal(state.cooking.recipe, nStep, state.cooking.checkedIngredients, !!state.cooking.wakeLockSentinel);
+            rerenderCookingModal();
+          }
+          break;
+        }
+        case 'cooking-goto': {
+          var gStep = parseInt(actionEl.getAttribute('data-step'), 10);
+          if (!isNaN(gStep) && gStep >= 0 && state.cooking && state.cooking.recipe) {
+            state.cooking.stepIndex = gStep;
+            rerenderCookingModal();
           }
           break;
         }
@@ -1051,11 +1161,32 @@
           var cIdx = parseInt(actionEl.getAttribute('data-index'), 10);
           if (!isNaN(cIdx) && state.cooking) {
             state.cooking.checkedIngredients[cIdx] = !state.cooking.checkedIngredients[cIdx];
-            Views.showCookingModal(state.cooking.recipe, state.cooking.stepIndex, state.cooking.checkedIngredients, !!state.cooking.wakeLockSentinel);
+            rerenderCookingModal();
           }
           break;
         }
+        case 'toggle-cooking-ing-panel': {
+          if (state.cooking) {
+            state.cooking.ingExpanded = !state.cooking.ingExpanded;
+            rerenderCookingModal();
+          }
+          break;
+        }
+        case 'cooking-timer-start': {
+          startTimer();
+          break;
+        }
+        case 'cooking-timer-pause': {
+          stopTimer();
+          rerenderCookingModal();
+          break;
+        }
+        case 'cooking-timer-reset': {
+          resetTimer();
+          break;
+        }
         case 'close-cooking': {
+          stopTimer();
           releaseWakeLock();
           Views.hideModal();
           break;
