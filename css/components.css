@@ -900,9 +900,6 @@
   border-bottom: 1px solid var(--border);
   font-size: 0.95rem;
   color: var(--text-secondary);
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  word-break: break-word;
 }
 
 .ingredient-item:last-child {
@@ -911,16 +908,48 @@
 
 .ingredient-bullet {
   color: var(--primary);
-  margin-right: 6px;
   font-weight: bold;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Contenuto: nome + quantità + note in colonna */
+.ingredient-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ingredient-item__main {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  word-break: break-word;
+}
+
+.ingredient-item__name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.ingredient-item__qty {
+  font-size: 0.88rem;
+  color: var(--primary);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .ingredient-item__notes {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-style: italic;
   color: var(--text-muted);
-  margin-left: 4px;
+  line-height: 1.4;
+  word-break: break-word;
 }
+
 
 /* Step list (custom) */
 .step-list {

@@ -492,12 +492,20 @@ window.Views = (function () {
         '<ul class="ingredient-list">';
     if (recipe.ingredients && recipe.ingredients.length > 0) {
       recipe.ingredients.forEach(function (ing) {
-        var parts = [];
-        if (ing.quantity) parts.push('<span class="ing-qty" data-base-qty="' + esc(ing.quantity) + '">' + esc(ing.quantity) + '</span>');
-        if (ing.unit) parts.push('<span class="ing-unit">' + esc(ing.unit) + '</span>');
-        parts.push('<span class="ing-name">' + esc(ing.name) + '</span>');
-        var notesHTML = ing.notes ? ' <span class="ingredient-item__notes">(' + esc(ing.notes) + ')</span>' : '';
-        html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + notesHTML + '</li>';
+        var qtyPart = ing.quantity ? '<span class="ingredient-item__qty ing-qty" data-base-qty="' + esc(ing.quantity) + '">' + esc(ing.quantity) + (ing.unit ? ' ' + esc(ing.unit) : '') + '</span>' : '';
+        var namePart = '<span class="ingredient-item__name ing-name">' + esc(ing.name) + '</span>';
+        var notesHTML = ing.notes ? '<span class="ingredient-item__notes">💡 ' + esc(ing.notes) + '</span>' : '';
+
+        html +=
+          '<li class="ingredient-item">' +
+            '<span class="ingredient-bullet">•</span>' +
+            '<div class="ingredient-item__body">' +
+              '<div class="ingredient-item__main">' +
+                namePart + (qtyPart ? ' ' + qtyPart : '') +
+              '</div>' +
+              notesHTML +
+            '</div>' +
+          '</li>';
       });
     }
     html += '</ul></div>';
