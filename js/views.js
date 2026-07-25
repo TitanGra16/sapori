@@ -454,9 +454,9 @@ window.Views = (function () {
         '</div>' +
       '</div>';
 
-    // Start Cooking Mode Button
+    // Start Cooking Mode Button (hidden in print)
     html +=
-      '<div style="padding:0 1rem;margin-bottom:1.25rem">' +
+      '<div class="no-print" style="padding:0 1rem;margin-bottom:1.25rem">' +
         '<button type="button" class="btn btn--primary" data-action="start-cooking" data-id="' + esc(recipe.id) + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;font-size:1.05rem;padding:1rem 1.25rem;border-radius:var(--radius-lg);font-weight:800;letter-spacing:.02em;background:var(--gradient);box-shadow:0 6px 20px var(--shadow);transition:all .2s;position:relative;overflow:hidden">' +
           '<span style="font-size:1.3rem;line-height:1">🍳</span>' +
           ' Inizia la Cottura' +
@@ -1105,16 +1105,16 @@ window.Views = (function () {
     if (recipe.ingredients && recipe.ingredients.length > 0) {
       recipe.ingredients.forEach(function (ing) {
         var qtyStr = ing.quantity ? esc(ing.quantity) + (ing.unit ? ' ' + esc(ing.unit) : '') : '';
-        var qtyPart = qtyStr ? '<span class="ingredient-item__qty">' + qtyStr + '</span>' : '';
-        var namePart = '<span class="ingredient-item__name">' + esc(ing.name) + '</span>';
-        var notesHTML = ing.notes ? '<span class="ingredient-item__notes">💡 ' + esc(ing.notes) + '</span>' : '';
+        var qtyPart = qtyStr ? '<span class="print-preview__ing-qty">' + qtyStr + '</span>' : '';
+        var namePart = '<span class="print-preview__ing-name">' + esc(ing.name) + '</span>';
+        var notesHTML = ing.notes ? '<div class="print-preview__ing-notes">💡 ' + esc(ing.notes) + '</div>' : '';
 
         ingHtml +=
-          '<li class="ingredient-item print-preview__ing-item">' +
-            '<span class="ingredient-bullet print-preview__ing-bullet">•</span>' +
-            '<div class="ingredient-item__body">' +
-              '<div class="ingredient-item__main">' +
-                namePart + (qtyPart ? ' ' + qtyPart : '') +
+          '<li class="print-preview__ing-item">' +
+            '<span class="print-preview__ing-bullet">•</span>' +
+            '<div class="print-preview__ing-content">' +
+              '<div class="print-preview__ing-main">' +
+                namePart + qtyPart +
               '</div>' +
               notesHTML +
             '</div>' +

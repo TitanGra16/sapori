@@ -2413,7 +2413,9 @@
   .btn-servings-dec,
   .btn-servings-inc,
   .print-preview-modal,
-  .share-modal {
+  .share-modal,
+  .no-print,
+  [data-action="start-cooking"] {
     display: none !important;
   }
 
@@ -3994,19 +3996,55 @@
 .print-preview__ing-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.2cm;
-  padding: 6px 0;
+  gap: 0.25cm;
+  padding: 5px 0;
   border-bottom: 1px dotted #ddd;
-  font-size: 10.5pt;
+  font-size: 10pt;
   color: #1a0f0a;
 }
 
 .print-preview__ing-bullet {
   color: #E85D3A;
   font-size: 12pt;
-  line-height: 1;
+  line-height: 1.2;
   flex-shrink: 0;
-  margin-top: 2px;
+}
+
+.print-preview__ing-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.print-preview__ing-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4cm;
+}
+
+.print-preview__ing-name {
+  font-weight: 600;
+  color: #1a0f0a;
+  word-break: break-word;
+}
+
+.print-preview__ing-qty {
+  font-weight: 700;
+  color: #E85D3A;
+  white-space: nowrap;
+  font-size: 9.5pt;
+  margin-left: auto;
+}
+
+.print-preview__ing-notes {
+  font-size: 8.8pt;
+  font-style: italic;
+  color: #666666;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .print-preview__step-list {
