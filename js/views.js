@@ -1104,11 +1104,21 @@ window.Views = (function () {
     var ingHtml = '';
     if (recipe.ingredients && recipe.ingredients.length > 0) {
       recipe.ingredients.forEach(function (ing) {
-        var parts = [];
-        if (ing.quantity) parts.push('<strong>' + esc(ing.quantity) + '</strong>' + (ing.unit ? ' ' + esc(ing.unit) : ''));
-        parts.push(esc(ing.name));
-        var noteTxt = ing.notes ? ' <em style="color:#888;font-size:9pt">(' + esc(ing.notes) + ')</em>' : '';
-        ingHtml += '<li class="print-preview__ing-item"><span class="print-preview__ing-bullet">•</span>' + parts.join(' ') + noteTxt + '</li>';
+        var qtyStr = ing.quantity ? esc(ing.quantity) + (ing.unit ? ' ' + esc(ing.unit) : '') : '';
+        var qtyPart = qtyStr ? '<span class="ingredient-item__qty">' + qtyStr + '</span>' : '';
+        var namePart = '<span class="ingredient-item__name">' + esc(ing.name) + '</span>';
+        var notesHTML = ing.notes ? '<span class="ingredient-item__notes">💡 ' + esc(ing.notes) + '</span>' : '';
+
+        ingHtml +=
+          '<li class="ingredient-item print-preview__ing-item">' +
+            '<span class="ingredient-bullet print-preview__ing-bullet">•</span>' +
+            '<div class="ingredient-item__body">' +
+              '<div class="ingredient-item__main">' +
+                namePart + (qtyPart ? ' ' + qtyPart : '') +
+              '</div>' +
+              notesHTML +
+            '</div>' +
+          '</li>';
       });
     } else {
       ingHtml = '<li style="color:#999;font-size:10pt;padding:6px 0">Nessun ingrediente inserito.</li>';

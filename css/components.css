@@ -2570,33 +2570,67 @@
   }
 
   /* ── Ingredients ── */
-  .ingredient-list { padding: 0 !important; }
-  .ingredient-bullet { display: none !important; }
+  .ingredient-list { padding: 0 !important; margin: 0 0 0.5cm 0 !important; }
 
   .ingredient-item {
     font-size: 11pt !important;
-    padding: 8px 0 !important;
+    padding: 6px 0 !important;
     border-bottom: 1px dotted #ccc !important;
     color: #1a0f0a !important;
     page-break-inside: avoid !important;
     display: flex !important;
-    align-items: center !important;
-    gap: 0.3cm !important;
+    align-items: flex-start !important;
+    gap: 0.2cm !important;
   }
 
-  .ingredient-item::before {
-    content: "•" !important;
+  .ingredient-bullet {
+    display: inline-block !important;
     color: #E85D3A !important;
-    font-size: 14pt !important;
+    font-size: 12pt !important;
+    font-weight: bold !important;
     line-height: 1 !important;
     flex-shrink: 0 !important;
+    margin-top: 2px !important;
+  }
+
+  .ingredient-item__body {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .ingredient-item__main {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    word-break: break-word !important;
+  }
+
+  .ingredient-item__name {
+    font-weight: 600 !important;
+    color: #1a0f0a !important;
+  }
+
+  .ingredient-item__qty {
+    font-weight: 700 !important;
+    color: #E85D3A !important;
+    font-size: 10pt !important;
+    margin-left: auto !important;
+    white-space: nowrap !important;
   }
 
   .ingredient-item__notes {
-    font-size: 9.5pt !important;
+    font-size: 9pt !important;
     font-style: italic !important;
-    color: #7d685e !important;
-    margin-left: 4px !important;
+    color: #555555 !important;
+    display: block !important;
+    word-break: break-word !important;
+    margin-top: 1px !important;
+    line-height: 1.4 !important;
   }
 
   /* ── Steps ── */
@@ -3959,7 +3993,7 @@
 
 .print-preview__ing-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.2cm;
   padding: 6px 0;
   border-bottom: 1px dotted #ddd;
@@ -3972,6 +4006,7 @@
   font-size: 12pt;
   line-height: 1;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .print-preview__step-list {

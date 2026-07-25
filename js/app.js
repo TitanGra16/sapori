@@ -931,12 +931,21 @@
             '<ul class="ingredient-list">';
         if (recipe.ingredients && recipe.ingredients.length > 0) {
           recipe.ingredients.forEach(function (ing) {
-            var parts = [];
-            if (ing.quantity) parts.push(esc(ing.quantity));
-            if (ing.unit) parts.push(esc(ing.unit));
-            parts.push(esc(ing.name));
-            var notesHtml = ing.notes ? ' <span class="ingredient-item__notes">(' + esc(ing.notes) + ')</span>' : '';
-            html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + notesHtml + '</li>';
+            var qtyStr = ing.quantity ? esc(ing.quantity) + (ing.unit ? ' ' + esc(ing.unit) : '') : '';
+            var qtyPart = qtyStr ? '<span class="ingredient-item__qty">' + qtyStr + '</span>' : '';
+            var namePart = '<span class="ingredient-item__name">' + esc(ing.name) + '</span>';
+            var notesHTML = ing.notes ? '<span class="ingredient-item__notes">💡 ' + esc(ing.notes) + '</span>' : '';
+
+            html +=
+              '<li class="ingredient-item">' +
+                '<span class="ingredient-bullet">•</span>' +
+                '<div class="ingredient-item__body">' +
+                  '<div class="ingredient-item__main">' +
+                    namePart + (qtyPart ? ' ' + qtyPart : '') +
+                  '</div>' +
+                  notesHTML +
+                '</div>' +
+              '</li>';
           });
         }
         html += '</ul></div>';
