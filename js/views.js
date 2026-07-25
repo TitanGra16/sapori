@@ -1076,6 +1076,165 @@ window.Views = (function () {
     overlay._onConfirm = onConfirm;
   }
 
+  /**
+   * Show a full Print Preview Modal for a single recipe
+   * @param {Object} recipe
+   */
+  function showPrintPreviewModal(recipe) {
+    var esc = Utils.escapeHtml;
+    var overlay = document.getElementById('modal-overlay');
+    if (!overlay) return;
+
+    var cat = Utils.getCategoryInfo(recipe.category);
+    var diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
+    var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
+    var diffLabel = diffMap[recipe.difficulty] || 'Facile';
+    var today = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+    var pwaUrl = window.location.origin + window.location.pathname;
+
+    // ── Ingredients HTML ──
+    var ingHtml = '';
+    if (recipe.ingredients && recipe.ingredients.length > 0) {
+      recipe.ingredients.forEach(function (ing) {
+        var parts = [];
+        if (ing.quantity) parts.push('<strong>' + esc(ing.quantity) + '</strong>' + (ing.unit ? ' ' + esc(ing.unit) : ''));
+        parts.push(esc(ing.name));
+        var noteTxt = ing.notes ? ' <em style="color:#888;font-size:9pt">(' + esc(ing.notes) + ')</em>' : '';
+        ingHtml += '<li class="print-preview__ing-item"><span class="print-preview__ing-bullet">•</span>' + parts.join(' ') + noteTxt + '</li>';
+      });
+    } else {
+      ingHtml = '<li style="color:#999;font-size:10pt;padding:6px 0">Nessun ingrediente inserito.</li>';
+    }
+
+    // ── Steps HTML ──
+    var stepsHtml = '';
+    if (recipe.steps && recipe.steps.length > 0) {
+      recipe.steps.forEach(function (s, i) {
+        var text = typeof s === 'object' ? s.text : s;
+        var notes = typeof s === 'object' ? s.notes : '';
+        stepsHtml +=
+          '<li class="print-preview__step-item">' +
+            '<span class="print-preview__step-num">' + (i + 1) + '</span>' +
+            '<div>' +
+              '<span class="print-preview__step-text">' + esc(text) + '</span>' +
+              (notes ? '<em class="print-preview__step-notes">📌 ' + esc(notes) + '</em>' : '') +
+            '</div>' +
+          '</li>';
+      });
+    } else {
+      stepsHtml = '<li style="color:#999;font-size:10pt;padding:6px 0">Nessun passaggio inserito.</li>';
+    }
+
+    // ── Notes HTML ──
+    var notesHtml = recipe.notes
+      ? '<div class="print-preview__notes-box"><div class="print-preview__notes-label">📝 Note</div><div class="print-preview__notes-text">' + esc(recipe.notes) + '</div></div>'
+      : '<div class="print-preview__notes-box"><div class="print-preview__notes-label">📝 Note</div><div class="print-preview__dotted-line" style="margin:8px 0"></div><div class="print-preview__dotted-line" style="margin:8px 0"></div><div class="print-preview__dotted-line" style="margin:8px 0"></div></div>';
+
+    // ── Description HTML ──
+    var descHtml = recipe.description
+      ? '<div style="margin-bottom:0.4cm"><div class="print-preview__section-title" style="margin-top:0.3cm">Descrizione</div><p style="font-size:10.5pt;color:#1a0f0a;line-height:1.6;margin:0">' + esc(recipe.description) + '</p></div>'
+      : '';
+
+    // ── Photo HTML ──
+    var photoHtml = recipe.image
+      ? '<img src="' + esc(recipe.image) + '" alt="Foto" style="width:100%;height:100%;object-fit:cover">'
+      : '<span class="print-preview__photo-placeholder">FOTO</span>';
+
+    overlay.innerHTML =
+      '<div class="print-preview-modal">' +
+        // ── HEADER ──
+        '<div class="print-preview-modal__header">' +
+          '<div class="print-preview-modal__header-left">' +
+            '<span class="print-preview-modal__label">🖨️ Anteprima Stampa</span>' +
+            '<h2 class="print-preview-modal__title">' + esc(recipe.name) + '</h2>' +
+          '</div>' +
+          '<div class="print-preview-modal__header-actions">' +
+            '<button type="button" class="btn btn--primary" id="btn-print-now" style="display:flex;align-items:center;gap:6px">' +
+              '🖨️ <span>Stampa / Salva PDF</span>' +
+            '</button>' +
+            '<button type="button" class="btn btn--icon" data-action="modal-cancel" style="border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+
+        // ── PAPER PREVIEW ──
+        '<div class="print-preview-modal__body">' +
+          '<div class="print-preview-modal__paper">' +
+            // Color accent band
+            '<div class="print-preview__accent"></div>' +
+
+            // Header row: watermark
+            '<div class="print-preview__header">' +
+              '<span></span>' +
+              '<span class="print-preview__watermark">🍴 SAPORI</span>' +
+            '</div>' +
+
+            // Title
+            '<div class="print-preview__title">' + esc(recipe.name) + '</div>' +
+
+            // Category pill
+            '<div class="print-preview__cat">' + esc(cat.icon) + ' ' + esc(cat.label) + '</div>' +
+
+            // Info row
+            '<div class="print-preview__info">' +
+              '<div class="print-preview__info-item"><span class="print-preview__info-label">Prep</span> ' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</div>' +
+              '<div class="print-preview__info-item"><span class="print-preview__info-label">Cottura</span> ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</div>' +
+              '<div class="print-preview__info-item"><span class="print-preview__info-label">Porzioni</span> ' + esc(String(recipe.servings || 4)) + '</div>' +
+              '<div class="print-preview__info-item"><span class="print-preview__info-label">Difficoltà</span> ' + esc(diffEmoji) + ' ' + esc(diffLabel) + '</div>' +
+            '</div>' +
+
+            // Description
+            descHtml +
+
+            // Notes box
+            notesHtml +
+
+            // Ingredients
+            '<div class="print-preview__section-title">Ingredienti</div>' +
+            '<ul class="print-preview__ing-list">' + ingHtml + '</ul>' +
+
+            // Steps
+            '<div class="print-preview__section-title">Preparazione</div>' +
+            '<ol class="print-preview__step-list">' + stepsHtml + '</ol>' +
+
+            // Footer: photo + storage
+            '<div class="print-preview__footer-box">' +
+              '<div class="print-preview__photo-box">' + photoHtml + '</div>' +
+              '<div class="print-preview__storage-box">' +
+                '<div class="print-preview__storage-label">🏷️ Conservazione:</div>' +
+                '<div class="print-preview__dotted-line"></div>' +
+                '<div class="print-preview__dotted-line"></div>' +
+                '<div class="print-preview__dotted-line"></div>' +
+              '</div>' +
+            '</div>' +
+
+            // Document footer
+            '<div class="print-preview__doc-footer">' +
+              '<span>Creato con Sapori App — ' + today + '</span>' +
+              '<span style="color:#E85D3A">' + esc(pwaUrl) + '</span>' +
+            '</div>' +
+          '</div>' + // paper
+        '</div>' + // body
+
+        // ── FOOTER BAR ──
+        '<div class="print-preview-modal__footer">' +
+          '<span class="print-preview-modal__tip">💡 Suggerimento: nel dialogo di stampa seleziona <strong>Salva come PDF</strong> per creare il file</span>' +
+          '<button type="button" class="btn btn--ghost btn--sm" data-action="modal-cancel">Chiudi</button>' +
+        '</div>' +
+      '</div>';
+
+    overlay.classList.remove('hidden');
+
+    // Print button
+    var btnPrint = document.getElementById('btn-print-now');
+    if (btnPrint) {
+      btnPrint.addEventListener('click', function () {
+        window.print();
+      });
+    }
+  }
+
   function hideModal() {
     var overlay = document.getElementById('modal-overlay');
     overlay.classList.add('hidden');
@@ -1094,6 +1253,7 @@ window.Views = (function () {
     renderPantry: renderPantry,
     showCookingModal: showCookingModal,
     showConfirmModal: showConfirmModal,
+    showPrintPreviewModal: showPrintPreviewModal,
     hideModal: hideModal
   };
 

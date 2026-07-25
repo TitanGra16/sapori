@@ -828,22 +828,54 @@
         return;
       }
 
-      // Ordina le ricette alfabeticamente A-Z per un ricettario ordinato
-      recipes.sort(function (a, b) {
-        return a.name.localeCompare(b.name);
-      });
+      Utils.showToast('Preparazione ricettario in corso… 📚', 'info');
+
+      // Sort A-Z
+      recipes.sort(function (a, b) { return a.name.localeCompare(b.name, 'it-IT'); });
 
       var esc = Utils.escapeHtml;
+      var today = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+      var pwaUrl = window.location.origin + window.location.pathname;
 
-      // Crea contenitore temporaneo di stampa
       var printDiv = document.createElement('div');
       printDiv.className = 'print-all-recipes-container';
 
       var html = '';
+
+      // ── COVER PAGE ──
+      html +=
+        '<div class="print-cover-page">' +
+          '<div class="print-cover-brand">🍴 SAPORI</div>' +
+          '<div class="print-cover-emoji">📖</div>' +
+          '<div class="print-cover-title">Il Mio Ricettario</div>' +
+          '<div class="print-cover-divider"></div>' +
+          '<div class="print-cover-subtitle">' + recipes.length + ' ricette della tradizione di casa</div>' +
+          '<div class="print-cover-meta">' +
+            '<span>Esportato il ' + today + '</span>' +
+            '<span>' + esc(pwaUrl) + '</span>' +
+          '</div>' +
+        '</div>';
+
+      // ── INDEX PAGE ──
+      html += '<div class="print-index-page">';
+      html += '<div class="print-index-title">Indice delle Ricette</div>';
+      html += '<ul class="print-index-list">';
       recipes.forEach(function (recipe) {
         var cat = Utils.getCategoryInfo(recipe.category);
-        var totalTime = Utils.getTotalTime(recipe.prepTime, recipe.cookTime);
+        html +=
+          '<li class="print-index-item">' +
+            '<span class="print-index-item-name">' + esc(cat.icon) + ' ' + esc(recipe.name) + '</span>' +
+            '<span class="print-index-item-cat">' + esc(cat.label) + '</span>' +
+          '</li>';
+      });
+      html += '</ul>';
+      html += '</div>';
+
+      // ── RECIPES ──
+      recipes.forEach(function (recipe) {
+        var cat = Utils.getCategoryInfo(recipe.category);
         var diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
+        var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
 
         html += '<article class="print-cookbook-recipe">';
 
@@ -851,37 +883,39 @@
         html += '<h1 class="recipe-detail__title">' + esc(recipe.name) + '</h1>';
 
         // Category
-        html += '<span class="recipe-card__category" style="border-color:' + esc(cat.color) + ';color:' + esc(cat.color) + '">' +
-                  esc(cat.icon) + ' ' + esc(cat.label) +
-                '</span>';
+        html +=
+          '<span class="recipe-card__category" style="border-color:' + esc(cat.color) + ';color:' + esc(cat.color) + '">' +
+            esc(cat.icon) + ' ' + esc(cat.label) +
+          '</span>';
 
-        // Info Bar
+        // Info bar
         html +=
           '<div class="recipe-detail__info-bar">' +
-            '<div class="recipe-detail__info-item"><span>' + Icons.clock + '</span><span>Prep: ' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</span></div>' +
-            '<div class="recipe-detail__info-item"><span>' + Icons.flame + '</span><span>Cottura: ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
-            '<div class="recipe-detail__info-item"><span>' + esc(diffEmoji) + '</span><span>' + esc(recipe.difficulty || 'facile') + '</span></div>' +
-            '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span><span>' + (recipe.servings || 4) + ' porzioni</span></div>' +
+            '<div class="recipe-detail__info-item"><span>Preparazione:</span><span>' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</span></div>' +
+            '<div class="recipe-detail__info-item"><span>Cottura:</span><span>' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
+            '<div class="recipe-detail__info-item"><span>Porzioni:</span><span>' + (recipe.servings || 4) + '</span></div>' +
+            '<div class="recipe-detail__info-item"><span>Difficolt\u00e0:</span><span>' + esc(diffEmoji) + ' ' + esc(diffMap[recipe.difficulty] || 'Facile') + '</span></div>' +
           '</div>';
 
         // Description
         if (recipe.description) {
-          html += '<div class="recipe-detail__section recipe-detail__description-section">' +
-                    '<h3 class="recipe-detail__description-title">Descrizione</h3>' +
-                    '<p>' + esc(recipe.description) + '</p>' +
-                  '</div>';
+          html +=
+            '<div class="recipe-detail__section recipe-detail__description-section">' +
+              '<h3 class="recipe-detail__description-title">Descrizione</h3>' +
+              '<p>' + esc(recipe.description) + '</p>' +
+            '</div>';
         }
 
-        // Notes (replicates "NOTE" block in PDF export)
+        // Notes
         html +=
-          '<div class="recipe-detail__section recipe-detail__notes-section' + (recipe.notes ? '' : ' print-only') + '">' +
+          '<div class="recipe-detail__section recipe-detail__notes-section">' +
             '<h3 class="recipe-detail__notes-title">Note</h3>' +
-            (recipe.notes 
-              ? '<p>' + esc(recipe.notes) + '</p>' 
+            (recipe.notes
+              ? '<p>' + esc(recipe.notes) + '</p>'
               : '<div class="print-dotted-line"></div><div class="print-dotted-line"></div><div class="print-dotted-line"></div>') +
           '</div>';
 
-        // Body layout: ingredients + steps side-by-side
+        // Body
         html += '<div class="recipe-detail__body-layout">';
 
         // Ingredients
@@ -895,8 +929,8 @@
             if (ing.quantity) parts.push(esc(ing.quantity));
             if (ing.unit) parts.push(esc(ing.unit));
             parts.push(esc(ing.name));
-            var notesHTML = ing.notes ? ' <span class="ingredient-item__notes">(' + esc(ing.notes) + ')</span>' : '';
-            html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + notesHTML + '</li>';
+            var notesHtml = ing.notes ? ' <span class="ingredient-item__notes">(' + esc(ing.notes) + ')</span>' : '';
+            html += '<li class="ingredient-item"><span class="ingredient-bullet">•</span> ' + parts.join(' ') + notesHtml + '</li>';
           });
         }
         html += '</ul></div>';
@@ -910,26 +944,26 @@
           recipe.steps.forEach(function (stepVal, idx) {
             var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
             var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
-            var notesHTML = stepNotes ? '<span class="step-item__notes">Note: ' + esc(stepNotes) + '</span>' : '';
+            var notesHtml = stepNotes ? '<span class="step-item__notes">💡 ' + esc(stepNotes) + '</span>' : '';
             html +=
               '<li class="step-item">' +
                 '<span class="step-number">' + (idx + 1) + '</span>' +
                 '<div class="step-content">' +
                   '<p>' + esc(stepText) + '</p>' +
-                  notesHTML +
+                  notesHtml +
                 '</div>' +
               '</li>';
           });
         }
         html += '</ol></div>';
 
-        html += '</div>'; // close body-layout
+        html += '</div>'; // body-layout
 
-        // Print-only footer box (replicates the RICETTARIO UFFICIALE.pdf bottom layout)
+        // Footer: photo + storage
         html +=
           '<div class="print-footer-container">' +
             '<div class="print-photo-box">' +
-              (recipe.image ? '<img src="' + esc(recipe.image) + '" alt="Foto Ricetta">' : '<span class="print-photo-label">FOTO</span>') +
+              (recipe.image ? '<img src="' + esc(recipe.image) + '" alt="Foto">' : '<span class="print-photo-label">FOTO</span>') +
             '</div>' +
             '<div class="print-storage-box">' +
               '<h4 class="print-storage-title">Conservazione:</h4>' +
@@ -946,19 +980,18 @@
       document.body.appendChild(printDiv);
       document.body.classList.add('printing-all-recipes');
 
-      // Attiva la stampa
       setTimeout(function () {
         window.print();
         document.body.classList.remove('printing-all-recipes');
-        if (printDiv.parentNode) {
-          printDiv.parentNode.removeChild(printDiv);
-        }
-      }, 150);
+        if (printDiv.parentNode) printDiv.parentNode.removeChild(printDiv);
+      }, 200);
 
     } catch (err) {
+      console.error(err);
       Utils.showToast('Errore durante la creazione del PDF', 'error');
     }
   }
+
 
   async function importData() {
     var fileInput = document.getElementById('import-file-input');
@@ -1238,7 +1271,17 @@
           break;
         }
         case 'export-pdf': {
-          window.print();
+          var pdfId = actionEl.getAttribute('data-id');
+          if (pdfId) {
+            DB.getRecipe(pdfId).then(function (recipe) {
+              if (recipe && window.Views) {
+                Views.showPrintPreviewModal(recipe);
+              }
+            });
+          } else {
+            // Fallback: print current page
+            window.print();
+          }
           break;
         }
         case 'share-recipe': {

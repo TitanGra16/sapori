@@ -2,7 +2,8 @@
   'use strict';
 
   var Share = {
-    // Gradient definitions corresponding to theme palettes
+
+    // Gradient definitions per palette
     _gradients: {
       classico:  ['#E85D3A', '#FFA726'],
       oceano:    ['#0EA5E9', '#06B6D4'],
@@ -13,289 +14,362 @@
       zafferano: ['#D97706', '#FBBF24']
     },
 
-    /**
-     * Generate the Share Card as a Canvas and show the Share Modal
-     * @param {Object} recipe - The recipe object to share
-     */
+    /* ────────────────────────────────────────────────────────
+       PUBLIC: Open share menu
+    ──────────────────────────────────────────────────────── */
     async openShareMenu(recipe) {
-      Utils.showToast('Generazione cartolina gourmet in corso... 🎨', 'info');
+      Utils.showToast('Generazione cartolina in corso… 🎨', 'info');
       try {
         var dataUrl = await this.generateCardDataURL(recipe);
         this._showShareModal(recipe, dataUrl);
       } catch (e) {
-        console.error('Errore nella generazione della cartolina:', e);
-        Utils.showToast('Impossibile generare la cartolina di condivisione', 'error');
+        console.error('Errore generazione cartolina:', e);
+        Utils.showToast('Impossibile generare la cartolina', 'error');
       }
     },
 
-    /**
-     * Draw the recipe card on a canvas and return its base64 PNG data URL
-     * @param {Object} recipe
-     * @returns {Promise<string>}
-     */
+    /* ────────────────────────────────────────────────────────
+       CANVAS — Generate share card
+    ──────────────────────────────────────────────────────── */
     generateCardDataURL(recipe) {
       var self = this;
       return new Promise(function (resolve, reject) {
+        var W = 900, H = 1100;
         var canvas = document.createElement('canvas');
-        canvas.width = 800;
-        canvas.height = 1000;
+        canvas.width = W;
+        canvas.height = H;
         var ctx = canvas.getContext('2d');
 
-        // Get active theme settings
-        var activeTheme = window.Theme ? window.Theme.getCurrentTheme() : { mode: 'light', palette: 'classico' };
+        // Theme
+        var activeTheme = window.Theme ? window.Theme.getCurrentTheme() : { mode: 'dark', palette: 'classico' };
         var palette = activeTheme.palette || 'classico';
         var isDark = activeTheme.mode === 'dark';
+        var gc = self._gradients[palette] || self._gradients.classico;
 
         // Colors
-        var gradColors = self._gradients[palette] || self._gradients.classico;
-        var cardBg = isDark ? '#18181b' : '#ffffff';
-        var textColor = isDark ? '#f4f4f5' : '#18181b';
-        var textMuted = isDark ? '#a1a1aa' : '#71717a';
-        var borderCol = isDark ? '#27272a' : '#f4f4f5';
+        var bgCard  = isDark ? '#18181b' : '#ffffff';
+        var bgSurf  = isDark ? '#27272a' : '#f9f6f3';
+        var textCol = isDark ? '#f4f4f5' : '#1a0f0a';
+        var mutedCol= isDark ? '#a1a1aa' : '#71717a';
+        var borderC = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
-        // 1. Draw full card background (fills the entire canvas)
-        ctx.fillStyle = cardBg;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // 1. Background
+        ctx.fillStyle = bgCard;
+        ctx.fillRect(0, 0, W, H);
 
-        // 2. Load and draw recipe image (Hero format: full width, full-bleed at the top)
-        var imageX = 0;
-        var imageY = 0;
-        var imageW = canvas.width;
-        var imageH = 430;
+        // 2. Top gradient band
+        var bandH = 400;
+        var grad = ctx.createLinearGradient(0, 0, W, bandH);
+        grad.addColorStop(0, gc[0]);
+        grad.addColorStop(1, gc[1]);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, bandH);
 
+        // 3. Load image
         var img = new Image();
         img.crossOrigin = 'anonymous';
 
-        img.onload = function () {
-          // Draw full-bleed image (no rounded corners needed)
-          ctx.save();
-          var imgRatio = img.width / img.height;
-          var containerRatio = imageW / imageH;
-          var drawW, drawH, drawX, drawY;
-
-          if (imgRatio > containerRatio) {
-            drawH = imageH;
-            drawW = imageH * imgRatio;
-            drawX = imageX - (drawW - imageW) / 2;
-            drawY = imageY;
-          } else {
-            drawW = imageW;
-            drawH = imageW / imgRatio;
-            drawX = imageX;
-            drawY = imageY - (drawH - imageH) / 2;
+        var drawContent = function (hasImage) {
+          if (hasImage) {
+            // Clip image into top band
+            ctx.save();
+            ctx.globalAlpha = 0.35;
+            var ir = img.width / img.height;
+            var bR = W / bandH;
+            var dW, dH, dX, dY;
+            if (ir > bR) { dH = bandH; dW = dH * ir; dX = -(dW - W) / 2; dY = 0; }
+            else { dW = W; dH = dW / ir; dX = 0; dY = -(dH - bandH) / 2; }
+            ctx.drawImage(img, dX, dY, dW, dH);
+            ctx.restore();
           }
-          ctx.drawImage(img, drawX, drawY, drawW, drawH);
-          ctx.restore();
 
-          // Overlay gradient on bottom of image for text readability
-          var overlayGrad = ctx.createLinearGradient(0, imageY + imageH - 120, 0, imageY + imageH);
-          overlayGrad.addColorStop(0, 'rgba(0,0,0,0)');
-          overlayGrad.addColorStop(1, 'rgba(0,0,0,0.5)');
-          ctx.fillStyle = overlayGrad;
-          ctx.fillRect(imageX, imageY + imageH - 120, imageW, 120);
+          // Gradient overlay on band bottom for readability
+          var ovGrad = ctx.createLinearGradient(0, bandH - 160, 0, bandH);
+          ovGrad.addColorStop(0, 'rgba(0,0,0,0)');
+          ovGrad.addColorStop(1, 'rgba(0,0,0,0.55)');
+          ctx.fillStyle = ovGrad;
+          ctx.fillRect(0, bandH - 160, W, 160);
 
-          // Draw logo watermark in header area
-          ctx.fillStyle = 'rgba(255,255,255,0.9)';
-          ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+          // Watermark on band
           ctx.textAlign = 'right';
-          ctx.fillText('🍴 SAPORI', canvas.width - 40, 35);
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+          ctx.fillText('🍴 SAPORI', W - 36, 40);
 
-          // Continue drawing texts below image (start at startY = 465)
-          self._drawCardDetails(ctx, recipe, 0, 0, canvas.width, canvas.height, imageY + imageH + 35, textColor, textMuted, borderCol, gradColors[0]);
-          resolve(canvas.toDataURL('image/png'));
-        };
+          // Category pill on band
+          var cat = window.Recipes ? window.Recipes.CATEGORIES.find(c => c.id === recipe.category) : null;
+          var catLabel = (cat ? cat.icon + ' ' + cat.label : '🍽 Cucina').toUpperCase();
+          ctx.font = 'bold 13px system-ui, sans-serif';
+          var catW = ctx.measureText(catLabel).width + 28;
+          self._drawRoundedRect(ctx, 36, bandH - 140, catW, 28, 14, 'rgba(255,255,255,0.22)');
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'left';
+          ctx.fillText(catLabel, 36 + 14, bandH - 121);
 
-        img.onerror = function () {
-          // Fallback if image fails to load or does not exist
-          ctx.fillStyle = isDark ? '#27272a' : '#f4f4f5';
-          ctx.fillRect(imageX, imageY, imageW, imageH);
-          
-          ctx.fillStyle = textMuted;
-          ctx.font = '64px system-ui, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('🍽️', imageX + imageW / 2, imageY + imageH / 2 + 10);
-          
-          ctx.font = 'bold 15px system-ui, sans-serif';
-          ctx.fillText('Sapori — Il Tuo Ricettario Personale', imageX + imageW / 2, imageY + imageH / 2 + 60);
+          // Recipe title on band
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 44px system-ui, -apple-system, sans-serif';
+          ctx.textAlign = 'left';
+          self._drawTextWrapped(ctx, recipe.name, 36, bandH - 86, W - 72, 52);
 
-          // Continue drawing texts
-          self._drawCardDetails(ctx, recipe, 0, 0, canvas.width, canvas.height, imageY + imageH + 35, textColor, textMuted, borderCol, gradColors[0]);
-          resolve(canvas.toDataURL('image/png'));
-        };
+          // ── Content area below band ──
+          var sX = 36, cW = W - 72, y = bandH + 36;
 
-        // Trigger image load (use default placeholder if empty)
-        img.src = recipe.image || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        if (img.complete && typeof img.onload === 'function') {
-          img.onload();
-        }
-      });
-    },
+          // Info capsules
+          var diffLabel = { facile: 'Facile', media: 'Media', difficile: 'Difficile' }[recipe.difficulty] || 'Facile';
+          var metaItems = [
+            { icon: '⏱', label: 'Prep', val: (recipe.prepTime || 0) + ' min' },
+            { icon: '🍳', label: 'Cottura', val: (recipe.cookTime || 0) + ' min' },
+            { icon: '👥', label: 'Porzioni', val: String(recipe.servings || 4) },
+            { icon: '⭐', label: 'Difficoltà', val: diffLabel }
+          ];
+          var capW = (cW - 30) / 4, capH = 56;
+          metaItems.forEach(function (m, i) {
+            var cx = sX + i * (capW + 10);
+            self._drawRoundedRect(ctx, cx, y, capW, capH, 12, bgSurf);
+            ctx.strokeStyle = borderC;
+            ctx.lineWidth = 1;
+            self._drawRoundedRectPath(ctx, cx, y, capW, capH, 12);
+            ctx.stroke();
+            // icon
+            ctx.font = '17px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = gc[0];
+            ctx.fillText(m.icon, cx + capW / 2, y + 21);
+            // value
+            ctx.font = 'bold 13px system-ui, sans-serif';
+            ctx.fillStyle = textCol;
+            ctx.fillText(m.val, cx + capW / 2, y + 39);
+          });
+          y += capH + 32;
 
-    /**
-     * Draw text details inside the card (full-bleed layout)
-     */
-    _drawCardDetails(ctx, recipe, cardX, cardY, cardW, cardH, startY, textColor, textMuted, borderCol, themePrimary) {
-      var self = this;
-      var leftMargin = cardX + 40;
-      var contentW = cardW - 80;
-      ctx.textAlign = 'left';
-
-      // 1. Category tag (Pill Badge)
-      var cat = window.Recipes ? window.Recipes.CATEGORIES.find(c => c.id === recipe.category) : null;
-      var catLabel = (cat ? cat.icon + ' ' + cat.label : 'CUCINA').toUpperCase();
-      
-      // Calculate label width dynamic sizing
-      ctx.font = 'bold 11px system-ui, sans-serif';
-      var textMetrics = ctx.measureText(catLabel);
-      var badgeW = textMetrics.width + 24;
-      var badgeH = 24;
-
-      ctx.fillStyle = 'rgba(232, 93, 58, 0.1)';
-      self._drawRoundedRect(ctx, leftMargin, startY, badgeW, badgeH, 6, ctx.fillStyle);
-      
-      ctx.fillStyle = '#E85D3A';
-      ctx.textAlign = 'center';
-      ctx.fillText(catLabel, leftMargin + (badgeW / 2), startY + 16);
-
-      // 2. Recipe Title
-      ctx.textAlign = 'left';
-      ctx.fillStyle = textColor;
-      ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
-      var titleY = startY + 65;
-      var titleHeight = self._drawTextWrapped(ctx, recipe.name, leftMargin, titleY, contentW, 42);
-
-      // 3. Metadata Capsules Row
-      var capsuleY = titleY + titleHeight + 15;
-      var capsuleH = 42;
-      var colW = (contentW - 36) / 4; // 12px gap between columns
-
-      var difficultyLabel = self._getDifficultyLabel(recipe.difficulty);
-      var metaItems = [
-        { val: (recipe.prepTime || '0') + ' min', icon: '⏱️' },
-        { val: (recipe.cookTime || '0') + ' min', icon: '🍳' },
-        { val: (recipe.servings || '4') + ' porz.', icon: '👥' },
-        { val: difficultyLabel, icon: '⭐' }
-      ];
-
-      metaItems.forEach(function (item, idx) {
-        var x = leftMargin + (idx * (colW + 12));
-        
-        // Draw soft capsule
-        ctx.fillStyle = 'rgba(113, 113, 122, 0.06)';
-        self._drawRoundedRect(ctx, x, capsuleY, colW, capsuleH, 10, ctx.fillStyle);
-        
-        // Label
-        ctx.fillStyle = textColor;
-        ctx.font = 'bold 13px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(item.icon + '  ' + item.val, x + (colW / 2), capsuleY + 26);
-      });
-
-      // 4. Divider Line
-      var dividerY = capsuleY + capsuleH + 28;
-      ctx.strokeStyle = borderCol;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(leftMargin, dividerY);
-      ctx.lineTo(leftMargin + contentW, dividerY);
-      ctx.stroke();
-
-      // 5. Ingredients Section
-      var ingTitleY = dividerY + 38;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = textColor;
-      ctx.font = 'bold 13px system-ui, sans-serif';
-      ctx.fillText('INGREDIENTI PRINCIPALI', leftMargin, ingTitleY);
-
-      var ingY = ingTitleY + 32;
-      ctx.font = '15px system-ui, sans-serif';
-      
-      if (recipe.ingredients && recipe.ingredients.length > 0) {
-        var maxIng = 4;
-        var shown = recipe.ingredients.slice(0, maxIng);
-        shown.forEach(function (ing, idx) {
-          var y = ingY + (idx * 30);
-          
-          // Draw a small bullet circle matching primary color
-          ctx.fillStyle = '#E85D3A';
-          ctx.beginPath();
-          ctx.arc(leftMargin + 4, y - 5, 4, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Ingredient Text
-          ctx.fillStyle = textColor;
-          ctx.fillText(ing.name, leftMargin + 22, y);
-
-          // Quantity (aligned to the right or styled text)
-          if (ing.quantity) {
-            ctx.fillStyle = textMuted;
-            ctx.textAlign = 'right';
-            ctx.fillText(ing.quantity + ' ' + (ing.unit || ''), leftMargin + contentW, y);
-            ctx.textAlign = 'left'; // reset
+          // Description (up to 2 lines)
+          if (recipe.description) {
+            ctx.font = 'italic 15px system-ui, sans-serif';
+            ctx.fillStyle = mutedCol;
+            ctx.textAlign = 'left';
+            var descH = self._drawTextWrapped(ctx, recipe.description, sX, y, cW, 22, 2);
+            y += descH + 24;
           }
-        });
 
-        if (recipe.ingredients.length > maxIng) {
-          ctx.fillStyle = textMuted;
-          ctx.font = 'italic 14px system-ui, sans-serif';
-          ctx.fillText('• ... e altri ' + (recipe.ingredients.length - maxIng) + ' ingredienti', leftMargin, ingY + (maxIng * 30));
+          // Divider
+          ctx.strokeStyle = borderC;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(sX, y); ctx.lineTo(sX + cW, y); ctx.stroke();
+          y += 26;
+
+          // Ingredients section title
+          ctx.font = 'bold 13px system-ui, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillStyle = gc[0];
+          ctx.fillText('INGREDIENTI', sX, y);
+          y += 24;
+
+          // Ingredients list
+          if (recipe.ingredients && recipe.ingredients.length > 0) {
+            var maxI = Math.min(recipe.ingredients.length, 6);
+            recipe.ingredients.slice(0, maxI).forEach(function (ing, idx) {
+              var iy = y + idx * 30;
+              // Bullet
+              ctx.beginPath();
+              ctx.arc(sX + 6, iy - 5, 5, 0, Math.PI * 2);
+              ctx.fillStyle = gc[0];
+              ctx.fill();
+              // Name
+              ctx.font = '15px system-ui, sans-serif';
+              ctx.fillStyle = textCol;
+              ctx.textAlign = 'left';
+              ctx.fillText(ing.name, sX + 22, iy);
+              // Quantity
+              if (ing.quantity) {
+                ctx.fillStyle = mutedCol;
+                ctx.textAlign = 'right';
+                ctx.fillText(ing.quantity + (ing.unit ? ' ' + ing.unit : ''), sX + cW, iy);
+              }
+            });
+            y += maxI * 30;
+            if (recipe.ingredients.length > maxI) {
+              ctx.fillStyle = mutedCol;
+              ctx.font = 'italic 13px system-ui, sans-serif';
+              ctx.textAlign = 'left';
+              ctx.fillText('… e altri ' + (recipe.ingredients.length - maxI) + ' ingredienti', sX, y);
+              y += 22;
+            }
+          }
+
+          y += 12;
+
+          // Divider
+          ctx.strokeStyle = borderC;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(sX, y); ctx.lineTo(sX + cW, y); ctx.stroke();
+          y += 22;
+
+          // Steps preview (first 2)
+          if (recipe.steps && recipe.steps.length > 0) {
+            ctx.font = 'bold 13px system-ui, sans-serif';
+            ctx.fillStyle = gc[0];
+            ctx.textAlign = 'left';
+            ctx.fillText('PREPARAZIONE', sX, y);
+            y += 24;
+
+            var previewSteps = recipe.steps.slice(0, 2);
+            previewSteps.forEach(function (s, i) {
+              var text = typeof s === 'object' ? s.text : s;
+              // Step number circle
+              ctx.beginPath();
+              ctx.arc(sX + 12, y - 4, 12, 0, Math.PI * 2);
+              ctx.fillStyle = gc[0];
+              ctx.fill();
+              ctx.font = 'bold 11px system-ui, sans-serif';
+              ctx.fillStyle = '#ffffff';
+              ctx.textAlign = 'center';
+              ctx.fillText(String(i + 1), sX + 12, y + 1);
+              // Step text
+              ctx.font = '14px system-ui, sans-serif';
+              ctx.fillStyle = textCol;
+              ctx.textAlign = 'left';
+              var truncated = text.length > 72 ? text.slice(0, 69) + '…' : text;
+              ctx.fillText(truncated, sX + 32, y);
+              y += 32;
+            });
+
+            if (recipe.steps.length > 2) {
+              ctx.font = 'italic 13px system-ui, sans-serif';
+              ctx.fillStyle = mutedCol;
+              ctx.textAlign = 'left';
+              ctx.fillText('… e altri ' + (recipe.steps.length - 2) + ' passaggi', sX, y);
+              y += 22;
+            }
+          }
+
+          // Footer
+          var footerY = H - 40;
+          ctx.strokeStyle = borderC;
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(sX, footerY - 18); ctx.lineTo(sX + cW, footerY - 18); ctx.stroke();
+          ctx.font = '12px system-ui, sans-serif';
+          ctx.fillStyle = mutedCol;
+          ctx.textAlign = 'left';
+          ctx.fillText('Creato con ❤️ su Sapori App', sX, footerY);
+          ctx.fillStyle = gc[0];
+          ctx.font = 'bold 12px system-ui, sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText('titangra16.github.io/sapori', sX + cW, footerY);
+
+          resolve(canvas.toDataURL('image/png'));
+        };
+
+        img.onload = function () { drawContent(true); };
+        img.onerror = function () { drawContent(false); };
+
+        if (recipe.image && recipe.image.length > 10) {
+          img.src = recipe.image;
+        } else {
+          drawContent(false);
         }
-      } else {
-        ctx.fillStyle = textMuted;
-        ctx.fillText('Nessun ingrediente inserito', leftMargin, ingY);
-      }
-
-      // 6. Card Footer Watermark
-      var footerY = cardH - 40;
-      ctx.strokeStyle = borderCol;
-      ctx.beginPath();
-      ctx.moveTo(leftMargin, footerY - 20);
-      ctx.lineTo(leftMargin + contentW, footerY - 20);
-      ctx.stroke();
-
-      ctx.fillStyle = textMuted;
-      ctx.font = '13px system-ui, sans-serif';
-      ctx.fillText('Creato con amore su Sapori App', leftMargin, footerY);
-
-      ctx.fillStyle = '#E85D3A';
-      ctx.font = 'bold 13px system-ui, sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText('titangra16.github.io/sapori', leftMargin + contentW, footerY);
+      });
     },
 
-    /**
-     * Show preview modal dialog for the generated share card
-     */
+    /* ────────────────────────────────────────────────────────
+       MODAL — Premium Share UI
+    ──────────────────────────────────────────────────────── */
     _showShareModal(recipe, dataUrl) {
       var self = this;
       var overlay = document.getElementById('modal-overlay');
       if (!overlay) return;
+      var esc = Utils.escapeHtml;
+      var pwaUrl = window.location.origin + window.location.pathname;
+      var hasNativeShare = !!(navigator.share);
 
       overlay.innerHTML =
-        '<div class="modal animate-slide-up" style="max-width: 500px;">' +
-          '<div class="modal__header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">' +
-            '<h3 style="margin:0; font-size:1.15rem; font-weight:700;">Condividi Ricetta</h3>' +
-            '<button type="button" class="btn btn--icon" data-action="modal-cancel" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:none; background:transparent; cursor:pointer;">' + Icons.x + '</button>' +
-          '</div>' +
-          '<div class="modal__body" style="text-align:center; padding:10px 0;">' +
-            '<p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:16px;">Tieni premuto sull\'immagine per salvarla in galleria, oppure usa le opzioni rapide:</p>' +
-            '<div class="share-card-preview-wrapper" style="box-shadow:var(--shadow-lg); border-radius:16px; overflow:hidden; display:inline-block; border:1px solid var(--border); max-width:100%; transition: transform 0.2s ease;">' +
-              '<img src="' + dataUrl + '" alt="Cartolina Condivisione" style="display:block; max-width:100%; max-height:420px; object-fit:contain;">' +
+        '<div class="share-modal">' +
+          // Accent band
+          '<div class="share-modal__accent"></div>' +
+
+          // Header
+          '<div class="share-modal__header">' +
+            '<div class="share-modal__header-left">' +
+              '<span class="share-modal__label">📲 Condividi Ricetta</span>' +
+              '<h2 class="share-modal__title">' + esc(recipe.name) + '</h2>' +
             '</div>' +
+            '<button type="button" class="btn btn--icon" data-action="modal-cancel" ' +
+              'style="border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">' +
+                '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' +
+              '</svg>' +
+            '</button>' +
           '</div>' +
-          '<div class="modal__footer" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:16px;">' +
-            '<button type="button" class="btn btn--primary" id="btn-share-native">' + Icons.share + ' Condividi</button>' +
-            '<button type="button" class="btn btn--secondary" id="btn-share-download">' + Icons.download + ' Scarica</button>' +
-            '<button type="button" class="btn btn--ghost" id="btn-share-copy-text">Copia Testo</button>' +
-          '</div>' +
+
+          // Body
+          '<div class="share-modal__body">' +
+
+            // Card preview
+            '<div class="share-modal__preview-wrap">' +
+              '<img class="share-modal__preview-img" src="' + dataUrl + '" alt="Cartolina ' + esc(recipe.name) + '">' +
+            '</div>' +
+            '<p class="share-modal__preview-hint">Tieni premuto sull\'immagine per salvarla in galleria</p>' +
+
+            // Actions grid (4 buttons)
+            '<div class="share-modal__actions">' +
+
+              (hasNativeShare
+                ? '<button class="share-modal__action-btn share-modal__action-btn--primary" id="btn-share-native">' +
+                    '<span class="share-modal__action-icon">📤</span>' +
+                    '<span class="share-modal__action-label">Condividi</span>' +
+                  '</button>'
+                : '') +
+
+              '<button class="share-modal__action-btn" id="btn-share-download">' +
+                '<span class="share-modal__action-icon">💾</span>' +
+                '<span class="share-modal__action-label">Scarica Immagine</span>' +
+              '</button>' +
+
+              '<button class="share-modal__action-btn" id="btn-share-copy-text">' +
+                '<span class="share-modal__action-icon">📋</span>' +
+                '<span class="share-modal__action-label">Copia Testo</span>' +
+              '</button>' +
+
+              (!hasNativeShare
+                ? '<button class="share-modal__action-btn share-modal__action-btn--primary" id="btn-share-native">' +
+                    '<span class="share-modal__action-icon">🔗</span>' +
+                    '<span class="share-modal__action-label">Condividi Link</span>' +
+                  '</button>'
+                : '') +
+
+              // Divider
+              '<div class="share-modal__divider"></div>' +
+
+              '<button class="share-modal__action-btn share-modal__action-btn--whatsapp" id="btn-share-whatsapp">' +
+                '<span class="share-modal__action-icon">💬</span>' +
+                '<span class="share-modal__action-label">WhatsApp</span>' +
+              '</button>' +
+
+              '<button class="share-modal__action-btn share-modal__action-btn--telegram" id="btn-share-telegram">' +
+                '<span class="share-modal__action-icon">✈️</span>' +
+                '<span class="share-modal__action-label">Telegram</span>' +
+              '</button>' +
+
+            '</div>' +
+
+            // Link section
+            '<div class="share-modal__link-section">' +
+              '<span class="share-modal__link-url">' + esc(pwaUrl) + '</span>' +
+              '<button class="share-modal__link-copy" id="btn-share-copy-link">Copia Link</button>' +
+            '</div>' +
+
+          '</div>' + // body
         '</div>';
 
       overlay.classList.remove('hidden');
 
-      // Bind actions
-      var btnNative = document.getElementById('btn-share-native');
+      // ── Bind actions ──
+      var btnNative   = document.getElementById('btn-share-native');
       var btnDownload = document.getElementById('btn-share-download');
       var btnCopyText = document.getElementById('btn-share-copy-text');
+      var btnWA       = document.getElementById('btn-share-whatsapp');
+      var btnTG       = document.getElementById('btn-share-telegram');
+      var btnCopyLink = document.getElementById('btn-share-copy-link');
 
       if (btnNative) {
         btnNative.addEventListener('click', function () {
@@ -314,39 +388,64 @@
           self._copyRecipeText(recipe);
         });
       }
+
+      if (btnWA) {
+        btnWA.addEventListener('click', function () {
+          self._shareViaWhatsApp(recipe);
+        });
+      }
+
+      if (btnTG) {
+        btnTG.addEventListener('click', function () {
+          self._shareViaTelegram(recipe);
+        });
+      }
+
+      if (btnCopyLink) {
+        btnCopyLink.addEventListener('click', function () {
+          var url = window.location.origin + window.location.pathname;
+          navigator.clipboard.writeText(url).then(function () {
+            btnCopyLink.textContent = 'Copiato ✓';
+            btnCopyLink.style.background = 'var(--primary)';
+            btnCopyLink.style.color = '#fff';
+            setTimeout(function () {
+              btnCopyLink.textContent = 'Copia Link';
+              btnCopyLink.style.background = '';
+              btnCopyLink.style.color = '';
+            }, 2000);
+            Utils.showToast('Link copiato! 🔗', 'success');
+          }).catch(function () {
+            Utils.showToast('Impossibile copiare il link', 'error');
+          });
+        });
+      }
     },
 
-    /**
-     * Share the generated image natively using the Web Share API (files parameter)
-     */
+    /* ────────────────────────────────────────────────────────
+       Share helpers
+    ──────────────────────────────────────────────────────── */
     async _shareImageNatively(recipe, dataUrl) {
       try {
         var blob = await (await fetch(dataUrl)).blob();
-        var file = new File([blob], recipe.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_ricetta.png', { type: blob.type });
+        var fname = recipe.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        var file = new File([blob], fname + '_ricetta.png', { type: blob.type });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: recipe.name,
-            text: 'Guarda questa fantastica ricetta di ' + recipe.name + ' su Sapori!'
-          });
+          await navigator.share({ files: [file], title: recipe.name, text: 'Guarda questa ricetta su Sapori! 🍴' });
         } else {
-          // Fallback share text with link
           await navigator.share({
             title: recipe.name,
-            text: 'Prova la ricetta di "' + recipe.name + '"! Trovi tutto sul mio ricettario Sapori.',
+            text: 'Prova la ricetta di "' + recipe.name + '" su Sapori!',
             url: window.location.origin + window.location.pathname
           });
         }
       } catch (e) {
-        console.warn('Condivisione nativa non riuscita:', e);
-        Utils.showToast('Funzionalità di condivisione non supportata su questo browser', 'info');
+        if (e.name !== 'AbortError') {
+          Utils.showToast('Condivisione non supportata su questo browser', 'info');
+        }
       }
     },
 
-    /**
-     * Download the card as a local file (fallback for desktops)
-     */
     _downloadCardImage(recipeName, dataUrl) {
       var link = document.createElement('a');
       link.download = recipeName.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_cartolina.png';
@@ -357,151 +456,143 @@
       Utils.showToast('Immagine scaricata! 💾', 'success');
     },
 
-    /**
-     * Format recipe as clean text card and copy to clipboard
-     */
     _copyRecipeText(recipe) {
-      var text = '📝 RICETTA: ' + recipe.name.toUpperCase() + '\n';
-      if (recipe.description) text += recipe.description + '\n';
-      
-      text += '\n⏱️ Tempo prep: ' + (recipe.prepTime || '0') + ' min';
-      text += '\n🍳 Tempo cottura: ' + (recipe.cookTime || '0') + ' min';
-      text += '\n👥 Porzioni: ' + (recipe.servings || '4');
-      text += '\n\n🧂 INGREDIENTI:\n';
-      recipe.ingredients.forEach(function (ing) {
-        text += '• ' + ing.name;
-        if (ing.quantity) text += ' (' + ing.quantity + ' ' + (ing.unit || '') + ')';
-        text += '\n';
-      });
+      var esc = function (s) { return (s || '').toString(); };
+      var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
 
-      text += '\n👨‍🍳 PREPARAZIONE:\n';
-      recipe.steps.forEach(function (step, idx) {
-        text += (idx + 1) + '. ' + step + '\n';
-      });
+      var lines = [];
+      lines.push('🍴 *' + esc(recipe.name).toUpperCase() + '*');
+      if (recipe.description) lines.push('_' + esc(recipe.description) + '_');
+      lines.push('');
+      lines.push('⏱ Preparazione: ' + (recipe.prepTime || 0) + ' min');
+      lines.push('🍳 Cottura: ' + (recipe.cookTime || 0) + ' min');
+      lines.push('👥 Porzioni: ' + (recipe.servings || 4));
+      lines.push('⭐ Difficoltà: ' + (diffMap[recipe.difficulty] || 'Facile'));
+      lines.push('');
 
-      text += '\nFatto con amore su Sapori App! 📱';
+      if (recipe.ingredients && recipe.ingredients.length > 0) {
+        lines.push('🧂 *INGREDIENTI:*');
+        recipe.ingredients.forEach(function (ing) {
+          var qty = ing.quantity ? ing.quantity + (ing.unit ? ' ' + ing.unit : '') + ' ' : '';
+          lines.push('• ' + qty + esc(ing.name));
+        });
+        lines.push('');
+      }
 
-      navigator.clipboard.writeText(text).then(function () {
-        Utils.showToast('Testo ricetta copiato negli appunti! 📋', 'success');
+      if (recipe.steps && recipe.steps.length > 0) {
+        lines.push('👨‍🍳 *PREPARAZIONE:*');
+        recipe.steps.forEach(function (s, i) {
+          var text = typeof s === 'object' ? s.text : s;
+          var notes = typeof s === 'object' && s.notes ? ' _(💡 ' + s.notes + ')_' : '';
+          lines.push((i + 1) + '. ' + esc(text) + notes);
+        });
+        lines.push('');
+      }
+
+      if (recipe.notes) {
+        lines.push('📝 Note: ' + esc(recipe.notes));
+        lines.push('');
+      }
+
+      lines.push('—\nFatto con ❤️ su *Sapori App* 📱');
+      lines.push(window.location.origin + window.location.pathname);
+
+      navigator.clipboard.writeText(lines.join('\n')).then(function () {
+        Utils.showToast('Testo copiato! Incollalo su WhatsApp o Telegram 📋', 'success');
       }).catch(function () {
         Utils.showToast('Impossibile copiare il testo', 'error');
       });
     },
 
-    /**
-     * Helper to get difficulty labels
-     */
-    _getDifficultyLabel(diffId) {
-      var diffs = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
-      return diffs[diffId] || 'Facile';
+    _shareViaWhatsApp(recipe) {
+      var text = this._buildShareText(recipe);
+      var url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text);
+      window.open(url, '_blank', 'noopener,noreferrer');
     },
 
-    /**
-     * Helper to draw wrapped text inside canvas
-     */
-    _drawTextWrapped(ctx, text, x, y, maxWidth, lineHeight) {
-      if (!text || typeof text !== 'string') text = '';
-      var words = text.split(' ');
-      var line = '';
-      var lines = [];
+    _shareViaTelegram(recipe) {
+      var text = this._buildShareText(recipe);
+      var url = 'https://t.me/share/url?url=' +
+        encodeURIComponent(window.location.origin + window.location.pathname) +
+        '&text=' + encodeURIComponent('🍴 ' + recipe.name + '\n' + (recipe.description || '') + '\n\nVedi la ricetta completa su Sapori!');
+      window.open(url, '_blank', 'noopener,noreferrer');
+    },
 
+    _buildShareText(recipe) {
+      var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
+      var lines = [
+        '🍴 *' + recipe.name + '*',
+        (recipe.description ? recipe.description + '\n' : ''),
+        '⏱ Prep: ' + (recipe.prepTime || 0) + ' min | 🍳 Cottura: ' + (recipe.cookTime || 0) + ' min | 👥 ' + (recipe.servings || 4) + ' porzioni',
+        '',
+        '🧂 Ingredienti: ' + (recipe.ingredients || []).slice(0, 4).map(function (i) { return i.name; }).join(', ') +
+          ((recipe.ingredients || []).length > 4 ? ' e altri...' : ''),
+        '',
+        '👉 Ricetta completa: ' + window.location.origin + window.location.pathname,
+        'Scarica Sapori App — il tuo ricettario personale! 📱'
+      ];
+      return lines.join('\n');
+    },
+
+    _getDifficultyLabel(diffId) {
+      return { facile: 'Facile', media: 'Media', difficile: 'Difficile' }[diffId] || 'Facile';
+    },
+
+    /* ────────────────────────────────────────────────────────
+       Canvas Helpers
+    ──────────────────────────────────────────────────────── */
+    _drawTextWrapped(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+      if (!text) return 0;
+      var words = String(text).split(' ');
+      var line = '', lines = [];
       for (var n = 0; n < words.length; n++) {
-        var testLine = line + words[n] + ' ';
-        var metrics = ctx.measureText(testLine);
-        var testWidth = metrics.width;
-        if (testWidth > maxWidth && n > 0) {
-          lines.push(line);
+        var test = line + words[n] + ' ';
+        if (ctx.measureText(test).width > maxWidth && n > 0) {
+          lines.push(line.trim());
           line = words[n] + ' ';
         } else {
-          line = testLine;
+          line = test;
         }
       }
-      lines.push(line);
-
-      for (var i = 0; i < lines.length; i++) {
-        ctx.fillText(lines[i], x, y + (i * lineHeight));
+      if (line.trim()) lines.push(line.trim());
+      if (maxLines && lines.length > maxLines) {
+        lines = lines.slice(0, maxLines);
+        if (lines[maxLines - 1]) lines[maxLines - 1] = lines[maxLines - 1].slice(0, -3) + '…';
       }
+      lines.forEach(function (l, i) { ctx.fillText(l, x, y + i * lineHeight); });
       return lines.length * lineHeight;
     },
 
-    /**
-     * Helper to draw filled rounded rect
-     */
-    _drawRoundedRect(ctx, x, y, width, height, radius, fill) {
+    _drawRoundedRect(ctx, x, y, w, h, r, fill) {
       ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + width - radius, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-      ctx.lineTo(x + width, y + height - radius);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-      ctx.lineTo(x + radius, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
       ctx.closePath();
-      if (fill) {
-        ctx.fillStyle = fill;
-        ctx.fill();
-      }
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
     },
 
-    /**
-     * Helper to draw filled rounded rect with different corner radii
-     */
-    _drawRoundedRectComplex(ctx, x, y, width, height, topLeft, topRight, bottomLeft, bottomRight, fill) {
+    _drawRoundedRectPath(ctx, x, y, w, h, r) {
       ctx.beginPath();
-      ctx.moveTo(x + topLeft, y);
-      ctx.lineTo(x + width - topRight, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + topRight);
-      ctx.lineTo(x + width, y + height - bottomRight);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - bottomRight, y + height);
-      ctx.lineTo(x + bottomLeft, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - bottomLeft);
-      ctx.lineTo(x, y + topLeft);
-      ctx.quadraticCurveTo(x, y, x + topLeft, y);
-      ctx.closePath();
-      if (fill) {
-        ctx.fillStyle = fill;
-        ctx.fill();
-      }
-    },
-
-    /**
-     * Helper path generator for clipping rounded rectangles
-     */
-    _drawRoundedRectPath(ctx, x, y, width, height, radius) {
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + width - radius, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-      ctx.lineTo(x + width, y + height - radius);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-      ctx.lineTo(x + radius, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
-      ctx.closePath();
-    },
-
-    /**
-     * Complex path generator for clipping rounded rectangles with specific corner radii
-     */
-    _drawRoundedRectPathComplex(ctx, x, y, width, height, topLeft, topRight, bottomLeft, bottomRight) {
-      ctx.beginPath();
-      ctx.moveTo(x + topLeft, y);
-      ctx.lineTo(x + width - topRight, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + topRight);
-      ctx.lineTo(x + width, y + height - bottomRight);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - bottomRight, y + height);
-      ctx.lineTo(x + bottomLeft, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - bottomLeft);
-      ctx.lineTo(x, y + topLeft);
-      ctx.quadraticCurveTo(x, y, x + topLeft, y);
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
       ctx.closePath();
     }
   };
 
-  // Expose to window
   window.Share = Share;
 
 })(window);
