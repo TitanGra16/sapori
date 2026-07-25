@@ -2346,11 +2346,10 @@
 .print-footer-container,
 .print-only,
 .print-cover-page,
-.print-all-recipes-container,
-.print-preview-modal,
-.share-modal {
+.print-all-recipes-container {
   display: none !important;
 }
+
 
 /* ============================================================
    PROFESSIONAL PRINT SYSTEM (A4 Cookbook Export)

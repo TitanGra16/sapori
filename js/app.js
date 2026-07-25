@@ -466,7 +466,8 @@
       var ingName = row.querySelector('[data-field="ing-name"]').value.trim();
       var ingQty = row.querySelector('[data-field="ing-qty"]').value.trim();
       var ingUnit = row.querySelector('[data-field="ing-unit"]').value;
-      var ingNotes = row.querySelector('[data-field="ing-notes"]').value.trim();
+      var ingNotesEl = row.querySelector('[data-field="ing-notes"]');
+      var ingNotes = ingNotesEl ? ingNotesEl.value.trim() : '';
       if (ingName) {
         ingredients.push({ name: ingName, quantity: ingQty, unit: ingUnit, notes: ingNotes });
       }
@@ -477,7 +478,8 @@
     var steps = [];
     stepRows.forEach(function (row) {
       var text = row.querySelector('[data-field="step-text"]').value.trim();
-      var notes = row.querySelector('[data-field="step-notes"]').value.trim();
+      var stepNotesEl = row.querySelector('[data-field="step-notes"]');
+      var notes = stepNotesEl ? stepNotesEl.value.trim() : '';
       if (text) {
         steps.push({ text: text, notes: notes });
       }
@@ -608,17 +610,20 @@
 
   function showFormErrors(errors) {
     var switchTarget = null;
-    errors.forEach(function (err) {
-      if (err.toLowerCase().includes('nome')) {
+    // errors è un oggetto { fieldName: "messaggio" }, non un array
+    Object.values(errors).forEach(function (err) {
+      if (!err) return;
+      var errLower = err.toLowerCase();
+      if (errLower.includes('nome')) {
         setFieldError('error-name', err);
         if (!switchTarget) switchTarget = 'tab-info';
-      } else if (err.toLowerCase().includes('categoria')) {
+      } else if (errLower.includes('categoria')) {
         setFieldError('error-category', err);
         if (!switchTarget) switchTarget = 'tab-info';
-      } else if (err.toLowerCase().includes('ingrediente') || err.toLowerCase().includes('ingredienti')) {
+      } else if (errLower.includes('ingrediente') || errLower.includes('ingredienti')) {
         setFieldError('error-ingredients', err);
         if (!switchTarget || switchTarget === 'tab-cook') switchTarget = 'tab-prep';
-      } else if (err.toLowerCase().includes('passagg') || err.toLowerCase().includes('preparazione')) {
+      } else if (errLower.includes('passagg') || errLower.includes('preparazione')) {
         setFieldError('error-steps', err);
         if (!switchTarget || switchTarget === 'tab-cook') switchTarget = 'tab-prep';
       }
@@ -626,6 +631,7 @@
     if (switchTarget) {
       switchFormTab(switchTarget);
     }
+
   }
 
   function setFieldError(errorId, message) {
