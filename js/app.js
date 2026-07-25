@@ -691,10 +691,15 @@
     var rows = document.querySelectorAll('#ingredients-list .ingredient-row');
     var ingredients = [];
     rows.forEach(function (row) {
+      var nameEl = row.querySelector('[data-field="ing-name"]');
+      var qtyEl = row.querySelector('[data-field="ing-qty"]');
+      var unitEl = row.querySelector('[data-field="ing-unit"]');
+      var notesEl = row.querySelector('[data-field="ing-notes"]');
       ingredients.push({
-        name: row.querySelector('[data-field="ing-name"]').value,
-        quantity: row.querySelector('[data-field="ing-qty"]').value,
-        unit: row.querySelector('[data-field="ing-unit"]').value
+        name: nameEl ? nameEl.value : '',
+        quantity: qtyEl ? qtyEl.value : '',
+        unit: unitEl ? unitEl.value : '',
+        notes: notesEl ? notesEl.value : ''
       });
     });
     return ingredients;
@@ -714,25 +719,31 @@
     var esc = Utils.escapeHtml;
     var html =
       '<div class="dynamic-list__item ingredient-row" data-index="' + index + '">' +
-        '<div class="ingredient-inputs">' +
-          '<input type="text" class="form-input" placeholder="Ingrediente" data-field="ing-name" value="' + esc(ing.name || '') + '">' +
-          '<input type="text" class="form-input" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
-          '<select class="form-select" data-field="ing-unit" style="max-width:6rem">' +
-            '<option value="">—</option>';
+        '<div class="ingredient-row-container" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
+          '<div class="ingredient-inputs">' +
+            '<input type="text" class="form-input" placeholder="Ingrediente *" data-field="ing-name" value="' + esc(ing.name || '') + '" required>' +
+            '<input type="text" class="form-input" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
+            '<select class="form-select" data-field="ing-unit" style="max-width:6rem">' +
+              '<option value="">—</option>';
     Recipes.UNITS.forEach(function (u) {
       html += '<option value="' + esc(u) + '"' + (ing.unit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
     });
     html += '</select>';
     if (total > 1) {
-      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi">✕</button>';
+      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
     }
-    html += '</div></div>';
+    html += '</div>';
+    html += '<div class="ingredient-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
+              '<input type="text" class="form-input" placeholder="Note per questo ingrediente (es. tiepido, setacciato)" data-field="ing-notes" value="' + esc(ing.notes || '') + '">' +
+            '</div>' +
+        '</div>' +
+      '</div>';
     return html;
   }
 
   function addStepRow() {
     var steps = collectCurrentSteps();
-    steps.push('');
+    steps.push({ text: '', notes: '' });
     rerenderSteps(steps);
   }
 
@@ -747,7 +758,12 @@
     var rows = document.querySelectorAll('#steps-list .step-item');
     var steps = [];
     rows.forEach(function (row) {
-      steps.push(row.querySelector('[data-field="step-text"]').value);
+      var textEl = row.querySelector('[data-field="step-text"]');
+      var notesEl = row.querySelector('[data-field="step-notes"]');
+      steps.push({
+        text: textEl ? textEl.value : '',
+        notes: notesEl ? notesEl.value : ''
+      });
     });
     return steps;
   }
@@ -762,14 +778,21 @@
     list.innerHTML = html;
   }
 
-  function stepRowHTMLFromApp(step, index, total) {
+  function stepRowHTMLFromApp(stepVal, index, total) {
     var esc = Utils.escapeHtml;
+    var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
+    var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
     var html =
       '<div class="dynamic-list__item step-item" data-index="' + index + '">' +
         '<span class="step-number">' + (index + 1) + '</span>' +
-        '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio...">' + esc(step || '') + '</textarea>';
+        '<div class="step-inputs" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
+          '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" required>' + esc(stepText || '') + '</textarea>' +
+          '<div class="step-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
+            '<input type="text" class="form-input" placeholder="Suggerimento / nota per questo passaggio (opzionale)" data-field="step-notes" value="' + esc(stepNotes || '') + '">' +
+          '</div>' +
+        '</div>';
     if (total > 1) {
-      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">✕</button>';
+      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
     }
     html += '</div>';
     return html;

@@ -308,15 +308,29 @@ window.Recipes = {
         .map(ing => ({
           name: ing.name.trim(),
           quantity: ing.quantity !== undefined && ing.quantity !== null ? String(ing.quantity).trim() : '',
-          unit: ing.unit !== undefined && ing.unit !== null ? String(ing.unit).trim() : ''
+          unit: ing.unit !== undefined && ing.unit !== null ? String(ing.unit).trim() : '',
+          notes: ing.notes !== undefined && ing.notes !== null ? String(ing.notes).trim() : ''
         }));
     }
 
-    // Clean steps: only non-empty strings
+    // Clean steps: preserve strings or objects with text and notes
     if (Array.isArray(recipe.steps)) {
       exported.steps = recipe.steps
-        .filter(s => s && typeof s === 'string' && s.trim())
-        .map(s => s.trim());
+        .filter(s => {
+          if (!s) return false;
+          if (typeof s === 'string') return s.trim().length > 0;
+          if (typeof s === 'object' && s.text) return String(s.text).trim().length > 0;
+          return false;
+        })
+        .map(s => {
+          if (typeof s === 'object') {
+            return {
+              text: String(s.text || '').trim(),
+              notes: String(s.notes || '').trim()
+            };
+          }
+          return { text: String(s).trim(), notes: '' };
+        });
     }
 
     return exported;
