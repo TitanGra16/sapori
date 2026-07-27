@@ -12,6 +12,7 @@
     filters: { search: '', category: '', sortBy: 'recent' },
     editingRecipe: null,
     savingRecipe: false,
+    savingCategory: false,
     pantryIngredients: [],
     cooking: {
       recipe: null,
@@ -301,6 +302,8 @@
   }
 
   async function saveCustomCategory(newCat) {
+    if (state.savingCategory) return;
+    state.savingCategory = true;
     try {
       var categoriesSetting = await DB.getSetting('customCategories');
       var custom = [];
@@ -322,11 +325,14 @@
       }
     } catch (e) {
       Utils.showToast('Errore durante il salvataggio della categoria', 'error');
+    } finally {
+      state.savingCategory = false;
     }
   }
 
   async function deleteCustomCategory(catId) {
     try {
+      var movedRecipes = await DB.reassignCategory(catId, 'altro');
       var categoriesSetting = await DB.getSetting('customCategories');
       if (categoriesSetting) {
         var custom = JSON.parse(categoriesSetting);
@@ -341,7 +347,12 @@
           return cat.id !== catId;
         });
         
-        Utils.showToast('Categoria eliminata', 'success');
+        Utils.showToast(
+          movedRecipes > 0
+            ? 'Categoria eliminata: ' + movedRecipes + ' ricett' + (movedRecipes === 1 ? 'a spostata' : 'e spostate') + ' in Altro.'
+            : 'Categoria eliminata',
+          'success'
+        );
         
         // Re-render delle impostazioni
         if (state.currentView === 'settings') {
@@ -804,6 +815,20 @@
     }
   }
 
+  async function confirmDeleteCustomCategory(catId) {
+    var category = Recipes.CATEGORIES.find(function (cat) { return cat.id === catId && cat.isCustom; });
+    if (!category) return;
+    var recipes = await DB.getAllRecipes();
+    var affected = recipes.filter(function (recipe) { return recipe.category === catId; }).length;
+    var message = affected > 0
+      ? 'La categoria “' + category.label + '” è usata da ' + affected + ' ricett' + (affected === 1 ? 'a' : 'e') + '. Eliminandola, verr' + (affected === 1 ? 'à spostata' : 'anno spostate') + ' automaticamente in “Altro”.'
+      : 'Eliminare la categoria “' + category.label + '”?';
+    Views.showConfirmModal('Elimina categoria', message, async function () {
+      Views.hideModal();
+      await deleteCustomCategory(catId);
+    });
+  }
+
   /* ──────────────────── FORM: DYNAMIC ROWS ──────────────────── */
 
   function addIngredientRow() {
@@ -1184,16 +1209,40 @@
 
   async function handleImportFile(file) {
     if (!file) return;
+    if (file.size > DB.MAX_IMPORT_BYTES) {
+      Utils.showToast('Il file supera il limite di 50 MB.', 'error');
+      return;
+    }
     try {
       var text = await Utils.readFileAsText(file);
-      var count = await DB.importData(text);
-      Utils.showToast('Importate ' + count + ' ricette con successo! 📤', 'success');
-      // Re-render settings to update count
-      if (state.currentView === 'settings') {
-        Views.renderSettings(appContent);
-      }
+      var preview = await DB.previewImport(text);
+      var applyImport = async function (mode) {
+        Views.hideModal();
+        try {
+          var summary = await DB.importData(text, { mode: mode });
+          await loadCustomCategories();
+          await Theme.init();
+          var parts = [];
+          if (summary.imported) parts.push(summary.imported + ' nuove');
+          if (summary.updated) parts.push(summary.updated + ' aggiornate');
+          if (summary.skipped) parts.push(summary.skipped + ' duplicate ignorate');
+          if (summary.rejected) parts.push(summary.rejected + ' non valide');
+          Utils.showToast('Importazione completata: ' + (parts.join(', ') || 'nessuna modifica') + '.', 'success');
+          if (state.currentView === 'settings') Views.renderSettings(appContent);
+        } catch (importError) {
+          Utils.showToast('Errore nell\'importazione: ' + importError.message, 'error');
+        }
+      };
+      Views.showImportPreviewModal(
+        preview,
+        function () { applyImport('merge'); },
+        preview.isBackup ? function () { applyImport('replace'); } : null
+      );
     } catch (e) {
       Utils.showToast('Errore nell\'importazione: ' + e.message, 'error');
+    } finally {
+      var fileInput = document.getElementById('import-file-input');
+      if (fileInput) fileInput.value = '';
     }
   }
 
@@ -1651,7 +1700,7 @@
           var label = labelInput.value.trim();
           var icon = iconInput ? iconInput.value.trim() : '🍴';
           var color = colorInput ? colorInput.value : '#E85D3A';
-          var id = label.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          var id = Utils.slugify(label);
           
           if (!id) id = 'cat-' + Date.now();
           
@@ -1677,7 +1726,7 @@
         }
         case 'delete-category': {
           var catId = actionEl.getAttribute('data-id');
-          if (catId) deleteCustomCategory(catId);
+          if (catId) confirmDeleteCustomCategory(catId);
           break;
         }
         case 'export-pdf-all': {

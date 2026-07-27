@@ -5,6 +5,9 @@
  */
 window.DB = {
   db: null,
+  initPromise: null,
+  MAX_IMPORT_BYTES: 50 * 1024 * 1024,
+  MAX_IMPORT_RECIPES: 5000,
 
   /**
    * Initialize the IndexedDB database.
@@ -13,8 +16,9 @@ window.DB = {
    */
   async init() {
     if (this.db) return this.db;
+    if (this.initPromise) return this.initPromise;
 
-    return new Promise((resolve, reject) => {
+    this.initPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open('SaporiDB', 1);
 
       request.onerror = () => {
@@ -39,6 +43,10 @@ window.DB = {
         }
       };
 
+      request.onblocked = () => {
+        reject(new Error('Il database è aperto in un’altra scheda non aggiornata. Chiudila e riprova.'));
+      };
+
       request.onsuccess = () => {
         this.db = request.result;
 
@@ -46,10 +54,20 @@ window.DB = {
         this.db.onclose = () => {
           this.db = null;
         };
+        this.db.onversionchange = () => {
+          this.db.close();
+          this.db = null;
+        };
 
         resolve(this.db);
       };
     });
+
+    try {
+      return await this.initPromise;
+    } finally {
+      this.initPromise = null;
+    }
   },
 
   /**
@@ -184,6 +202,23 @@ window.DB = {
     await this._txComplete(tx);
   },
 
+  async reassignCategory(fromCategory, toCategory = 'altro') {
+    if (!fromCategory || fromCategory === toCategory) return 0;
+    const db = await this._ensureDB();
+    const tx = db.transaction('recipes', 'readwrite');
+    const store = tx.objectStore('recipes');
+    const recipes = await this._promisify(store.getAll());
+    let changed = 0;
+    recipes.forEach(recipe => {
+      if (recipe.category === fromCategory) {
+        store.put({ ...recipe, category: toCategory, updatedAt: Date.now() });
+        changed++;
+      }
+    });
+    await this._txComplete(tx);
+    return changed;
+  },
+
   /**
    * Get a setting value by key.
    * @param {string} key
@@ -218,34 +253,139 @@ window.DB = {
     await this._txComplete(tx);
   },
 
+  async getAllSettings() {
+    const db = await this._ensureDB();
+    const tx = db.transaction('settings', 'readonly');
+    const entries = await this._promisify(tx.objectStore('settings').getAll());
+    return entries.reduce((result, entry) => {
+      result[entry.key] = entry.value;
+      return result;
+    }, {});
+  },
+
   /**
    * Export all recipes as a JSON string with metadata.
    * @returns {Promise<string>}
    */
   async exportData() {
     const recipes = await this.getAllRecipes();
+    const settings = await this.getAllSettings();
 
     const exportPayload = {
       appName: 'Sapori',
-      version: 1,
+      version: 2,
       exportDate: new Date().toISOString(),
       recipeCount: recipes.length,
-      recipes: recipes
+      recipes: recipes.map(recipe => window.Recipes ? window.Recipes.formatRecipeForExport(recipe) : recipe),
+      settings: {
+        customCategories: settings.customCategories || '[]',
+        themeMode: settings.themeMode || null,
+        themePalette: settings.themePalette || null
+      }
     };
 
     return JSON.stringify(exportPayload, null, 2);
   },
 
-  /**
-   * Import recipes from a JSON string.
-   * Validates the structure and generates new IDs to avoid conflicts.
-   * @param {string} jsonString
-   * @returns {Promise<number>} Count of imported recipes
-   * @throws {Error} On invalid data
-   */
-  async importData(jsonString) {
+  _parseCustomCategories(value) {
+    let categories = value;
+    if (typeof categories === 'string') {
+      try {
+        categories = JSON.parse(categories);
+      } catch (e) {
+        categories = [];
+      }
+    }
+    if (!Array.isArray(categories)) return [];
+
+    const seen = new Set();
+    return categories.slice(0, 100).map(category => {
+      if (!category || typeof category !== 'object') return null;
+      const label = String(category.label || '').trim().slice(0, 60);
+      const baseId = window.Utils ? window.Utils.slugify(category.id || label) : label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const id = baseId.slice(0, 80);
+      const icon = String(category.icon || '🍴').trim().slice(0, 16) || '🍴';
+      const color = /^#[0-9a-f]{6}$/i.test(String(category.color || '')) ? category.color : '#E85D3A';
+      if (!id || !label || seen.has(id)) return null;
+      seen.add(id);
+      return { id, label, icon, color, isCustom: true };
+    }).filter(Boolean);
+  },
+
+  _normalizeImportedRecipe(recipe, allowedCategories) {
+    if (!recipe || typeof recipe !== 'object' || Array.isArray(recipe)) return null;
+
+    const asString = (value, max) => value === undefined || value === null ? '' : String(value).trim().slice(0, max);
+    const asInteger = (value, fallback) => {
+      const number = Number(value);
+      return Number.isFinite(number) && Number.isInteger(number) ? number : fallback;
+    };
+    const limits = window.Recipes ? window.Recipes.LIMITS : {
+      name: 120, description: 2000, notes: 4000, ingredients: 100,
+      ingredientName: 160, ingredientQuantity: 50, ingredientNotes: 500,
+      steps: 100, stepText: 2000, stepNotes: 1000
+    };
+
+    const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients.slice(0, limits.ingredients).map(ingredient => {
+      if (!ingredient || typeof ingredient !== 'object' || Array.isArray(ingredient)) return null;
+      return {
+        name: asString(ingredient.name, limits.ingredientName),
+        quantity: asString(ingredient.quantity, limits.ingredientQuantity),
+        unit: asString(ingredient.unit, 30),
+        notes: asString(ingredient.notes, limits.ingredientNotes)
+      };
+    }).filter(Boolean) : [];
+
+    const steps = Array.isArray(recipe.steps) ? recipe.steps.slice(0, limits.steps).map(step => {
+      if (typeof step === 'string') return { text: asString(step, limits.stepText), notes: '' };
+      if (!step || typeof step !== 'object' || Array.isArray(step)) return null;
+      return {
+        text: asString(step.text, limits.stepText),
+        notes: asString(step.notes, limits.stepNotes)
+      };
+    }).filter(Boolean) : [];
+
+    const rawImage = typeof recipe.image === 'string' ? recipe.image : '';
+    const image = rawImage.length <= 7 * 1024 * 1024 &&
+      /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(rawImage) ? rawImage : null;
+    const category = allowedCategories.has(recipe.category) ? recipe.category : 'altro';
+    const difficulty = ['facile', 'media', 'difficile'].includes(recipe.difficulty) ? recipe.difficulty : 'media';
+    const now = Date.now();
+
+    return {
+      id: typeof recipe.id === 'string' && recipe.id.length <= 128 ? recipe.id : null,
+      name: asString(recipe.name, limits.name),
+      category,
+      description: asString(recipe.description, limits.description),
+      notes: asString(recipe.notes, limits.notes),
+      ingredients,
+      steps,
+      prepTime: asInteger(recipe.prepTime, 0),
+      cookTime: asInteger(recipe.cookTime, 0),
+      difficulty,
+      servings: asInteger(recipe.servings, 4),
+      image,
+      isFavorite: recipe.isFavorite === true,
+      createdAt: Number.isFinite(Number(recipe.createdAt)) ? Number(recipe.createdAt) : now,
+      updatedAt: Number.isFinite(Number(recipe.updatedAt)) ? Number(recipe.updatedAt) : now
+    };
+  },
+
+  _recipeFingerprint(recipe) {
+    return JSON.stringify({
+      name: String(recipe.name || '').toLocaleLowerCase('it-IT'),
+      category: recipe.category || 'altro',
+      ingredients: recipe.ingredients || [],
+      steps: recipe.steps || []
+    });
+  },
+
+  _prepareImport(jsonString) {
     if (!jsonString || typeof jsonString !== 'string') {
       throw new Error('Dati di importazione non validi: stringa JSON attesa');
+    }
+    if (new Blob([jsonString]).size > this.MAX_IMPORT_BYTES) {
+      throw new Error('Il file supera il limite di 50 MB');
     }
 
     let data;
@@ -255,61 +395,146 @@ window.DB = {
       throw new Error('Formato JSON non valido: ' + e.message);
     }
 
-    // Validate top-level structure
     if (!data || typeof data !== 'object') {
       throw new Error('Struttura dati non valida');
     }
+    if (data.version !== undefined && (!Number.isInteger(Number(data.version)) || Number(data.version) > 2)) {
+      throw new Error('Versione del backup non supportata');
+    }
 
-    // Accept both { recipes: [...] } and plain arrays
     let recipes;
     if (Array.isArray(data.recipes)) {
       recipes = data.recipes;
     } else if (Array.isArray(data)) {
       recipes = data;
+    } else if (typeof data.name === 'string') {
+      recipes = [data];
     } else {
       throw new Error('Nessuna ricetta trovata nei dati importati');
     }
+    if (recipes.length > this.MAX_IMPORT_RECIPES) {
+      throw new Error(`Il file contiene più di ${this.MAX_IMPORT_RECIPES} ricette`);
+    }
 
-    if (recipes.length === 0) {
-      return 0;
+    const settings = data.settings && typeof data.settings === 'object' ? data.settings : {};
+    const hasCustomCategories = settings.customCategories !== undefined || data.customCategories !== undefined;
+    const hasThemeMode = settings.themeMode !== undefined;
+    const hasThemePalette = settings.themePalette !== undefined;
+    const customCategories = this._parseCustomCategories(
+      settings.customCategories !== undefined ? settings.customCategories : data.customCategories
+    );
+    const allowedCategories = new Set(['antipasti', 'primi', 'secondi', 'contorni', 'dolci', 'bevande', 'altro']);
+    customCategories.forEach(category => allowedCategories.add(category.id));
+
+    const importedCategoryIds = new Set(customCategories.map(category => category.id));
+    const normalized = recipes.map(recipe => this._normalizeImportedRecipe(recipe, allowedCategories)).filter(recipe => {
+      if (!recipe) return false;
+      if (!window.Recipes) return true;
+      const validationRecipe = importedCategoryIds.has(recipe.category)
+        ? { ...recipe, category: 'altro' }
+        : recipe;
+      return window.Recipes.validate(validationRecipe).valid;
+    });
+    const validPalettes = new Set(['classico', 'oceano', 'bosco', 'tramonto', 'ametista', 'autunno', 'zafferano']);
+
+    return {
+      recipes: normalized,
+      rejected: recipes.length - normalized.length,
+      settings: {
+        customCategories: JSON.stringify(customCategories),
+        themeMode: settings.themeMode === 'dark' || settings.themeMode === 'light' ? settings.themeMode : null,
+        themePalette: validPalettes.has(settings.themePalette) ? settings.themePalette : null
+      },
+      settingPresence: { hasCustomCategories, hasThemeMode, hasThemePalette },
+      customCategories,
+      isBackup: Array.isArray(data.recipes)
+    };
+  },
+
+  async previewImport(jsonString) {
+    const prepared = this._prepareImport(jsonString);
+    const existing = await this.getAllRecipes();
+    const ids = new Set(existing.map(recipe => recipe.id));
+    const fingerprints = new Set(existing.map(recipe => this._recipeFingerprint(recipe)));
+    let additions = 0;
+    let updates = 0;
+    let duplicates = 0;
+
+    prepared.recipes.forEach(recipe => {
+      if (recipe.id && ids.has(recipe.id)) updates++;
+      else if (fingerprints.has(this._recipeFingerprint(recipe))) duplicates++;
+      else additions++;
+    });
+
+    return {
+      total: prepared.recipes.length,
+      additions,
+      updates,
+      duplicates,
+      rejected: prepared.rejected,
+      categories: prepared.customCategories.length,
+      isBackup: prepared.isBackup
+    };
+  },
+
+  /**
+   * Import recipes and supported settings in one atomic transaction.
+   * mode "merge" updates matching IDs and skips content duplicates.
+   * mode "replace" replaces the whole recipe store.
+   */
+  async importData(jsonString, options = {}) {
+    const prepared = this._prepareImport(jsonString);
+    const mode = options.mode === 'replace' ? 'replace' : 'merge';
+    if (prepared.recipes.length === 0 && prepared.rejected > 0) {
+      throw new Error('Nessuna ricetta valida trovata nel file');
     }
 
     const db = await this._ensureDB();
-    const tx = db.transaction('recipes', 'readwrite');
+    const existing = mode === 'merge' ? await this.getAllRecipes() : [];
+    const existingIds = new Set(existing.map(recipe => recipe.id));
+    const fingerprints = new Set(existing.map(recipe => this._recipeFingerprint(recipe)));
+    const tx = db.transaction(['recipes', 'settings'], 'readwrite');
     const store = tx.objectStore('recipes');
+    const settingsStore = tx.objectStore('settings');
     const now = Date.now();
-    let importCount = 0;
+    const summary = { imported: 0, updated: 0, skipped: 0, rejected: prepared.rejected, categories: prepared.customCategories.length };
 
-    for (const recipe of recipes) {
-      // Basic validation: must have at least a name
-      if (!recipe || typeof recipe !== 'object' || !recipe.name || typeof recipe.name !== 'string') {
-        continue; // Skip invalid entries
+    if (mode === 'replace') store.clear();
+
+    for (const recipe of prepared.recipes) {
+      const fingerprint = this._recipeFingerprint(recipe);
+      if (mode === 'merge' && recipe.id && existingIds.has(recipe.id)) {
+        store.put({ ...recipe, updatedAt: now });
+        fingerprints.add(fingerprint);
+        summary.updated++;
+        continue;
+      }
+      if (mode === 'merge' && fingerprints.has(fingerprint)) {
+        summary.skipped++;
+        continue;
       }
 
-      const importedRecipe = {
-        id: window.Utils ? window.Utils.generateId() : (crypto.randomUUID ? crypto.randomUUID() : this._fallbackId()),
-        name: recipe.name || '',
-        category: recipe.category || 'altro',
-        description: recipe.description || '',
-        ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
-        steps: Array.isArray(recipe.steps) ? recipe.steps : [],
-        prepTime: typeof recipe.prepTime === 'number' ? recipe.prepTime : 0,
-        cookTime: typeof recipe.cookTime === 'number' ? recipe.cookTime : 0,
-        difficulty: recipe.difficulty || 'media',
-        servings: typeof recipe.servings === 'number' && recipe.servings > 0 ? recipe.servings : 4,
-        image: recipe.image || null,
-        isFavorite: typeof recipe.isFavorite === 'boolean' ? recipe.isFavorite : false,
-        createdAt: typeof recipe.createdAt === 'number' ? recipe.createdAt : now,
-        updatedAt: now
-      };
-
-      store.add(importedRecipe);
-      importCount++;
+      const id = recipe.id && !existingIds.has(recipe.id)
+        ? recipe.id
+        : (window.Utils ? window.Utils.generateId() : (crypto.randomUUID ? crypto.randomUUID() : this._fallbackId()));
+      store.put({ ...recipe, id, updatedAt: now });
+      existingIds.add(id);
+      fingerprints.add(fingerprint);
+      summary.imported++;
     }
 
+    if (prepared.settingPresence.hasCustomCategories) {
+      settingsStore.put({ key: 'customCategories', value: prepared.settings.customCategories });
+    }
+    if (prepared.settingPresence.hasThemeMode && prepared.settings.themeMode) {
+      settingsStore.put({ key: 'themeMode', value: prepared.settings.themeMode });
+    }
+    if (prepared.settingPresence.hasThemePalette && prepared.settings.themePalette) {
+      settingsStore.put({ key: 'themePalette', value: prepared.settings.themePalette });
+    }
     await this._txComplete(tx);
 
-    return importCount;
+    return summary;
   },
 
   /**

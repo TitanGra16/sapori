@@ -682,8 +682,8 @@ window.Views = (function () {
     html += '<div class="settings-item settings-item--column">';
     html += '<div class="settings-item__label">Aggiungi nuova categoria</div>';
     html += '<div class="add-category-form" style="display:flex; flex-wrap:wrap; gap:var(--space-sm); width:100%; margin-top:var(--space-xs);">';
-    html += '<input type="text" id="input-cat-label" class="form-input" placeholder="Es. Ricette Veloci" style="flex:1; min-width:150px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem;">';
-    html += '<input type="text" id="input-cat-icon" class="form-input" placeholder="Emoji (es. ⏱️)" style="width:100px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem; text-align:center;">';
+    html += '<input type="text" id="input-cat-label" class="form-input" maxlength="60" placeholder="Es. Ricette Veloci" style="flex:1; min-width:150px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem;">';
+    html += '<input type="text" id="input-cat-icon" class="form-input" maxlength="16" placeholder="Emoji (es. ⏱️)" style="width:100px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem; text-align:center;">';
     html += '<select id="input-cat-color" class="form-select" style="width:120px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem; background-color:var(--bg-secondary);">' +
               '<option value="#E85D3A">Arancione</option>' +
               '<option value="#0EA5E9">Azzurro</option>' +
@@ -1092,6 +1092,37 @@ window.Views = (function () {
     overlay._onConfirm = onConfirm;
   }
 
+  function showImportPreviewModal(preview, onMerge, onReplace) {
+    var overlay = document.getElementById('modal-overlay');
+    var summary = [
+      '<strong>' + preview.additions + '</strong> nuove',
+      '<strong>' + preview.updates + '</strong> aggiornabili',
+      '<strong>' + preview.duplicates + '</strong> duplicate',
+      '<strong>' + preview.rejected + '</strong> non valide'
+    ].join(' · ');
+
+    overlay.innerHTML =
+      '<div class="modal animate-slide-up" role="dialog" aria-modal="true" aria-labelledby="import-preview-title">' +
+        '<div class="modal__header"><h3 id="import-preview-title">Anteprima importazione</h3></div>' +
+        '<div class="modal__body">' +
+          '<p>Il file contiene <strong>' + preview.total + '</strong> ricett' + (preview.total === 1 ? 'a valida' : 'e valide') + '.</p>' +
+          '<p style="margin-top:.75rem;color:var(--text-secondary)">' + summary + '</p>' +
+          (preview.categories ? '<p style="margin-top:.5rem">' + preview.categories + ' categorie personalizzate incluse.</p>' : '') +
+          '<p style="margin-top:.75rem;font-size:.85rem;color:var(--text-muted)">Unisci aggiorna gli ID già presenti e ignora i duplicati. Sostituisci elimina prima le ricette attuali.</p>' +
+        '</div>' +
+        '<div class="modal__footer">' +
+          '<button type="button" class="btn btn--ghost" data-action="modal-cancel">Annulla</button>' +
+          (onReplace ? '<button type="button" class="btn btn--danger" id="btn-import-replace">Sostituisci</button>' : '') +
+          '<button type="button" class="btn btn--primary" id="btn-import-merge">Unisci</button>' +
+        '</div>' +
+      '</div>';
+
+    overlay.classList.remove('hidden');
+    document.getElementById('btn-import-merge').addEventListener('click', onMerge);
+    var replaceButton = document.getElementById('btn-import-replace');
+    if (replaceButton) replaceButton.addEventListener('click', onReplace);
+  }
+
   /**
    * Show a full Print Preview Modal for a single recipe
    * @param {Object} recipe
@@ -1279,6 +1310,7 @@ window.Views = (function () {
     renderPantry: renderPantry,
     showCookingModal: showCookingModal,
     showConfirmModal: showConfirmModal,
+    showImportPreviewModal: showImportPreviewModal,
     showPrintPreviewModal: showPrintPreviewModal,
     hideModal: hideModal
   };
