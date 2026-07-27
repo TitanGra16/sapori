@@ -1143,7 +1143,131 @@ window.Views = (function () {
   }
 
   /**
-   * Show a full Print Preview Modal for a single recipe
+   * Build the canonical printable layout used by both the A4 preview and the
+   * complete cookbook. Keeping one template prevents preview/print drift.
+   * @param {Object} recipe
+   * @param {Object} [options]
+   * @returns {string}
+   */
+  function buildPrintableRecipeHTML(recipe, options) {
+    options = options || {};
+    var esc = Utils.escapeHtml;
+    var cat = Utils.getCategoryInfo(recipe.category);
+    var diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
+    var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
+    var totalMinutes = (parseInt(recipe.prepTime, 10) || 0) + (parseInt(recipe.cookTime, 10) || 0);
+    var printedOn = options.printedOn || new Date().toLocaleDateString('it-IT', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    var appUrl = options.appUrl || (window.location.origin + window.location.pathname);
+    var recipeNumber = options.recipeNumber
+      ? '<span class="print-recipe-sheet__number">Ricetta ' + esc(String(options.recipeNumber).padStart(2, '0')) + '</span>'
+      : '';
+
+    var ingredientsHtml = '';
+    if (recipe.ingredients && recipe.ingredients.length) {
+      recipe.ingredients.forEach(function (ingredient) {
+        var quantity = ingredient.quantity
+          ? esc(ingredient.quantity) + (ingredient.unit ? ' ' + esc(ingredient.unit) : '')
+          : '';
+        ingredientsHtml +=
+          '<li class="print-recipe-sheet__ingredient">' +
+            '<span class="print-recipe-sheet__bullet" aria-hidden="true"></span>' +
+            '<div class="print-recipe-sheet__ingredient-content">' +
+              '<div class="print-recipe-sheet__ingredient-main">' +
+                '<span class="print-recipe-sheet__ingredient-name">' + esc(ingredient.name) + '</span>' +
+                (quantity ? '<strong class="print-recipe-sheet__quantity">' + quantity + '</strong>' : '') +
+              '</div>' +
+              (ingredient.notes
+                ? '<span class="print-recipe-sheet__ingredient-note">' + esc(ingredient.notes) + '</span>'
+                : '') +
+            '</div>' +
+          '</li>';
+      });
+    } else {
+      ingredientsHtml = '<li class="print-recipe-sheet__empty">Nessun ingrediente inserito.</li>';
+    }
+
+    var stepsHtml = '';
+    if (recipe.steps && recipe.steps.length) {
+      recipe.steps.forEach(function (step, index) {
+        var stepText = typeof step === 'object' ? step.text : step;
+        var stepNotes = typeof step === 'object' ? step.notes : '';
+        stepsHtml +=
+          '<li class="print-recipe-sheet__step">' +
+            '<span class="print-recipe-sheet__step-number">' + (index + 1) + '</span>' +
+            '<div class="print-recipe-sheet__step-content">' +
+              '<p>' + esc(stepText) + '</p>' +
+              (stepNotes
+                ? '<span class="print-recipe-sheet__step-note">Suggerimento: ' + esc(stepNotes) + '</span>'
+                : '') +
+            '</div>' +
+          '</li>';
+      });
+    } else {
+      stepsHtml = '<li class="print-recipe-sheet__empty">Nessun passaggio inserito.</li>';
+    }
+
+    var notesHtml = recipe.notes
+      ? '<p class="print-recipe-sheet__notes-text">' + esc(recipe.notes) + '</p>'
+      : '<div class="print-recipe-sheet__writing-lines" aria-label="Spazio per annotazioni"><span></span><span></span><span></span></div>';
+    var photoHtml = recipe.image
+      ? '<figure class="print-recipe-sheet__photo"><img src="' + esc(recipe.image) + '" alt="Foto di ' + esc(recipe.name) + '"></figure>'
+      : '';
+
+    return (
+      '<article class="print-recipe-sheet">' +
+        '<div class="print-recipe-sheet__accent" aria-hidden="true"></div>' +
+        '<header class="print-recipe-sheet__header">' +
+          '<div class="print-recipe-sheet__brand-row">' +
+            '<span class="print-recipe-sheet__brand">🍴 Sapori</span>' +
+            recipeNumber +
+          '</div>' +
+          '<div class="print-recipe-sheet__intro' + (photoHtml ? ' print-recipe-sheet__intro--with-photo' : '') + '">' +
+            '<div class="print-recipe-sheet__intro-copy">' +
+              '<span class="print-recipe-sheet__category">' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>' +
+              '<h1 class="print-recipe-sheet__title">' + esc(recipe.name) + '</h1>' +
+              (recipe.description ? '<p class="print-recipe-sheet__description">' + esc(recipe.description) + '</p>' : '') +
+            '</div>' +
+            photoHtml +
+          '</div>' +
+        '</header>' +
+        '<dl class="print-recipe-sheet__meta">' +
+          '<div><dt>Preparazione</dt><dd>' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</dd></div>' +
+          '<div><dt>Cottura</dt><dd>' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</dd></div>' +
+          '<div><dt>Tempo totale</dt><dd>' + esc(Utils.formatTime(totalMinutes)) + '</dd></div>' +
+          '<div><dt>Porzioni</dt><dd>' + esc(String(recipe.servings || 4)) + '</dd></div>' +
+          '<div><dt>Difficoltà</dt><dd>' + esc(diffEmoji) + ' ' + esc(diffMap[recipe.difficulty] || 'Facile') + '</dd></div>' +
+        '</dl>' +
+        '<section class="print-recipe-sheet__section">' +
+          '<h2>Ingredienti</h2>' +
+          '<ul class="print-recipe-sheet__ingredients">' + ingredientsHtml + '</ul>' +
+        '</section>' +
+        '<section class="print-recipe-sheet__section print-recipe-sheet__section--steps">' +
+          '<h2>Preparazione</h2>' +
+          '<ol class="print-recipe-sheet__steps">' + stepsHtml + '</ol>' +
+        '</section>' +
+        '<div class="print-recipe-sheet__aftercare">' +
+          '<section class="print-recipe-sheet__notes">' +
+            '<h2>Note</h2>' + notesHtml +
+          '</section>' +
+          '<section class="print-recipe-sheet__storage">' +
+            '<h2>Conservazione</h2>' +
+            '<div class="print-recipe-sheet__writing-lines" aria-label="Spazio per indicazioni di conservazione"><span></span><span></span><span></span></div>' +
+          '</section>' +
+        '</div>' +
+        '<footer class="print-recipe-sheet__footer">' +
+          '<span>Stampato il ' + esc(printedOn) + '</span>' +
+          '<span>' + esc(appUrl) + '</span>' +
+        '</footer>' +
+      '</article>'
+    );
+  }
+
+  /**
+   * Show an exact-ratio A4 preview for a single recipe.
    * @param {Object} recipe
    */
   function showPrintPreviewModal(recipe) {
@@ -1151,151 +1275,27 @@ window.Views = (function () {
     var overlay = document.getElementById('modal-overlay');
     if (!overlay) return;
 
-    var cat = Utils.getCategoryInfo(recipe.category);
-    var diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
-    var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
-    var diffLabel = diffMap[recipe.difficulty] || 'Facile';
-    var today = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-    var pwaUrl = window.location.origin + window.location.pathname;
-
-    // ── Ingredients HTML ──
-    var ingHtml = '';
-    if (recipe.ingredients && recipe.ingredients.length > 0) {
-      recipe.ingredients.forEach(function (ing) {
-        var qtyStr = ing.quantity ? esc(ing.quantity) + (ing.unit ? ' ' + esc(ing.unit) : '') : '';
-        var qtyPart = qtyStr ? '<span class="print-preview__ing-qty">' + qtyStr + '</span>' : '';
-        var namePart = '<span class="print-preview__ing-name">' + esc(ing.name) + '</span>';
-        var notesHTML = ing.notes ? '<div class="print-preview__ing-notes">💡 ' + esc(ing.notes) + '</div>' : '';
-
-        ingHtml +=
-          '<li class="print-preview__ing-item">' +
-            '<span class="print-preview__ing-bullet">•</span>' +
-            '<div class="print-preview__ing-content">' +
-              '<div class="print-preview__ing-main">' +
-                namePart + qtyPart +
-              '</div>' +
-              notesHTML +
-            '</div>' +
-          '</li>';
-      });
-    } else {
-      ingHtml = '<li style="color:#999;font-size:10pt;padding:6px 0">Nessun ingrediente inserito.</li>';
-    }
-
-    // ── Steps HTML ──
-    var stepsHtml = '';
-    if (recipe.steps && recipe.steps.length > 0) {
-      recipe.steps.forEach(function (s, i) {
-        var text = typeof s === 'object' ? s.text : s;
-        var notes = typeof s === 'object' ? s.notes : '';
-        stepsHtml +=
-          '<li class="print-preview__step-item">' +
-            '<span class="print-preview__step-num">' + (i + 1) + '</span>' +
-            '<div>' +
-              '<span class="print-preview__step-text">' + esc(text) + '</span>' +
-              (notes ? '<em class="print-preview__step-notes">📌 ' + esc(notes) + '</em>' : '') +
-            '</div>' +
-          '</li>';
-      });
-    } else {
-      stepsHtml = '<li style="color:#999;font-size:10pt;padding:6px 0">Nessun passaggio inserito.</li>';
-    }
-
-    // ── Notes HTML ──
-    var notesHtml = recipe.notes
-      ? '<div class="print-preview__notes-box"><div class="print-preview__notes-label">📝 Note</div><div class="print-preview__notes-text">' + esc(recipe.notes) + '</div></div>'
-      : '<div class="print-preview__notes-box"><div class="print-preview__notes-label">📝 Note</div><div class="print-preview__dotted-line" style="margin:8px 0"></div><div class="print-preview__dotted-line" style="margin:8px 0"></div><div class="print-preview__dotted-line" style="margin:8px 0"></div></div>';
-
-    // ── Description HTML ──
-    var descHtml = recipe.description
-      ? '<div style="margin-bottom:0.4cm"><div class="print-preview__section-title" style="margin-top:0.3cm">Descrizione</div><p style="font-size:10.5pt;color:#1a0f0a;line-height:1.6;margin:0">' + esc(recipe.description) + '</p></div>'
-      : '';
-
-    // ── Photo HTML ──
-    var photoHtml = recipe.image
-      ? '<img src="' + esc(recipe.image) + '" alt="Foto" style="width:100%;height:100%;object-fit:cover">'
-      : '<span class="print-preview__photo-placeholder">FOTO</span>';
-
     overlay.innerHTML =
       '<div class="print-preview-modal" role="dialog" aria-modal="true" aria-labelledby="print-preview-title">' +
-        // ── HEADER ──
         '<div class="print-preview-modal__header">' +
           '<div class="print-preview-modal__header-left">' +
-            '<span class="print-preview-modal__label">🖨️ Anteprima Stampa</span>' +
+            '<span class="print-preview-modal__label">Documento A4</span>' +
             '<h2 class="print-preview-modal__title" id="print-preview-title">' + esc(recipe.name) + '</h2>' +
           '</div>' +
           '<div class="print-preview-modal__header-actions">' +
-            '<button type="button" class="btn btn--primary" id="btn-print-now" style="display:flex;align-items:center;gap:6px">' +
-              '🖨️ <span>Stampa / Salva PDF</span>' +
+            '<button type="button" class="btn btn--primary print-preview-modal__print" id="btn-print-now" aria-label="Stampa o salva PDF">' +
+              '🖨️ <span>Stampa o salva PDF</span>' +
             '</button>' +
-            '<button type="button" class="btn btn--icon" data-action="modal-cancel" aria-label="Chiudi anteprima" style="border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+            '<button type="button" class="btn btn--icon print-preview-modal__close" data-action="modal-cancel" aria-label="Chiudi anteprima">' +
               '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
             '</button>' +
           '</div>' +
         '</div>' +
-
-        // ── PAPER PREVIEW ──
         '<div class="print-preview-modal__body">' +
-          '<div class="print-preview-modal__paper">' +
-            // Color accent band
-            '<div class="print-preview__accent"></div>' +
-
-            // Header row: watermark
-            '<div class="print-preview__header">' +
-              '<span></span>' +
-              '<span class="print-preview__watermark">🍴 SAPORI</span>' +
-            '</div>' +
-
-            // Title
-            '<div class="print-preview__title">' + esc(recipe.name) + '</div>' +
-
-            // Category pill
-            '<div class="print-preview__cat">' + esc(cat.icon) + ' ' + esc(cat.label) + '</div>' +
-
-            // Info row
-            '<div class="print-preview__info">' +
-              '<div class="print-preview__info-item"><span class="print-preview__info-label">Prep</span> ' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</div>' +
-              '<div class="print-preview__info-item"><span class="print-preview__info-label">Cottura</span> ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</div>' +
-              '<div class="print-preview__info-item"><span class="print-preview__info-label">Porzioni</span> ' + esc(String(recipe.servings || 4)) + '</div>' +
-              '<div class="print-preview__info-item"><span class="print-preview__info-label">Difficoltà</span> ' + esc(diffEmoji) + ' ' + esc(diffLabel) + '</div>' +
-            '</div>' +
-
-            // Description
-            descHtml +
-
-            // Notes box
-            notesHtml +
-
-            // Ingredients
-            '<div class="print-preview__section-title">Ingredienti</div>' +
-            '<ul class="print-preview__ing-list">' + ingHtml + '</ul>' +
-
-            // Steps
-            '<div class="print-preview__section-title">Preparazione</div>' +
-            '<ol class="print-preview__step-list">' + stepsHtml + '</ol>' +
-
-            // Footer: photo + storage
-            '<div class="print-preview__footer-box">' +
-              '<div class="print-preview__photo-box">' + photoHtml + '</div>' +
-              '<div class="print-preview__storage-box">' +
-                '<div class="print-preview__storage-label">🏷️ Conservazione:</div>' +
-                '<div class="print-preview__dotted-line"></div>' +
-                '<div class="print-preview__dotted-line"></div>' +
-                '<div class="print-preview__dotted-line"></div>' +
-              '</div>' +
-            '</div>' +
-
-            // Document footer
-            '<div class="print-preview__doc-footer">' +
-              '<span>Creato con Sapori App — ' + today + '</span>' +
-              '<span style="color:#E85D3A">' + esc(pwaUrl) + '</span>' +
-            '</div>' +
-          '</div>' + // paper
-        '</div>' + // body
-
-        // ── FOOTER BAR ──
+          '<div class="print-preview-modal__paper">' + buildPrintableRecipeHTML(recipe) + '</div>' +
+        '</div>' +
         '<div class="print-preview-modal__footer">' +
-          '<span class="print-preview-modal__tip">💡 Suggerimento: nel dialogo di stampa seleziona <strong>Salva come PDF</strong> per creare il file</span>' +
+          '<span class="print-preview-modal__tip">A4 verticale · Nel dialogo scegli “Salva come PDF” oppure la tua stampante.</span>' +
           '<button type="button" class="btn btn--ghost btn--small" data-action="modal-cancel">Chiudi</button>' +
         '</div>' +
       '</div>';
@@ -1348,6 +1348,7 @@ window.Views = (function () {
     showCookingModal: showCookingModal,
     showConfirmModal: showConfirmModal,
     showImportPreviewModal: showImportPreviewModal,
+    buildPrintableRecipeHTML: buildPrintableRecipeHTML,
     showPrintPreviewModal: showPrintPreviewModal,
     hideModal: hideModal
   };

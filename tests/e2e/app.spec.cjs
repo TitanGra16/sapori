@@ -57,7 +57,73 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
   const printDialog = page.getByRole('dialog', { name: 'Ricetta automatica' });
   await expect(printDialog).toBeVisible();
   await expect(printDialog.getByText('Mescolare tutti gli ingredienti.')).toBeVisible();
-  await expect(printDialog.getByRole('button', { name: /Stampa.*Salva PDF/ })).toBeEnabled();
+  await expect(printDialog.getByText('Tempo totale')).toBeVisible();
+  await expect(printDialog.getByText('30 min', { exact: true })).toBeVisible();
+
+  await page.evaluate(() => {
+    window.__printSnapshot = null;
+    window.print = () => {
+      const root = document.querySelector('.print-document-root--preview');
+      window.__printSnapshot = {
+        bodyClassActive: document.body.classList.contains('printing-preview'),
+        sheets: root ? root.querySelectorAll('.print-recipe-sheet').length : 0,
+        title: root ? root.querySelector('.print-recipe-sheet__title').textContent : ''
+      };
+    };
+  });
+  await printDialog.getByRole('button', { name: /Stampa o salva PDF/i }).click();
+  await expect.poll(() => page.evaluate(() => window.__printSnapshot)).toEqual({
+    bodyClassActive: true,
+    sheets: 1,
+    title: 'Ricetta automatica'
+  });
+});
+
+test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', async ({ page }) => {
+  await page.evaluate(async () => {
+    const base = {
+      category: 'primi',
+      description: 'Descrizione da ricettario.',
+      ingredients: [{ name: 'Farina', quantity: '100', unit: 'g', notes: '' }],
+      steps: [{ text: 'Impastare con cura.', notes: '' }],
+      prepTime: 10,
+      cookTime: 20,
+      servings: 4,
+      difficulty: 'facile',
+      notes: '',
+      image: null,
+      imageThumbnail: null,
+      isFavorite: false
+    };
+    await DB.addRecipe({ ...base, name: 'Zuppa' });
+    await DB.addRecipe({ ...base, name: 'Arrosto' });
+  });
+
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.evaluate(() => {
+    window.__cookbookSnapshot = null;
+    window.print = () => {
+      const root = document.querySelector('.print-document-root--cookbook');
+      window.__cookbookSnapshot = {
+        bodyClassActive: document.body.classList.contains('printing-all-recipes'),
+        sheets: root ? root.querySelectorAll('.print-recipe-sheet').length : 0,
+        index: root
+          ? Array.from(root.querySelectorAll('.print-index-item')).map(item => item.textContent.trim())
+          : [],
+        titles: root
+          ? Array.from(root.querySelectorAll('.print-recipe-sheet__title')).map(item => item.textContent)
+          : []
+      };
+    };
+  });
+
+  await page.getByRole('button', { name: 'Ricettario PDF' }).click();
+  await expect.poll(() => page.evaluate(() => window.__cookbookSnapshot)).toEqual({
+    bodyClassActive: true,
+    sheets: 2,
+    index: ['01ArrostoPrimi Piatti', '02ZuppaPrimi Piatti'],
+    titles: ['Arrosto', 'Zuppa']
+  });
 });
 
 test('salva la foto completa separata dalla miniatura delle card', async ({ page }) => {

@@ -1213,133 +1213,34 @@
           '</div>' +
         '</div>';
 
-      // ── INDEX PAGE ──
-      html += '<div class="print-index-page">';
-      html += '<div class="print-index-title">Indice delle Ricette</div>';
-      html += '<ul class="print-index-list">';
-      recipes.forEach(function (recipe) {
+      // ── INDEX ──
+      html += '<section class="print-index-page">';
+      html += '<div class="print-index-kicker">Il mio ricettario</div>';
+      html += '<h1 class="print-index-title">Indice delle ricette</h1>';
+      html += '<p class="print-index-summary">Le ricette sono numerate nello stesso ordine delle schede successive.</p>';
+      html += '<ol class="print-index-list">';
+      recipes.forEach(function (recipe, index) {
         var cat = Utils.getCategoryInfo(recipe.category);
         html +=
           '<li class="print-index-item">' +
-            '<span class="print-index-item-name">' + esc(cat.icon) + ' ' + esc(recipe.name) + '</span>' +
+            '<span class="print-index-item-number">' + String(index + 1).padStart(2, '0') + '</span>' +
+            '<span class="print-index-item-name">' + esc(recipe.name) + '</span>' +
             '<span class="print-index-item-cat">' + esc(cat.label) + '</span>' +
           '</li>';
       });
-      html += '</ul>';
-      html += '</div>';
+      html += '</ol>';
+      html += '</section>';
 
       // ── RECIPES ──
-      recipes.forEach(function (recipe) {
-        var cat = Utils.getCategoryInfo(recipe.category);
-        var diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
-        var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
-
-        html += '<article class="print-cookbook-recipe">';
-
-        // Title
-        html += '<h1 class="recipe-detail__title">' + esc(recipe.name) + '</h1>';
-
-        // Category
+      recipes.forEach(function (recipe, index) {
         html +=
-          '<span class="recipe-card__category" style="border-color:' + esc(cat.color) + ';color:' + esc(cat.color) + '">' +
-            esc(cat.icon) + ' ' + esc(cat.label) +
-          '</span>';
-
-        // Info bar
-        html +=
-          '<div class="recipe-detail__info-bar">' +
-            '<div class="recipe-detail__info-item"><span>Preparazione:</span><span>' + esc(Utils.formatTime(recipe.prepTime || 0)) + '</span></div>' +
-            '<div class="recipe-detail__info-item"><span>Cottura:</span><span>' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
-            '<div class="recipe-detail__info-item"><span>Porzioni:</span><span>' + (recipe.servings || 4) + '</span></div>' +
-            '<div class="recipe-detail__info-item"><span>Difficolt\u00e0:</span><span>' + esc(diffEmoji) + ' ' + esc(diffMap[recipe.difficulty] || 'Facile') + '</span></div>' +
+          '<div class="print-cookbook-recipe">' +
+            Views.buildPrintableRecipeHTML(recipe, {
+              recipeNumber: index + 1,
+              printedOn: today,
+              appUrl: pwaUrl
+            }) +
           '</div>';
-
-        // Description
-        if (recipe.description) {
-          html +=
-            '<div class="recipe-detail__section recipe-detail__description-section">' +
-              '<h3 class="recipe-detail__description-title">Descrizione</h3>' +
-              '<p>' + esc(recipe.description) + '</p>' +
-            '</div>';
-        }
-
-        // Notes
-        html +=
-          '<div class="recipe-detail__section recipe-detail__notes-section">' +
-            '<h3 class="recipe-detail__notes-title">Note</h3>' +
-            (recipe.notes
-              ? '<p>' + esc(recipe.notes) + '</p>'
-              : '<div class="print-dotted-line"></div><div class="print-dotted-line"></div><div class="print-dotted-line"></div>') +
-          '</div>';
-
-        // Body
-        html += '<div class="recipe-detail__body-layout">';
-
-        // Ingredients
-        html +=
-          '<div class="recipe-detail__section recipe-detail__ingredients-section">' +
-            '<h2 class="recipe-detail__section-title">Ingredienti</h2>' +
-            '<ul class="ingredient-list">';
-        if (recipe.ingredients && recipe.ingredients.length > 0) {
-          recipe.ingredients.forEach(function (ing) {
-            var qtyStr = ing.quantity ? esc(ing.quantity) + (ing.unit ? ' ' + esc(ing.unit) : '') : '';
-            var qtyPart = qtyStr ? '<span class="ingredient-item__qty">' + qtyStr + '</span>' : '';
-            var namePart = '<span class="ingredient-item__name">' + esc(ing.name) + '</span>';
-            var notesHTML = ing.notes ? '<span class="ingredient-item__notes">💡 ' + esc(ing.notes) + '</span>' : '';
-
-            html +=
-              '<li class="ingredient-item">' +
-                '<span class="ingredient-bullet">•</span>' +
-                '<div class="ingredient-item__body">' +
-                  '<div class="ingredient-item__main">' +
-                    namePart + (qtyPart ? ' ' + qtyPart : '') +
-                  '</div>' +
-                  notesHTML +
-                '</div>' +
-              '</li>';
-          });
-        }
-        html += '</ul></div>';
-
-        // Steps
-        html +=
-          '<div class="recipe-detail__section recipe-detail__steps-section">' +
-            '<h2 class="recipe-detail__section-title">Preparazione</h2>' +
-            '<ol class="step-list">';
-        if (recipe.steps && recipe.steps.length > 0) {
-          recipe.steps.forEach(function (stepVal, idx) {
-            var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
-            var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
-            var notesHtml = stepNotes ? '<span class="step-item__notes">💡 ' + esc(stepNotes) + '</span>' : '';
-            html +=
-              '<li class="step-item">' +
-                '<span class="step-number">' + (idx + 1) + '</span>' +
-                '<div class="step-content">' +
-                  '<p>' + esc(stepText) + '</p>' +
-                  notesHtml +
-                '</div>' +
-              '</li>';
-          });
-        }
-        html += '</ol></div>';
-
-        html += '</div>'; // body-layout
-
-        // Footer: photo + storage
-        html +=
-          '<div class="print-footer-container">' +
-            '<div class="print-photo-box">' +
-              (recipe.image ? '<img src="' + esc(recipe.image) + '" alt="Foto">' : '<span class="print-photo-label">FOTO</span>') +
-            '</div>' +
-            '<div class="print-storage-box">' +
-              '<h4 class="print-storage-title">Conservazione:</h4>' +
-              '<div class="print-dotted-line"></div>' +
-              '<div class="print-dotted-line"></div>' +
-              '<div class="print-dotted-line"></div>' +
-            '</div>' +
-          '</div>';
-
-        html += '</article>';
       });
 
       printDiv.innerHTML = html;
