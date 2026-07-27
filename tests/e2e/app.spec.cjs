@@ -8,7 +8,7 @@ async function openCleanApp(page) {
   }
 }
 
-async function fillMinimumRecipe(page, name = 'Ricetta automatica') {
+async function fillMinimumRecipeForm(page, name = 'Ricetta automatica') {
   await page.getByRole('button', { name: 'Nuova ricetta' }).click();
   await page.getByRole('textbox', { name: 'Nome ricetta' }).fill(name);
   await page.getByRole('textbox', { name: 'Descrizione' }).fill('Descrizione creata dal test end-to-end.');
@@ -22,6 +22,10 @@ async function fillMinimumRecipe(page, name = 'Ricetta automatica') {
   await page.getByRole('tab', { name: 'Dettagli di cottura' }).click();
   await page.getByRole('spinbutton', { name: 'Tempo preparazione' }).fill('10');
   await page.getByRole('spinbutton', { name: 'Tempo cottura' }).fill('20');
+}
+
+async function fillMinimumRecipe(page, name = 'Ricetta automatica') {
+  await fillMinimumRecipeForm(page, name);
   await page.getByRole('button', { name: 'Salva Ricetta' }).click();
 }
 
@@ -43,6 +47,52 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
   await expect(printDialog).toBeVisible();
   await expect(printDialog.getByText('Mescolare tutti gli ingredienti.')).toBeVisible();
   await expect(printDialog.getByRole('button', { name: /Stampa.*Salva PDF/ })).toBeEnabled();
+});
+
+test('salva la foto completa separata dalla miniatura delle card', async ({ page }) => {
+  await fillMinimumRecipeForm(page, 'Ricetta con foto');
+  await page.locator('#input-image').setInputFiles({
+    name: 'foto.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFElEQVR4nGP4z8DAwMDAxMDAwMAAAAkAAf8B9e0AAAAASUVORK5CYII=',
+      'base64'
+    )
+  });
+  await page.getByRole('tab', { name: 'Informazioni generali' }).click();
+  await expect(page.locator('#image-preview')).toBeVisible();
+  await expect.poll(() => page.locator('#input-image-thumbnail-data').inputValue()).toMatch(/^data:image\/jpeg;base64,/);
+  await page.getByRole('tab', { name: 'Dettagli di cottura' }).click();
+  await page.getByRole('button', { name: 'Salva Ricetta' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Ricetta con foto', level: 3 })).toBeVisible();
+  const stored = await page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('SaporiDB', 2);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction(['recipes', 'images'], 'readonly');
+      const recipeRequest = tx.objectStore('recipes').getAll();
+      const imageRequest = tx.objectStore('images').getAll();
+      tx.onerror = () => reject(tx.error);
+      tx.oncomplete = () => {
+        db.close();
+        resolve({
+          recipe: recipeRequest.result[0],
+          image: imageRequest.result[0]
+        });
+      };
+    };
+  }));
+
+  expect(stored.recipe.image).toBeNull();
+  expect(stored.recipe.imageThumbnail).toMatch(/^data:image\/jpeg;base64,/);
+  expect(stored.recipe.hasImage).toBe(true);
+  expect(stored.image.data).toMatch(/^data:image\/jpeg;base64,/);
+  await expect(page.locator('.recipe-card__image img')).toHaveAttribute('src', stored.recipe.imageThumbnail);
+
+  await page.getByRole('link', { name: 'Apri la ricetta Ricetta con foto' }).click();
+  await expect(page.locator('.recipe-detail__hero img')).toHaveAttribute('src', stored.image.data);
 });
 
 test('le righe dinamiche mantengono limiti e nomi accessibili', async ({ page }) => {

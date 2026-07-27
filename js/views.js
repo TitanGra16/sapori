@@ -110,7 +110,7 @@ window.Views = (function () {
   async function renderHome(container, filters) {
     filters = filters || { search: '', category: '', sortBy: 'recent' };
 
-    var recipes = await DB.getAllRecipes();
+    var recipes = await DB.getRecipeSummaries();
 
     var sortMap = {
       'recent': 'recent',
@@ -257,6 +257,7 @@ window.Views = (function () {
     html += '</div>';
     html += '<input type="file" id="input-image" accept="image/jpeg,image/png,image/webp" class="hidden" aria-label="Seleziona foto">';
     html += '<input type="hidden" id="input-image-data" value="' + esc(r.image || '') + '">';
+    html += '<input type="hidden" id="input-image-thumbnail-data" value="' + esc(r.imageThumbnail || '') + '">';
     html += '</div>';
 
     // Tab 1 Actions
@@ -597,7 +598,7 @@ window.Views = (function () {
   /* ──────────────────── FAVORITES VIEW ──────────────────── */
 
   async function renderFavorites(container) {
-    var recipes = await DB.getAllRecipes();
+    var recipes = await DB.getRecipeSummaries();
     var favs = recipes.filter(function (r) { return r.isFavorite; });
 
     var html = '<div class="view animate-fade-in">';
@@ -620,8 +621,7 @@ window.Views = (function () {
     var theme = Theme.getCurrentTheme();
     var isDark = theme.mode === 'dark';
     var currentPalette = theme.palette || 'classico';
-    var recipes = await DB.getAllRecipes();
-    var count = recipes.length;
+    var count = await DB.countRecipes();
 
     var palettes = Theme.PALETTES;
 
@@ -776,7 +776,7 @@ window.Views = (function () {
   async function renderPantry(container, userIngredients) {
     userIngredients = userIngredients || [];
     var esc = Utils.escapeHtml;
-    var recipes = await DB.getAllRecipes();
+    var recipes = await DB.getRecipeSummaries();
     var matches = Recipes.matchPantry(recipes, userIngredients);
 
     var html = '<div class="view pantry-view animate-fade-in" style="padding-bottom:2rem">';

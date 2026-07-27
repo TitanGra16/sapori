@@ -737,6 +737,7 @@
     var description = (document.getElementById('input-description').value || '').trim();
     var notes = (document.getElementById('input-notes').value || '').trim();
     var imageData = document.getElementById('input-image-data').value || '';
+    var imageThumbnailData = document.getElementById('input-image-thumbnail-data').value || '';
     var prepTime = readInteger('input-preptime', 0);
     var cookTime = readInteger('input-cooktime', 0);
     var difficulty = document.getElementById('input-difficulty').value;
@@ -778,6 +779,7 @@
       difficulty: difficulty,
       servings: servings,
       image: imageData || null,
+      imageThumbnail: imageThumbnailData || null,
       isFavorite: state.editingRecipe ? state.editingRecipe.isFavorite : false,
       createdAt: state.editingRecipe ? state.editingRecipe.createdAt : now,
       updatedAt: now
@@ -999,8 +1001,7 @@
   async function confirmDeleteCustomCategory(catId) {
     var category = Recipes.CATEGORIES.find(function (cat) { return cat.id === catId && cat.isCustom; });
     if (!category) return;
-    var recipes = await DB.getAllRecipes();
-    var affected = recipes.filter(function (recipe) { return recipe.category === catId; }).length;
+    var affected = await DB.countRecipes(catId);
     var message = affected > 0
       ? 'La categoria “' + category.label + '” è usata da ' + affected + ' ricett' + (affected === 1 ? 'a' : 'e') + '. Eliminandola, verr' + (affected === 1 ? 'à spostata' : 'anno spostate') + ' automaticamente in “Altro”.'
       : 'Eliminare la categoria “' + category.label + '”?';
@@ -1122,8 +1123,10 @@
     if (uploadArea) uploadArea.setAttribute('aria-busy', 'true');
     try {
       var base64 = await Utils.compressImage(file, 1280);
+      var thumbnail = await Utils.createImageThumbnail(base64, 360);
       if (requestToken !== imageRequestToken) return;
       document.getElementById('input-image-data').value = base64;
+      document.getElementById('input-image-thumbnail-data').value = thumbnail;
 
       uploadArea.innerHTML =
         '<div class="image-upload__preview">' +
@@ -1147,6 +1150,7 @@
   function removeImage() {
     imageRequestToken += 1;
     document.getElementById('input-image-data').value = '';
+    document.getElementById('input-image-thumbnail-data').value = '';
     var fileInput = document.getElementById('input-image');
     if (fileInput) fileInput.value = '';
 

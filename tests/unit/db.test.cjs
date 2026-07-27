@@ -20,6 +20,14 @@ async function deleteDatabase(context) {
   });
 }
 
+async function getStoredRecords(context, id) {
+  const tx = context.DB.db.transaction(['recipes', 'images'], 'readonly');
+  const recipePromise = context.DB._promisify(tx.objectStore('recipes').get(id));
+  const imagePromise = context.DB._promisify(tx.objectStore('images').get(id));
+  const [recipe, image] = await Promise.all([recipePromise, imagePromise]);
+  return { recipe, image };
+}
+
 test('importa il fixture completo senza perdere note', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));
@@ -90,4 +98,117 @@ test('backup versione 2 ripristina ricette, categorie e tema', async t => {
   assert.equal(backup.settings.themeMode, 'dark');
   assert.equal(backup.settings.themePalette, 'oceano');
   assert.match(backup.settings.customCategories, /Veloci/);
+});
+
+test('separa foto complete e miniature senza perdere backup o dettaglio', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const fullImage = 'data:image/jpeg;base64,Rk9UT19DT01QTEVUQQ==';
+  const thumbnail = 'data:image/jpeg;base64,TUlOSUFUVVJB';
+  const id = await context.DB.addRecipe({
+    name: 'Ricetta fotografata',
+    category: 'altro',
+    description: '',
+    notes: '',
+    ingredients: [{ name: 'Pane', quantity: '', unit: '', notes: '' }],
+    steps: [{ text: 'Servi', notes: '' }],
+    prepTime: 1,
+    cookTime: 0,
+    difficulty: 'facile',
+    servings: 1,
+    image: fullImage,
+    imageThumbnail: thumbnail,
+    isFavorite: false
+  });
+
+  const stored = await getStoredRecords(context, id);
+  assert.equal(stored.recipe.image, null);
+  assert.equal(stored.recipe.imageThumbnail, thumbnail);
+  assert.equal(stored.recipe.hasImage, true);
+  assert.equal(stored.image.data, fullImage);
+
+  const summaries = await context.DB.getRecipeSummaries();
+  assert.equal(summaries[0].image, thumbnail);
+  assert.notEqual(summaries[0].image, fullImage);
+  assert.equal(await context.DB.countRecipes(), 1);
+  assert.equal(await context.DB.countRecipes('altro'), 1);
+  assert.equal(await context.DB.countRecipes('dolci'), 0);
+  assert.equal((await context.DB.getRecipe(id)).image, fullImage);
+  assert.equal(JSON.parse(await context.DB.exportData()).recipes[0].image, fullImage);
+
+  await context.DB.deleteRecipe(id);
+  const deleted = await getStoredRecords(context, id);
+  assert.equal(deleted.recipe, undefined);
+  assert.equal(deleted.image, undefined);
+});
+
+test('migra le foto incorporate da IndexedDB v1 al nuovo archivio', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  const fullImage = 'data:image/png;base64,TEVHQUNZ';
+
+  await new Promise((resolve, reject) => {
+    const request = indexedDB.open('SaporiDB', 1);
+    request.onerror = () => reject(request.error);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      const recipes = db.createObjectStore('recipes', { keyPath: 'id' });
+      db.createObjectStore('settings', { keyPath: 'key' });
+      recipes.put({
+        id: 'legacy-photo',
+        name: 'Ricetta precedente',
+        category: 'altro',
+        ingredients: [{ name: 'Pane' }],
+        steps: [{ text: 'Servi' }],
+        image: fullImage,
+        createdAt: 1,
+        updatedAt: 1
+      });
+    };
+    request.onsuccess = () => {
+      request.result.close();
+      resolve();
+    };
+  });
+
+  await context.DB.init();
+  const stored = await getStoredRecords(context, 'legacy-photo');
+  assert.equal(stored.recipe.image, null);
+  assert.equal(stored.recipe.hasImage, true);
+  assert.equal(stored.image.data, fullImage);
+  assert.equal((await context.DB.getRecipe('legacy-photo')).image, fullImage);
+});
+
+test('import e replace mantengono sincronizzati record e foto', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const firstImage = 'data:image/webp;base64,UFJJTUE=';
+  await context.DB.importData(JSON.stringify({
+    id: 'with-photo',
+    name: 'Prima',
+    category: 'altro',
+    ingredients: [{ name: 'Uno' }],
+    steps: [{ text: 'Prepara' }],
+    image: firstImage
+  }));
+  assert.equal((await context.DB.getRecipe('with-photo')).image, firstImage);
+  assert.equal((await getStoredRecords(context, 'with-photo')).recipe.image, null);
+
+  await context.DB.importData(JSON.stringify({
+    recipes: [{
+      id: 'without-photo',
+      name: 'Seconda',
+      category: 'altro',
+      ingredients: [{ name: 'Due' }],
+      steps: [{ text: 'Prepara' }]
+    }]
+  }), { mode: 'replace' });
+
+  assert.equal(await context.DB.getRecipe('with-photo'), undefined);
+  assert.equal((await getStoredRecords(context, 'with-photo')).image, undefined);
+  assert.equal((await context.DB.getRecipe('without-photo')).image, null);
 });

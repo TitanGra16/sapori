@@ -247,6 +247,58 @@ window.Utils = {
   },
 
   /**
+   * Create a small JPEG thumbnail from an already validated image data URL.
+   * @param {string} dataUrl
+   * @param {number} maxDimension
+   * @returns {Promise<string>}
+   */
+  async createImageThumbnail(dataUrl, maxDimension = 360) {
+    if (
+      typeof dataUrl !== 'string' ||
+      dataUrl.length > this.MAX_IMAGE_DATA_URL_LENGTH ||
+      !/^data:image\/(?:jpe?g|png|webp);base64,/i.test(dataUrl)
+    ) {
+      throw new Error('Dati immagine non validi');
+    }
+    if (!Number.isFinite(maxDimension) || maxDimension < 64 || maxDimension > 1024) {
+      throw new Error('Dimensione anteprima non valida');
+    }
+
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('Impossibile creare l’anteprima'));
+      image.onload = () => {
+        try {
+          const sourceWidth = image.naturalWidth;
+          const sourceHeight = image.naturalHeight;
+          if (
+            !sourceWidth ||
+            !sourceHeight ||
+            sourceWidth * sourceHeight > this.MAX_IMAGE_PIXELS
+          ) {
+            throw new Error('Risoluzione immagine non valida');
+          }
+          const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+          const width = Math.max(1, Math.round(sourceWidth * scale));
+          const height = Math.max(1, Math.round(sourceHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d');
+          if (!context) throw new Error('Canvas non disponibile');
+          context.fillStyle = '#FFFFFF';
+          context.fillRect(0, 0, width, height);
+          context.drawImage(image, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.72));
+        } catch (error) {
+          reject(new Error('Impossibile creare l’anteprima: ' + error.message));
+        }
+      };
+      image.src = dataUrl;
+    });
+  },
+
+  /**
    * Format minutes into a readable Italian time string.
    * @param {number} minutes
    * @returns {string}

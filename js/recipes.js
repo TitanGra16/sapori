@@ -320,6 +320,7 @@ window.Recipes = {
       difficulty: 'media',
       servings: 4,
       image: null,
+      imageThumbnail: null,
       isFavorite: false,
       createdAt: null,
       updatedAt: null

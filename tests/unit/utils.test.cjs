@@ -66,3 +66,41 @@ test('compressImage rifiuta SVG e ridimensiona il lato maggiore', async () => {
   assert.equal(canvas.width, 1280);
   assert.equal(canvas.height, 640);
 });
+
+test('createImageThumbnail riduce le immagini e rifiuta dati arbitrari', async () => {
+  let dimensions = [1600, 1200];
+  class FakeImage {
+    set src(value) {
+      this.naturalWidth = dimensions[0];
+      this.naturalHeight = dimensions[1];
+      queueMicrotask(() => this.onload());
+    }
+  }
+
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext: () => ({
+      fillRect() {},
+      drawImage() {}
+    }),
+    toDataURL: (type, quality) => `${type};quality=${quality}`
+  };
+  const { Utils } = loadAppScripts(['js/utils.js'], {
+    Image: FakeImage,
+    document: { createElement: () => canvas }
+  });
+
+  await assert.rejects(Utils.createImageThumbnail('javascript:alert(1)'), /non validi/);
+  await assert.rejects(Utils.createImageThumbnail('data:image/png;base64,AAAA', 0), /Dimensione/);
+  const result = await Utils.createImageThumbnail('data:image/png;base64,AAAA', 360);
+  assert.equal(canvas.width, 360);
+  assert.equal(canvas.height, 270);
+  assert.equal(result, 'image/jpeg;quality=0.72');
+
+  dimensions = [10000, 5000];
+  await assert.rejects(
+    Utils.createImageThumbnail('data:image/png;base64,AAAA', 360),
+    /Risoluzione/
+  );
+});

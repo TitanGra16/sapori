@@ -1,7 +1,7 @@
 /**
  * Sapori — IndexedDB Storage Module
- * Database: SaporiDB v1
- * Stores: recipes (keyPath: id), settings (keyPath: key)
+ * Database: SaporiDB v2
+ * Stores: recipes metadata, full-size images, settings.
  */
 window.DB = {
   db: null,
@@ -19,7 +19,7 @@ window.DB = {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open('SaporiDB', 1);
+      const request = indexedDB.open('SaporiDB', 2);
 
       request.onerror = () => {
         reject(new Error('Impossibile aprire il database: ' + request.error));
@@ -41,6 +41,10 @@ window.DB = {
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'key' });
         }
+
+        if (!db.objectStoreNames.contains('images')) {
+          db.createObjectStore('images', { keyPath: 'recipeId' });
+        }
       };
 
       request.onblocked = () => {
@@ -59,7 +63,11 @@ window.DB = {
           this.db = null;
         };
 
-        resolve(this.db);
+        this._migrateLegacyImages().then(() => resolve(this.db)).catch(error => {
+          this.db.close();
+          this.db = null;
+          reject(error);
+        });
       };
     });
 
@@ -79,6 +87,92 @@ window.DB = {
       await this.init();
     }
     return this.db;
+  },
+
+  _isDataImage(value) {
+    return typeof value === 'string' &&
+      value.length <= 7 * 1024 * 1024 &&
+      /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(value);
+  },
+
+  _toStoredRecipe(recipe, thumbnail) {
+    const fullImage = this._isDataImage(recipe && recipe.image) ? recipe.image : null;
+    const candidateThumbnail = thumbnail !== undefined ? thumbnail : recipe && recipe.imageThumbnail;
+    const imageThumbnail = typeof candidateThumbnail === 'string' &&
+      candidateThumbnail.length <= 750000 &&
+      /^data:image\/jpeg;base64,/i.test(candidateThumbnail)
+      ? candidateThumbnail
+      : null;
+
+    return {
+      stored: {
+        ...recipe,
+        image: null,
+        imageThumbnail,
+        hasImage: Boolean(fullImage)
+      },
+      fullImage
+    };
+  },
+
+  async _createThumbnail(image) {
+    if (!image || !window.Utils || typeof window.Utils.createImageThumbnail !== 'function') return null;
+    try {
+      return await window.Utils.createImageThumbnail(image, 360);
+    } catch (error) {
+      return null;
+    }
+  },
+
+  async _migrateLegacyImages() {
+    if (!this.db || !this.db.objectStoreNames.contains('images')) return;
+    const readTx = this.db.transaction('recipes', 'readonly');
+    const recipes = await this._promisify(readTx.objectStore('recipes').getAll());
+    const legacy = recipes.filter(recipe => this._isDataImage(recipe.image));
+    if (legacy.length === 0) return;
+
+    const migrated = [];
+    for (const recipe of legacy) {
+      migrated.push({
+        recipe,
+        thumbnail: await this._createThumbnail(recipe.image)
+      });
+    }
+    const writeTx = this.db.transaction(['recipes', 'images'], 'readwrite');
+    const recipeStore = writeTx.objectStore('recipes');
+    const imageStore = writeTx.objectStore('images');
+    migrated.forEach(item => {
+      const prepared = this._toStoredRecipe(item.recipe, item.thumbnail);
+      recipeStore.put(prepared.stored);
+      imageStore.put({ recipeId: item.recipe.id, data: prepared.fullImage });
+    });
+    await this._txComplete(writeTx);
+  },
+
+  async _getRawRecipes() {
+    const db = await this._ensureDB();
+    const tx = db.transaction('recipes', 'readonly');
+    return this._promisify(tx.objectStore('recipes').getAll());
+  },
+
+  async getRecipeSummaries() {
+    const recipes = await this._getRawRecipes();
+    return recipes
+      .map(recipe => ({
+        ...recipe,
+        image: recipe.imageThumbnail || (this._isDataImage(recipe.image) ? recipe.image : null)
+      }))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  },
+
+  async countRecipes(category) {
+    const db = await this._ensureDB();
+    const tx = db.transaction('recipes', 'readonly');
+    const store = tx.objectStore('recipes');
+    const request = category
+      ? store.index('category').count(category)
+      : store.count();
+    return this._promisify(request);
   },
 
   /**
@@ -112,14 +206,21 @@ window.DB = {
    */
   async getAllRecipes() {
     const db = await this._ensureDB();
-    const tx = db.transaction('recipes', 'readonly');
-    const store = tx.objectStore('recipes');
-    const recipes = await this._promisify(store.getAll());
+    const tx = db.transaction(['recipes', 'images'], 'readonly');
+    const recipesPromise = this._promisify(tx.objectStore('recipes').getAll());
+    const imagesPromise = this._promisify(tx.objectStore('images').getAll());
+    const [recipes, images] = await Promise.all([recipesPromise, imagesPromise]);
+    const imagesByRecipe = new Map(images.map(image => [image.recipeId, image.data]));
+    const hydrated = recipes.map(recipe => ({
+      ...recipe,
+      image: imagesByRecipe.get(recipe.id) ||
+        (this._isDataImage(recipe.image) ? recipe.image : null)
+    }));
 
     // Sort by createdAt descending
-    recipes.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    hydrated.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-    return recipes;
+    return hydrated;
   },
 
   /**
@@ -131,9 +232,17 @@ window.DB = {
     if (!id) return undefined;
 
     const db = await this._ensureDB();
-    const tx = db.transaction('recipes', 'readonly');
-    const store = tx.objectStore('recipes');
-    return this._promisify(store.get(id));
+    const tx = db.transaction(['recipes', 'images'], 'readonly');
+    const recipePromise = this._promisify(tx.objectStore('recipes').get(id));
+    const imagePromise = this._promisify(tx.objectStore('images').get(id));
+    const [recipe, imageRecord] = await Promise.all([recipePromise, imagePromise]);
+    if (!recipe) return undefined;
+    return {
+      ...recipe,
+      image: imageRecord && imageRecord.data
+        ? imageRecord.data
+        : (this._isDataImage(recipe.image) ? recipe.image : null)
+    };
   },
 
   /**
@@ -152,10 +261,13 @@ window.DB = {
       createdAt: now,
       updatedAt: now
     };
+    const prepared = this._toStoredRecipe(newRecipe);
 
-    const tx = db.transaction('recipes', 'readwrite');
-    const store = tx.objectStore('recipes');
-    store.add(newRecipe);
+    const tx = db.transaction(['recipes', 'images'], 'readwrite');
+    tx.objectStore('recipes').add(prepared.stored);
+    if (prepared.fullImage) {
+      tx.objectStore('images').put({ recipeId: newRecipe.id, data: prepared.fullImage });
+    }
     await this._txComplete(tx);
 
     return newRecipe.id;
@@ -178,10 +290,16 @@ window.DB = {
       ...recipe,
       updatedAt: Date.now()
     };
+    const prepared = this._toStoredRecipe(updatedRecipe);
 
-    const tx = db.transaction('recipes', 'readwrite');
-    const store = tx.objectStore('recipes');
-    store.put(updatedRecipe);
+    const tx = db.transaction(['recipes', 'images'], 'readwrite');
+    tx.objectStore('recipes').put(prepared.stored);
+    const imageStore = tx.objectStore('images');
+    if (prepared.fullImage) {
+      imageStore.put({ recipeId: recipe.id, data: prepared.fullImage });
+    } else {
+      imageStore.delete(recipe.id);
+    }
     await this._txComplete(tx);
   },
 
@@ -196,9 +314,9 @@ window.DB = {
     }
 
     const db = await this._ensureDB();
-    const tx = db.transaction('recipes', 'readwrite');
-    const store = tx.objectStore('recipes');
-    store.delete(id);
+    const tx = db.transaction(['recipes', 'images'], 'readwrite');
+    tx.objectStore('recipes').delete(id);
+    tx.objectStore('images').delete(id);
     await this._txComplete(tx);
   },
 
@@ -365,6 +483,7 @@ window.DB = {
       difficulty,
       servings: asInteger(recipe.servings, 4),
       image,
+      imageThumbnail: null,
       isFavorite: recipe.isFavorite === true,
       createdAt: Number.isFinite(Number(recipe.createdAt)) ? Number(recipe.createdAt) : now,
       updatedAt: Number.isFinite(Number(recipe.updatedAt)) ? Number(recipe.updatedAt) : now
@@ -453,7 +572,7 @@ window.DB = {
 
   async previewImport(jsonString) {
     const prepared = this._prepareImport(jsonString);
-    const existing = await this.getAllRecipes();
+    const existing = await this.getRecipeSummaries();
     const ids = new Set(existing.map(recipe => recipe.id));
     const fingerprints = new Set(existing.map(recipe => this._recipeFingerprint(recipe)));
     let additions = 0;
@@ -490,21 +609,39 @@ window.DB = {
     }
 
     const db = await this._ensureDB();
-    const existing = mode === 'merge' ? await this.getAllRecipes() : [];
+    const existing = mode === 'merge' ? await this.getRecipeSummaries() : [];
     const existingIds = new Set(existing.map(recipe => recipe.id));
     const fingerprints = new Set(existing.map(recipe => this._recipeFingerprint(recipe)));
-    const tx = db.transaction(['recipes', 'settings'], 'readwrite');
+    const importedRecipes = [];
+    for (const recipe of prepared.recipes) {
+      importedRecipes.push({
+        recipe,
+        thumbnail: await this._createThumbnail(recipe.image)
+      });
+    }
+    const tx = db.transaction(['recipes', 'images', 'settings'], 'readwrite');
     const store = tx.objectStore('recipes');
+    const imageStore = tx.objectStore('images');
     const settingsStore = tx.objectStore('settings');
     const now = Date.now();
     const summary = { imported: 0, updated: 0, skipped: 0, rejected: prepared.rejected, categories: prepared.customCategories.length };
 
-    if (mode === 'replace') store.clear();
+    if (mode === 'replace') {
+      store.clear();
+      imageStore.clear();
+    }
 
-    for (const recipe of prepared.recipes) {
+    for (const item of importedRecipes) {
+      const recipe = item.recipe;
       const fingerprint = this._recipeFingerprint(recipe);
       if (mode === 'merge' && recipe.id && existingIds.has(recipe.id)) {
-        store.put({ ...recipe, updatedAt: now });
+        const updated = this._toStoredRecipe({ ...recipe, updatedAt: now }, item.thumbnail);
+        store.put(updated.stored);
+        if (updated.fullImage) {
+          imageStore.put({ recipeId: recipe.id, data: updated.fullImage });
+        } else {
+          imageStore.delete(recipe.id);
+        }
         fingerprints.add(fingerprint);
         summary.updated++;
         continue;
@@ -517,7 +654,11 @@ window.DB = {
       const id = recipe.id && !existingIds.has(recipe.id)
         ? recipe.id
         : (window.Utils ? window.Utils.generateId() : (crypto.randomUUID ? crypto.randomUUID() : this._fallbackId()));
-      store.put({ ...recipe, id, updatedAt: now });
+      const added = this._toStoredRecipe({ ...recipe, id, updatedAt: now }, item.thumbnail);
+      store.put(added.stored);
+      if (added.fullImage) {
+        imageStore.put({ recipeId: id, data: added.fullImage });
+      }
       existingIds.add(id);
       fingerprints.add(fingerprint);
       summary.imported++;
