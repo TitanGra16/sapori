@@ -908,6 +908,7 @@ window.Views = (function () {
          timerState.minutes === 0 && timerState.seconds <= 30 ? 'cooking-modal__timer-display--warning' :
          'cooking-modal__timer-display--running')
       : '';
+    var timerInputDisabled = timerState.running ? ' disabled' : '';
 
     var html = '<div class="cooking-modal" id="cooking-modal-inner">';
 
@@ -1003,9 +1004,9 @@ window.Views = (function () {
       html +=   '</div>';
       html +=   '<div style="display:flex;flex-direction:column;align-items:center;gap:6px">';
       html +=     '<div class="cooking-modal__timer-input-wrap">';
-      html +=       '<input type="number" class="cooking-modal__timer-input" id="cooking-timer-min" min="0" max="99" value="' + (timerState.minutes || 0) + '" aria-label="Minuti">';
+      html +=       '<input type="number" class="cooking-modal__timer-input" id="cooking-timer-min" min="0" max="99" value="' + (timerState.minutes || 0) + '" aria-label="Minuti"' + timerInputDisabled + '>';
       html +=       '<span style="font-weight:700;color:var(--text-muted)">:</span>';
-      html +=       '<input type="number" class="cooking-modal__timer-input" id="cooking-timer-sec" min="0" max="59" value="' + (timerState.seconds || 0) + '" aria-label="Secondi">';
+      html +=       '<input type="number" class="cooking-modal__timer-input" id="cooking-timer-sec" min="0" max="59" value="' + (timerState.seconds || 0) + '" aria-label="Secondi"' + timerInputDisabled + '>';
       html +=     '</div>';
       html +=     '<div class="cooking-modal__timer-controls">';
       if (timerState.running) {

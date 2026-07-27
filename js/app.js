@@ -18,97 +18,180 @@
       checkedIngredients: {},
       wakeLockSentinel: null,
       ingExpanded: true,
-      timer: { minutes: 0, seconds: 0, running: false, intervalId: null }
+      timer: { minutes: 0, seconds: 0, running: false, intervalId: null, endAt: null }
     }
   };
 
   async function requestWakeLock() {
-    if ('wakeLock' in navigator) {
-      try {
-        state.cooking.wakeLockSentinel = await navigator.wakeLock.request('screen');
-        console.log('Screen Wake Lock attivato.');
-      } catch (err) {
-        console.warn('Wake Lock error:', err);
-        state.cooking.wakeLockSentinel = null;
-      }
+    if (!('wakeLock' in navigator) || document.visibilityState !== 'visible' ||
+        !state.cooking.recipe ||
+        (state.cooking.wakeLockSentinel && !state.cooking.wakeLockSentinel.released)) {
+      return;
+    }
+
+    try {
+      var sentinel = await navigator.wakeLock.request('screen');
+      state.cooking.wakeLockSentinel = sentinel;
+      sentinel.addEventListener('release', function () {
+        if (state.cooking.wakeLockSentinel === sentinel) {
+          state.cooking.wakeLockSentinel = null;
+          if (document.visibilityState === 'visible' && !modalOverlay.classList.contains('hidden')) {
+            rerenderCookingModal();
+          }
+        }
+      });
+      console.log('Screen Wake Lock attivato.');
+    } catch (err) {
+      console.warn('Wake Lock error:', err);
+      state.cooking.wakeLockSentinel = null;
     }
   }
 
-  function releaseWakeLock() {
+  async function releaseWakeLock() {
     if (state.cooking && state.cooking.wakeLockSentinel) {
-      try {
-        state.cooking.wakeLockSentinel.release();
-      } catch (e) {}
+      var sentinel = state.cooking.wakeLockSentinel;
       state.cooking.wakeLockSentinel = null;
+      try {
+        if (!sentinel.released) await sentinel.release();
+      } catch (err) {
+        console.warn('Wake Lock release error:', err);
+      }
     }
   }
 
   /* ── Timer helpers ── */
 
-  function stopTimer() {
-    if (state.cooking.timer.intervalId) {
-      clearInterval(state.cooking.timer.intervalId);
-      state.cooking.timer.intervalId = null;
+  var timerAudioContext = null;
+
+  function prepareTimerAudio() {
+    var AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return;
+    try {
+      if (!timerAudioContext || timerAudioContext.state === 'closed') {
+        timerAudioContext = new AudioContextCtor();
+      }
+      if (timerAudioContext.state === 'suspended') {
+        timerAudioContext.resume().catch(function () {});
+      }
+    } catch (err) {
+      console.warn('Timer audio unavailable:', err);
     }
-    state.cooking.timer.running = false;
+  }
+
+  function playTimerSound() {
+    if (!timerAudioContext || timerAudioContext.state !== 'running') return;
+    try {
+      var osc = timerAudioContext.createOscillator();
+      var gain = timerAudioContext.createGain();
+      osc.connect(gain);
+      gain.connect(timerAudioContext.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, timerAudioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, timerAudioContext.currentTime + 0.6);
+      osc.start();
+      osc.stop(timerAudioContext.currentTime + 0.6);
+    } catch (err) {
+      console.warn('Timer sound error:', err);
+    }
+  }
+
+  function updateTimerDisplay() {
+    var display = document.getElementById('cooking-timer-display');
+    if (!display) return false;
+
+    var m = state.cooking.timer.minutes;
+    var s = state.cooking.timer.seconds;
+    display.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    display.className = 'cooking-modal__timer-display';
+    if (state.cooking.timer.running) {
+      if (m === 0 && s <= 10) display.classList.add('cooking-modal__timer-display--danger');
+      else if (m === 0 && s <= 30) display.classList.add('cooking-modal__timer-display--warning');
+      else display.classList.add('cooking-modal__timer-display--running');
+    }
+    return true;
+  }
+
+  function syncTimerFromDeadline() {
+    var timer = state.cooking.timer;
+    if (!timer.running || !timer.endAt) return;
+
+    var remainingSeconds = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
+    timer.minutes = Math.floor(remainingSeconds / 60);
+    timer.seconds = remainingSeconds % 60;
+
+    if (remainingSeconds === 0) {
+      finishTimer();
+      return;
+    }
+
+    if (!updateTimerDisplay()) stopTimer();
+  }
+
+  function stopTimer() {
+    var timer = state.cooking.timer;
+    if (timer.running && timer.endAt) {
+      var remainingSeconds = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
+      timer.minutes = Math.floor(remainingSeconds / 60);
+      timer.seconds = remainingSeconds % 60;
+    }
+    if (timer.intervalId !== null) clearInterval(timer.intervalId);
+    timer.intervalId = null;
+    timer.endAt = null;
+    timer.running = false;
+  }
+
+  function finishTimer() {
+    var timer = state.cooking.timer;
+    if (timer.intervalId !== null) clearInterval(timer.intervalId);
+    timer.intervalId = null;
+    timer.endAt = null;
+    timer.running = false;
+    timer.minutes = 0;
+    timer.seconds = 0;
+    playTimerSound();
+    if ('vibrate' in navigator) navigator.vibrate([180, 80, 180]);
+    rerenderCookingModal();
+    Utils.showToast('⏱ Timer terminato!', 'success');
   }
 
   function startTimer() {
+    var timer = state.cooking.timer;
+    if (timer.running) return;
+
     var minEl = document.getElementById('cooking-timer-min');
     var secEl = document.getElementById('cooking-timer-sec');
     if (minEl && secEl) {
-      state.cooking.timer.minutes = Math.max(0, parseInt(minEl.value, 10) || 0);
-      state.cooking.timer.seconds = Math.min(59, Math.max(0, parseInt(secEl.value, 10) || 0));
+      timer.minutes = Math.min(99, Math.max(0, parseInt(minEl.value, 10) || 0));
+      timer.seconds = Math.min(59, Math.max(0, parseInt(secEl.value, 10) || 0));
     }
-    if (state.cooking.timer.minutes === 0 && state.cooking.timer.seconds === 0) return;
-    state.cooking.timer.running = true;
-    state.cooking.timer.intervalId = setInterval(function () {
-      if (state.cooking.timer.seconds > 0) {
-        state.cooking.timer.seconds--;
-      } else if (state.cooking.timer.minutes > 0) {
-        state.cooking.timer.minutes--;
-        state.cooking.timer.seconds = 59;
-      } else {
-        // Timer finished
-        stopTimer();
-        // Play notification sound if possible
-        try {
-          var ctx = new (window.AudioContext || window.webkitAudioContext)();
-          var osc = ctx.createOscillator();
-          var gain = ctx.createGain();
-          osc.connect(gain); gain.connect(ctx.destination);
-          osc.frequency.value = 880; gain.gain.value = 0.3;
-          osc.start(); osc.stop(ctx.currentTime + 0.5);
-        } catch(e) {}
-        rerenderCookingModal();
-        Utils.showToast('⏱ Timer terminato!', 'success');
-        return;
-      }
-      // Update timer display without full re-render
-      var display = document.getElementById('cooking-timer-display');
-      if (display) {
-        var m = state.cooking.timer.minutes;
-        var s = state.cooking.timer.seconds;
-        display.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-        // Update CSS class
-        display.className = 'cooking-modal__timer-display';
-        if (state.cooking.timer.running) {
-          if (m === 0 && s <= 10) display.classList.add('cooking-modal__timer-display--danger');
-          else if (m === 0 && s <= 30) display.classList.add('cooking-modal__timer-display--warning');
-          else display.classList.add('cooking-modal__timer-display--running');
-        }
-      } else {
-        // Display gone, stop timer
-        stopTimer();
-      }
-    }, 1000);
+    var totalSeconds = timer.minutes * 60 + timer.seconds;
+    if (totalSeconds === 0) {
+      Utils.showToast('Imposta una durata maggiore di zero.', 'warning');
+      return;
+    }
+
+    prepareTimerAudio();
+    timer.endAt = Date.now() + totalSeconds * 1000;
+    timer.running = true;
+    if (timer.intervalId !== null) clearInterval(timer.intervalId);
+    timer.intervalId = setInterval(syncTimerFromDeadline, 250);
+    rerenderCookingModal();
+    updateTimerDisplay();
   }
 
   function resetTimer() {
     stopTimer();
     state.cooking.timer.minutes = 0;
     state.cooking.timer.seconds = 0;
+    state.cooking.timer.endAt = null;
     rerenderCookingModal();
+  }
+
+  function closeCookingSession() {
+    stopTimer();
+    releaseWakeLock();
+    state.cooking.recipe = null;
+    Views.hideModal();
   }
 
   function rerenderCookingModal() {
@@ -117,7 +200,7 @@
         state.cooking.recipe,
         state.cooking.stepIndex,
         state.cooking.checkedIngredients,
-        !!state.cooking.wakeLockSentinel,
+        !!(state.cooking.wakeLockSentinel && !state.cooking.wakeLockSentinel.released),
         state.cooking.timer,
         state.cooking.ingExpanded
       );
@@ -1149,9 +1232,18 @@
     // Modal overlay click (close)
     modalOverlay.addEventListener('click', function (e) {
       if (e.target === modalOverlay) {
-        stopTimer();
-        releaseWakeLock();
-        Views.hideModal();
+        if (document.getElementById('cooking-modal-inner')) closeCookingSession();
+        else Views.hideModal();
+      }
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' &&
+          state.cooking.recipe &&
+          !modalOverlay.classList.contains('hidden')) {
+        requestWakeLock().then(function () {
+          rerenderCookingModal();
+        });
       }
     });
 
@@ -1221,17 +1313,15 @@
           if (cookId) {
             DB.getRecipe(cookId).then(async function (r) {
               if (r) {
-                // Stop any running timer before resetting state
-                if (state.cooking && state.cooking.timer && state.cooking.timer.intervalId) {
-                  clearInterval(state.cooking.timer.intervalId);
-                }
+                stopTimer();
+                await releaseWakeLock();
                 state.cooking = {
                   recipe: r,
                   stepIndex: 0,
                   checkedIngredients: {},
                   wakeLockSentinel: null,
                   ingExpanded: true,
-                  timer: { minutes: 0, seconds: 0, running: false, intervalId: null }
+                  timer: { minutes: 0, seconds: 0, running: false, intervalId: null, endAt: null }
                 };
                 await requestWakeLock();
                 rerenderCookingModal();
@@ -1294,9 +1384,7 @@
           break;
         }
         case 'close-cooking': {
-          stopTimer();
-          releaseWakeLock();
-          Views.hideModal();
+          closeCookingSession();
           break;
         }
         case 'scale-servings-down': {
