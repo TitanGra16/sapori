@@ -255,7 +255,7 @@ window.Views = (function () {
         '</button>';
     }
     html += '</div>';
-    html += '<input type="file" id="input-image" accept="image/*" class="hidden" aria-label="Seleziona foto">';
+    html += '<input type="file" id="input-image" accept="image/jpeg,image/png,image/webp" class="hidden" aria-label="Seleziona foto">';
     html += '<input type="hidden" id="input-image-data" value="' + esc(r.image || '') + '">';
     html += '</div>';
 

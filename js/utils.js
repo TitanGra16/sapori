@@ -3,6 +3,10 @@
  * General-purpose helpers used across the app.
  */
 window.Utils = {
+  MAX_IMAGE_FILE_BYTES: 12 * 1024 * 1024,
+  MAX_IMAGE_PIXELS: 40 * 1000 * 1000,
+  MAX_IMAGE_DATA_URL_LENGTH: 2500000,
+  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
 
   /**
    * Generate a unique ID.
@@ -159,61 +163,86 @@ window.Utils = {
   },
 
   /**
-   * Compress an image file to a base64 JPEG data URL.
-   * Resizes to maxWidth while maintaining aspect ratio.
+   * Compress an image file to a bounded base64 JPEG data URL.
+   * Resizes both dimensions while maintaining aspect ratio.
    * @param {File} file - Image file
-   * @param {number} maxWidth - Maximum width in pixels
+   * @param {number} maxDimension - Maximum width or height in pixels
    * @returns {Promise<string>} Base64 data URL
    */
-  async compressImage(file, maxWidth = 800) {
+  async compressImage(file, maxDimension = 1280) {
     if (!file || !(file instanceof Blob)) {
       throw new Error('File immagine non valido');
     }
+    if (!this.ALLOWED_IMAGE_TYPES.includes(String(file.type || '').toLowerCase())) {
+      throw new Error('Formato non supportato. Usa JPEG, PNG o WebP');
+    }
+    if (file.size > this.MAX_IMAGE_FILE_BYTES) {
+      throw new Error('La foto supera il limite di 12 MB');
+    }
+    if (!Number.isFinite(maxDimension) || maxDimension < 320 || maxDimension > 2048) {
+      throw new Error('Dimensione di compressione non valida');
+    }
 
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+      const image = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      const cleanup = () => URL.revokeObjectURL(objectUrl);
 
-      reader.onerror = () => reject(new Error('Errore nella lettura del file immagine'));
-
-      reader.onload = (e) => {
-        const img = new Image();
-
-        img.onerror = () => reject(new Error('Errore nel caricamento dell\'immagine'));
-
-        img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            let width = img.naturalWidth;
-            let height = img.naturalHeight;
-
-            // Scale down if wider than maxWidth
-            if (width > maxWidth) {
-              height = Math.round(height * (maxWidth / width));
-              width = maxWidth;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              reject(new Error('Impossibile creare il contesto canvas'));
-              return;
-            }
-
-            ctx.drawImage(img, 0, 0, width, height);
-
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            resolve(dataUrl);
-          } catch (err) {
-            reject(new Error('Errore nella compressione dell\'immagine: ' + err.message));
-          }
-        };
-
-        img.src = e.target.result;
+      image.onerror = () => {
+        cleanup();
+        reject(new Error('Il file non contiene un’immagine valida'));
       };
 
-      reader.readAsDataURL(file);
+      image.onload = () => {
+        cleanup();
+        try {
+          const sourceWidth = image.naturalWidth;
+          const sourceHeight = image.naturalHeight;
+          if (
+            !sourceWidth ||
+            !sourceHeight ||
+            sourceWidth * sourceHeight > this.MAX_IMAGE_PIXELS
+          ) {
+            reject(new Error('La foto ha una risoluzione troppo elevata'));
+            return;
+          }
+
+          const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+          const width = Math.max(1, Math.round(sourceWidth * scale));
+          const height = Math.max(1, Math.round(sourceHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('Impossibile elaborare la foto'));
+            return;
+          }
+
+          context.fillStyle = '#FFFFFF';
+          context.fillRect(0, 0, width, height);
+          context.drawImage(image, 0, 0, width, height);
+
+          let dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          if (dataUrl.length > this.MAX_IMAGE_DATA_URL_LENGTH) {
+            dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+          }
+          if (
+            !dataUrl.startsWith('data:image/jpeg;base64,') ||
+            dataUrl.length > this.MAX_IMAGE_DATA_URL_LENGTH
+          ) {
+            reject(new Error('La foto resta troppo pesante dopo la compressione'));
+            return;
+          }
+
+          resolve(dataUrl);
+        } catch (error) {
+          reject(new Error('Errore nella compressione dell’immagine: ' + error.message));
+        }
+      };
+
+      image.src = objectUrl;
     });
   },
 

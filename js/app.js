@@ -1160,19 +1160,35 @@
 
   /* ──────────────────── IMAGE HANDLING ──────────────────── */
 
+  var imageRequestToken = 0;
+
   function triggerImageUpload() {
     var fileInput = document.getElementById('input-image');
     if (fileInput) fileInput.click();
   }
 
   async function handleImageFile(file) {
-    if (!file || !file.type.startsWith('image/')) return;
+    var fileInput = document.getElementById('input-image');
+    if (!file) return;
+    if (!Utils.ALLOWED_IMAGE_TYPES.includes(String(file.type || '').toLowerCase())) {
+      if (fileInput) fileInput.value = '';
+      Utils.showToast('Formato non supportato. Usa JPEG, PNG o WebP', 'error');
+      return;
+    }
+    if (file.size > Utils.MAX_IMAGE_FILE_BYTES) {
+      if (fileInput) fileInput.value = '';
+      Utils.showToast('La foto supera il limite di 12 MB', 'error');
+      return;
+    }
 
+    var requestToken = ++imageRequestToken;
+    var uploadArea = document.getElementById('image-upload-area');
+    if (uploadArea) uploadArea.setAttribute('aria-busy', 'true');
     try {
-      var base64 = await Utils.compressImage(file, 800);
+      var base64 = await Utils.compressImage(file, 1280);
+      if (requestToken !== imageRequestToken) return;
       document.getElementById('input-image-data').value = base64;
 
-      var uploadArea = document.getElementById('image-upload-area');
       uploadArea.innerHTML =
         '<div class="image-upload__preview">' +
           '<button type="button" class="image-upload__change" data-action="trigger-image-upload" aria-label="Cambia foto">' +
@@ -1181,11 +1197,19 @@
           '<button type="button" class="image-upload__remove" data-action="remove-image" aria-label="Rimuovi foto">✕</button>' +
         '</div>';
     } catch (e) {
-      Utils.showToast('Errore nel caricamento dell\'immagine', 'error');
+      if (requestToken === imageRequestToken) {
+        Utils.showToast(e && e.message ? e.message : 'Errore nel caricamento dell’immagine', 'error');
+      }
+    } finally {
+      if (requestToken === imageRequestToken && uploadArea) {
+        uploadArea.removeAttribute('aria-busy');
+      }
+      if (fileInput) fileInput.value = '';
     }
   }
 
   function removeImage() {
+    imageRequestToken += 1;
     document.getElementById('input-image-data').value = '';
     var fileInput = document.getElementById('input-image');
     if (fileInput) fileInput.value = '';

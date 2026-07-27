@@ -1430,6 +1430,12 @@ body.search-open #app-content {
   margin-top: var(--space-sm);
 }
 
+.image-upload[aria-busy="true"] {
+  opacity: 0.65;
+  pointer-events: none;
+  cursor: progress;
+}
+
 .image-upload__placeholder {
   display: flex;
   flex-direction: column;
