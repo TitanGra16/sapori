@@ -126,6 +126,78 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
   });
 });
 
+test('condivide cartolina, testo completo e file ricetta portabile', async ({ page }) => {
+  await fillMinimumRecipe(page, 'Crème brûlée');
+  await page.getByRole('link', { name: 'Apri la ricetta Crème brûlée' }).click();
+
+  await page.evaluate(() => {
+    window.__copiedRecipe = '';
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async text => {
+          window.__copiedRecipe = text;
+        }
+      }
+    });
+  });
+
+  await page.getByRole('button', { name: 'Condividi' }).click();
+  const shareDialog = page.getByRole('dialog', { name: 'Crème brûlée' });
+  await expect(shareDialog).toBeVisible();
+  await expect(shareDialog.getByText('Questo link apre Sapori, ma non contiene la ricetta.')).toBeVisible();
+  await expect(shareDialog.getByRole('button', { name: /Cartolina PNG/ })).toBeVisible();
+  await expect(shareDialog.getByRole('button', { name: /Testo completo/ })).toBeVisible();
+  await expect(shareDialog.getByRole('button', { name: /File ricetta/ })).toBeVisible();
+  await expect(shareDialog.getByRole('button', { name: /WhatsApp/ })).toBeVisible();
+  await expect(shareDialog.getByRole('button', { name: /Telegram/ })).toBeVisible();
+
+  const cardSize = await shareDialog.locator('.share-modal__preview-img').evaluate(image => ({
+    width: image.naturalWidth,
+    height: image.naturalHeight
+  }));
+  expect(cardSize).toEqual({ width: 1080, height: 1350 });
+
+  await shareDialog.getByRole('button', { name: /Testo completo/ }).click();
+  await expect.poll(() => page.evaluate(() => window.__copiedRecipe)).toContain('INGREDIENTI');
+  expect(await page.evaluate(() => window.__copiedRecipe)).toContain('Mescolare tutti gli ingredienti.');
+
+  const downloadPromise = page.waitForEvent('download');
+  await shareDialog.getByRole('button', { name: /File ricetta/ }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('creme_brulee_ricetta_sapori.json');
+  const stream = await download.createReadStream();
+  let downloadedJson = '';
+  for await (const chunk of stream) downloadedJson += chunk.toString('utf8');
+  const portableRecipe = JSON.parse(downloadedJson);
+  expect(portableRecipe.name).toBe('Crème brûlée');
+  expect(portableRecipe.ingredients[0].name).toBe('Farina');
+
+  const nativeFallback = await page.evaluate(async () => {
+    const recipe = (await DB.getAllRecipes())[0];
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: ({ files }) => files.length === 1 && files[0].type === 'image/png'
+    });
+    const payload = Share._buildNativeSharePayload(
+      recipe,
+      { type: 'image/png' },
+      { type: 'application/json' },
+      'testo completo'
+    );
+    return {
+      fileTypes: payload.files.map(file => file.type),
+      title: payload.title
+    };
+  });
+  expect(nativeFallback).toEqual({
+    fileTypes: ['image/png'],
+    title: 'Crème brûlée'
+  });
+
+  await expectNoHorizontalOverflow(page);
+});
+
 test('salva la foto completa separata dalla miniatura delle card', async ({ page }) => {
   await fillMinimumRecipeForm(page, 'Ricetta con foto');
   await page.locator('#input-image').setInputFiles({
