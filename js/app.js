@@ -369,7 +369,6 @@
     await requestPersistentStorage();
     await loadCustomCategories();
     await Theme.init();
-    updateThemeIcon();
     setupRouter();
     setupEventListeners();
     setupModalAccessibility();
@@ -672,13 +671,6 @@
         item.removeAttribute('aria-current');
       }
     });
-  }
-
-  /* ──────────────────── THEME ICON ──────────────────── */
-
-  function updateThemeIcon() {
-    // CSS handles sun/moon visibility via [data-theme] selectors.
-    // This function is kept for compatibility but no longer swaps icons.
   }
 
   /* ──────────────────── SEARCH ──────────────────── */
@@ -1028,8 +1020,6 @@
       Utils.showToast('Hai raggiunto il limite di ingredienti.', 'warning');
       return;
     }
-    var newIndex = rows.length;
-
     // Re-render all rows with correct indices and remove buttons
     var ingredients = collectCurrentIngredients();
     ingredients.push({ name: '', quantity: '', unit: '' });
@@ -1064,37 +1054,7 @@
   function rerenderIngredients(ingredients) {
     var list = document.getElementById('ingredients-list');
     if (!list) return;
-    var html = '';
-    ingredients.forEach(function (ing, idx) {
-      html += ingredientRowHTMLFromApp(ing, idx, ingredients.length);
-    });
-    list.innerHTML = html;
-  }
-
-  function ingredientRowHTMLFromApp(ing, index, total) {
-    var esc = Utils.escapeHtml;
-    var html =
-      '<div class="dynamic-list__item ingredient-row" data-index="' + index + '">' +
-        '<div class="ingredient-row-container" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
-          '<div class="ingredient-inputs">' +
-            '<input type="text" class="form-input" placeholder="Ingrediente *" data-field="ing-name" value="' + esc(ing.name || '') + '" required>' +
-            '<input type="text" class="form-input" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
-            '<select class="form-select" data-field="ing-unit" style="max-width:6rem">' +
-              '<option value="">—</option>';
-    Recipes.UNITS.forEach(function (u) {
-      html += '<option value="' + esc(u) + '"' + (ing.unit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
-    });
-    html += '</select>';
-    if (total > 1) {
-      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
-    }
-    html += '</div>';
-    html += '<div class="ingredient-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
-              '<input type="text" class="form-input" placeholder="Note per questo ingrediente (es. tiepido, setacciato)" data-field="ing-notes" value="' + esc(ing.notes || '') + '">' +
-            '</div>' +
-        '</div>' +
-      '</div>';
-    return html;
+    list.innerHTML = Views.ingredientRowsHTML(ingredients);
   }
 
   function addStepRow() {
@@ -1131,31 +1091,7 @@
   function rerenderSteps(steps) {
     var list = document.getElementById('steps-list');
     if (!list) return;
-    var html = '';
-    steps.forEach(function (step, idx) {
-      html += stepRowHTMLFromApp(step, idx, steps.length);
-    });
-    list.innerHTML = html;
-  }
-
-  function stepRowHTMLFromApp(stepVal, index, total) {
-    var esc = Utils.escapeHtml;
-    var stepText = typeof stepVal === 'object' ? stepVal.text : stepVal;
-    var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
-    var html =
-      '<div class="dynamic-list__item step-item" data-index="' + index + '">' +
-        '<span class="step-number">' + (index + 1) + '</span>' +
-        '<div class="step-inputs" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
-          '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" required>' + esc(stepText || '') + '</textarea>' +
-          '<div class="step-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
-            '<input type="text" class="form-input" placeholder="Suggerimento / nota per questo passaggio (opzionale)" data-field="step-notes" value="' + esc(stepNotes || '') + '">' +
-          '</div>' +
-        '</div>';
-    if (total > 1) {
-      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
-    }
-    html += '</div>';
-    return html;
+    list.innerHTML = Views.stepRowsHTML(steps);
   }
 
   /* ──────────────────── IMAGE HANDLING ──────────────────── */
@@ -1510,7 +1446,6 @@
     // Theme toggle
     btnThemeToggle.addEventListener('click', async function () {
       await Theme.toggleDarkMode();
-      updateThemeIcon();
     });
 
     // Modal overlay click (close)
@@ -1606,11 +1541,7 @@
     document.addEventListener('click', function (e) {
       var target = e.target;
       var actionEl = target.closest('[data-action]');
-      if (!actionEl) {
-        // Check for special elements without data-action
-        handleNonActionClick(e);
-        return;
-      }
+      if (!actionEl) return;
 
       var action = actionEl.getAttribute('data-action');
 
@@ -2010,9 +1941,7 @@
     // Dark mode toggle via checkbox change event
     document.addEventListener('change', function (e) {
       if (e.target.closest('[data-action="toggle-dark"]') || (e.target.type === 'checkbox' && e.target.closest('.toggle-switch') && e.target.getAttribute('data-action') === 'toggle-dark')) {
-        Theme.toggleDarkMode().then(function () {
-          updateThemeIcon();
-        });
+        Theme.toggleDarkMode();
       }
     });
 
@@ -2026,12 +1955,6 @@
 
     // PWA Custom Install Prompt setup
     setupInstallPrompt();
-  }
-
-  /* ── Handle clicks on elements without data-action ── */
-  function handleNonActionClick(e) {
-    // Recipe card click (the card itself is the data-action element, handled above)
-    // Nothing extra needed here
   }
 
   /* ──────────────────── PWA INSTALL PROMPT ──────────────────── */

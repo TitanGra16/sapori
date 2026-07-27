@@ -541,10 +541,6 @@
       });
     },
 
-    _getDifficultyLabel(diffId) {
-      return { facile: 'Facile', media: 'Media', difficile: 'Difficile' }[diffId] || 'Facile';
-    },
-
     /* ────────────────────────────────────────────────────────
        Canvas Helpers
     ──────────────────────────────────────────────────────── */

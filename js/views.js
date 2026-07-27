@@ -276,9 +276,7 @@ window.Views = (function () {
         '<label class="form-label">Ingredienti *</label>' +
         '<span class="form-error" id="error-ingredients"></span>' +
         '<div class="dynamic-list" id="ingredients-list">';
-    r.ingredients.forEach(function (ing, idx) {
-      html += ingredientRowHTML(ing, idx, r.ingredients.length);
-    });
+    html += ingredientRowsHTML(r.ingredients);
     html += '</div>';
     html += '<button type="button" class="dynamic-list__add btn btn--ghost btn--small" data-action="add-ingredient">' + Icons.plus + ' Aggiungi ingrediente</button>';
     html += '</div>';
@@ -289,9 +287,7 @@ window.Views = (function () {
         '<label class="form-label">Preparazione *</label>' +
         '<span class="form-error" id="error-steps"></span>' +
         '<div class="dynamic-list" id="steps-list">';
-    r.steps.forEach(function (step, idx) {
-      html += stepRowHTML(step, idx, r.steps.length);
-    });
+    html += stepRowsHTML(r.steps);
     html += '</div>';
     html += '<button type="button" class="dynamic-list__add btn btn--ghost btn--small" data-action="add-step">' + Icons.plus + ' Aggiungi passaggio</button>';
     html += '</div>';
@@ -401,6 +397,18 @@ window.Views = (function () {
     }
     html += '</div>';
     return html;
+  }
+
+  function ingredientRowsHTML(ingredients) {
+    return ingredients.map(function (ingredient, index) {
+      return ingredientRowHTML(ingredient, index, ingredients.length);
+    }).join('');
+  }
+
+  function stepRowsHTML(steps) {
+    return steps.map(function (step, index) {
+      return stepRowHTML(step, index, steps.length);
+    }).join('');
   }
 
   /* ──────────────────── DETAIL VIEW ──────────────────── */
@@ -1330,6 +1338,8 @@ window.Views = (function () {
     renderFavorites: renderFavorites,
     renderSettings: renderSettings,
     renderPantry: renderPantry,
+    ingredientRowsHTML: ingredientRowsHTML,
+    stepRowsHTML: stepRowsHTML,
     showCookingModal: showCookingModal,
     showConfirmModal: showConfirmModal,
     showImportPreviewModal: showImportPreviewModal,

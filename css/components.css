@@ -1654,9 +1654,10 @@ body.search-open #app-content {
   align-items: center;
   justify-content: center;
   padding: var(--space-md);
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  overflow-y: auto;
   animation: fadeIn 0.25s ease both;
   opacity: 0;
   visibility: hidden;
@@ -1671,16 +1672,18 @@ body.search-open #app-content {
   visibility: visible;
 }
 
+.modal-overlay.hidden {
+  display: none;
+}
+
 .modal {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 440px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  background: var(--glass-bg);
-  backdrop-filter: blur(24px) saturate(1.5);
-  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  background: var(--bg-secondary);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -1873,6 +1876,10 @@ body.search-open #app-content {
 .badge--success {
   background: var(--success);
   color: var(--on-success);
+}
+
+.modal__body p {
+  margin: 0;
 }
 
 .badge--warning {
@@ -3151,59 +3158,6 @@ body.search-open #app-content {
 /* ============================================================
    FOCUS / COOKING MODE — Premium Redesign
    ============================================================ */
-
-/* ── Modal Overlay Base ── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
-  padding: var(--space-md);
-  overflow-y: auto;
-  transition: opacity var(--transition-normal);
-}
-
-.modal-overlay.hidden {
-  display: none;
-}
-
-/* ── Generic confirm modal ── */
-.modal {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.35);
-  max-width: 440px;
-  width: 100%;
-  animation: modalSlideUp 0.35s cubic-bezier(0.22,1,0.36,1) both;
-}
-
-.modal__header h3 {
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 var(--space-sm);
-}
-
-.modal__body p {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
-}
-
-.modal__footer {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
-  margin-top: var(--space-lg);
-}
 
 /* ── Cooking Modal Wrapper ── */
 .cooking-modal {
