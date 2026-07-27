@@ -6,6 +6,15 @@
 window.Theme = {
   currentMode: 'light',
   currentPalette: 'classico',
+  _systemListenerAttached: false,
+
+  _safeLocalStorageSet(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (e) {
+      // IndexedDB remains the source of truth when localStorage is unavailable.
+    }
+  },
 
   /**
    * Color map for theme-color meta tag.
@@ -73,7 +82,7 @@ window.Theme = {
    * Only applies if the user hasn't set a manual preference.
    */
   _listenSystemChanges() {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
+    if (typeof window === 'undefined' || !window.matchMedia || this._systemListenerAttached) return;
 
     try {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -92,6 +101,7 @@ window.Theme = {
       } else if (mq.addListener) {
         mq.addListener(handler);
       }
+      this._systemListenerAttached = true;
     } catch (e) {
       // Non-critical, ignore
     }
@@ -118,7 +128,7 @@ window.Theme = {
     // Scritto anche su localStorage: e' l'unico storage leggibile in modo
     // sincrono dallo script anti-FOUC in <head> di index.html, prima ancora
     // che DB.init()/Theme.init() (asincroni) possano applicare il tema reale.
-    localStorage.setItem('sapori-theme', this.currentMode);
+    this._safeLocalStorageSet('sapori-theme', this.currentMode);
 
     try {
       await window.DB.setSetting('themeMode', this.currentMode);
@@ -157,7 +167,7 @@ window.Theme = {
     this.apply();
 
     // Vedi commento in setDarkMode: serve anche qui allo script anti-FOUC.
-    localStorage.setItem('sapori-palette', this.currentPalette);
+    this._safeLocalStorageSet('sapori-palette', this.currentPalette);
 
     try {
       await window.DB.setSetting('themePalette', this.currentPalette);

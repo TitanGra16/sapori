@@ -13,6 +13,9 @@
     editingRecipe: null,
     savingRecipe: false,
     savingCategory: false,
+    routeToken: 0,
+    lastStableHash: '#home',
+    navigationConfirmed: false,
     pantryIngredients: [],
     cooking: {
       recipe: null,
@@ -241,6 +244,23 @@
   var btnThemeToggle = document.getElementById('btn-theme-toggle');
   var modalOverlay = document.getElementById('modal-overlay');
 
+  function safeStorageGet(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function safeStorageSet(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /* ──────────────────── INITIALIZATION ──────────────────── */
 
   async function init() {
@@ -369,17 +389,34 @@
   function setupRouter() {
     window.addEventListener('hashchange', function () {
       var hash = window.location.hash || '#home';
+      if (!state.navigationConfirmed && hasUnsavedForm()) {
+        var requestedHash = hash;
+        window.history.replaceState(null, '', state.lastStableHash || '#home');
+        confirmUnsavedNavigation(requestedHash);
+        return;
+      }
+      state.navigationConfirmed = false;
       handleRoute(hash);
     });
   }
 
-  function handleRoute(hash) {
+  async function renderRouteView(token, renderer) {
+    var staging = document.createElement('div');
+    await renderer(staging);
+    if (token !== state.routeToken) return false;
+    appContent.innerHTML = staging.innerHTML;
+    return true;
+  }
+
+  async function handleRoute(hash) {
+    var token = ++state.routeToken;
     // Parse the hash
     var parts = hash.replace('#', '').split('/');
     var view = parts[0] || 'home';
     var param = parts[1] || null;
 
     state.currentView = view;
+    closeSearch(false);
 
     // Transition animation
     appContent.classList.add('animate-fade-in');
@@ -389,13 +426,17 @@
       case 'home':
         updateNav('home');
         showHeader(true);
-        Views.renderHome(appContent, state.filters);
+        appContent.innerHTML = '<div class="view" role="status">Caricamento ricette…</div>';
+        await renderRouteView(token, function (container) {
+          return Views.renderHome(container, state.filters);
+        });
         break;
 
       case 'create':
         updateNav('create');
         showHeader(false);
         state.editingRecipe = null;
+        if (token !== state.routeToken) return;
         Views.renderCreate(appContent, null);
         break;
 
@@ -403,17 +444,20 @@
         updateNav('create');
         showHeader(false);
         if (param) {
-          DB.getRecipe(param).then(function (recipe) {
-            if (recipe) {
-              state.editingRecipe = recipe;
-              Views.renderCreate(appContent, recipe);
-            } else {
-              Utils.showToast('Ricetta non trovata', 'error');
-              navigateTo('#home');
-            }
-          });
+          appContent.innerHTML = '<div class="view" role="status">Caricamento ricetta…</div>';
+          var recipe = await DB.getRecipe(param);
+          if (token !== state.routeToken) return;
+          if (recipe) {
+            state.editingRecipe = recipe;
+            Views.renderCreate(appContent, recipe);
+          } else {
+            Utils.showToast('Ricetta non trovata', 'error');
+            navigateTo('#home', true);
+            return;
+          }
         } else {
-          navigateTo('#home');
+          navigateTo('#home', true);
+          return;
         }
         break;
 
@@ -421,43 +465,79 @@
         updateNav('');
         showHeader(false);
         if (param) {
-          Views.renderDetail(appContent, param);
+          appContent.innerHTML = '<div class="view" role="status">Caricamento ricetta…</div>';
+          await renderRouteView(token, function (container) {
+            return Views.renderDetail(container, param);
+          });
         } else {
-          navigateTo('#home');
+          navigateTo('#home', true);
+          return;
         }
         break;
 
       case 'favorites':
         updateNav('favorites');
         showHeader(true);
-        Views.renderFavorites(appContent);
+        appContent.innerHTML = '<div class="view" role="status">Caricamento preferiti…</div>';
+        await renderRouteView(token, function (container) {
+          return Views.renderFavorites(container);
+        });
         break;
 
       case 'settings':
         updateNav('settings');
         showHeader(true);
-        Views.renderSettings(appContent);
+        appContent.innerHTML = '<div class="view" role="status">Caricamento impostazioni…</div>';
+        await renderRouteView(token, function (container) {
+          return Views.renderSettings(container);
+        });
         break;
 
       case 'pantry':
         updateNav('');
         showHeader(false);
-        Views.renderPantry(appContent, state.pantryIngredients);
+        appContent.innerHTML = '<div class="view" role="status">Cerco le ricette compatibili…</div>';
+        await renderRouteView(token, function (container) {
+          return Views.renderPantry(container, state.pantryIngredients);
+        });
         break;
 
       default:
-        navigateTo('#home');
-        break;
+        navigateTo('#home', true);
+        return;
     }
 
-    // Close search bar on navigation
-    closeSearch();
+    if (token !== state.routeToken) return;
+    state.lastStableHash = hash;
+    state.navigationConfirmed = false;
 
     // Scroll to top on view change
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function navigateTo(hash) {
+  function hasUnsavedForm() {
+    return (state.currentView === 'create' || state.currentView === 'edit') &&
+      !!document.getElementById('recipe-form') &&
+      isFormDirty();
+  }
+
+  function confirmUnsavedNavigation(hash) {
+    Views.showConfirmModal(
+      'Modifiche non salvate',
+      'Uscendo da questa pagina perderai le modifiche non salvate. Vuoi continuare?',
+      function () {
+        Views.hideModal();
+        navigateTo(hash, true);
+      }
+    );
+  }
+
+  function navigateTo(hash, force) {
+    if (!force && hasUnsavedForm()) {
+      confirmUnsavedNavigation(hash);
+      return;
+    }
+    state.navigationConfirmed = !!force;
     if (window.location.hash === hash) {
       // Force re-render even if same hash
       handleRoute(hash);
@@ -506,14 +586,15 @@
     searchInput.focus();
   }
 
-  function closeSearch() {
+  function closeSearch(shouldRender) {
+    if (shouldRender === undefined) shouldRender = true;
     searchBar.classList.add('hidden');
     document.body.classList.remove('search-open');
     btnSearchToggle.setAttribute('aria-expanded', 'false');
     searchInput.value = '';
     if (state.filters.search !== '') {
       state.filters.search = '';
-      if (state.currentView === 'home') {
+      if (shouldRender && state.currentView === 'home') {
         Views.renderHome(appContent, state.filters);
       }
     }
@@ -803,7 +884,7 @@
         await DB.addRecipe(recipe);
         Utils.showToast('Ricetta creata con successo! 🎉', 'success');
       }
-      navigateTo('#home');
+      navigateTo('#home', true);
     } catch (e) {
       Utils.showToast('Errore nel salvataggio: ' + e.message, 'error');
     } finally {
@@ -1322,6 +1403,13 @@
       }
     });
 
+    window.addEventListener('beforeunload', function (e) {
+      if (hasUnsavedForm()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
     // File input for image
     document.addEventListener('change', function (e) {
       if (e.target.id === 'input-image') {
@@ -1501,11 +1589,7 @@
           break;
         }
         case 'go-back': {
-          if (window.history.length > 1) {
-            window.history.back();
-          } else {
-            navigateTo('#home');
-          }
+          navigateTo('#home');
           break;
         }
         case 'edit-recipe': {
@@ -1661,7 +1745,11 @@
               'Sei sicuro di voler uscire? Le modifiche non salvate andranno perse.',
               function () {
                 Views.hideModal();
-                performNavigate();
+                if (state.editingRecipe) {
+                  navigateTo('#detail/' + state.editingRecipe.id, true);
+                } else {
+                  navigateTo('#home', true);
+                }
               }
             );
           } else {
@@ -1789,16 +1877,6 @@
       }
     });
 
-    // Sort select change
-    document.addEventListener('change', function (e) {
-      if (e.target.id === 'sort-select') {
-        state.filters.sortBy = e.target.value;
-        if (state.currentView === 'home') {
-          Views.renderHome(appContent, state.filters);
-        }
-      }
-    });
-
     // PWA Custom Install Prompt setup
     setupInstallPrompt();
   }
@@ -1827,7 +1905,7 @@
       e.preventDefault();
       deferredPrompt = e;
       
-      var dismissedTime = localStorage.getItem('sapori-install-dismissed');
+      var dismissedTime = safeStorageGet('sapori-install-dismissed');
       var now = Date.now();
       
       // Mostra il prompt se non è stato rifiutato di recente (negli ultimi 7 giorni)
@@ -1851,7 +1929,7 @@
     var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
     if (isIOS) {
-      var dismissedTime = localStorage.getItem('sapori-install-dismissed');
+      var dismissedTime = safeStorageGet('sapori-install-dismissed');
       var now = Date.now();
       if (!dismissedTime || (now - parseInt(dismissedTime, 10)) > 7 * 24 * 60 * 60 * 1000) {
         var promptTitle = document.querySelector('.install-prompt__title');
@@ -1893,7 +1971,7 @@
         if (installPrompt) {
           installPrompt.classList.add('hidden');
         }
-        localStorage.setItem('sapori-install-dismissed', Date.now().toString());
+        safeStorageSet('sapori-install-dismissed', Date.now().toString());
       });
     }
   }
@@ -1907,7 +1985,7 @@
 
     if (!warningModal) return;
 
-    var dismissed = localStorage.getItem('sapori-warning-dismissed');
+    var dismissed = safeStorageGet('sapori-warning-dismissed');
     if (dismissed !== 'true') {
       warningModal.classList.remove('hidden');
     }
@@ -1920,7 +1998,7 @@
 
     if (btnDontShow) {
       btnDontShow.addEventListener('click', function () {
-        localStorage.setItem('sapori-warning-dismissed', 'true');
+        safeStorageSet('sapori-warning-dismissed', 'true');
         warningModal.classList.add('hidden');
       });
     }
@@ -1944,6 +2022,16 @@
 
   init().catch(function (err) {
     console.error('Errore inizializzazione app:', err);
+    appContent.innerHTML =
+      '<div class="view empty-state" role="alert">' +
+        '<h1>Impossibile avviare Sapori</h1>' +
+        '<p>I dati locali non sono accessibili in questo momento. Chiudi eventuali altre schede di Sapori e riprova.</p>' +
+        '<button type="button" class="btn btn--primary" id="btn-retry-init">Riprova</button>' +
+      '</div>';
+    var retryButton = document.getElementById('btn-retry-init');
+    if (retryButton) retryButton.addEventListener('click', function () {
+      window.location.reload();
+    });
   });
 
 })();

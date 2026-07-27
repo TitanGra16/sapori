@@ -19,8 +19,14 @@
   <!-- FOUC Prevention — must run before CSS loads -->
   <script>
     (function(){
-      var t=localStorage.getItem('sapori-theme')||'light';
-      var p=localStorage.getItem('sapori-palette')||'classico';
+      var t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+      var p='classico';
+      try {
+        var savedTheme=localStorage.getItem('sapori-theme');
+        var savedPalette=localStorage.getItem('sapori-palette');
+        if(savedTheme==='light'||savedTheme==='dark')t=savedTheme;
+        if(['classico','oceano','bosco','tramonto','ametista','autunno','zafferano'].indexOf(savedPalette)!==-1)p=savedPalette;
+      } catch(e) {}
       document.documentElement.setAttribute('data-theme',t);
       document.documentElement.setAttribute('data-palette',p);
     })();
@@ -35,7 +41,7 @@
 <body>
   <!-- App Header -->
   <header id="app-header">
-    <button type="button" class="header-logo" data-view="home" aria-label="Vai alla home">Sapori</button>
+    <button type="button" class="header-logo" data-action="go-home" aria-label="Vai alla home">Sapori</button>
     <div class="header-actions">
       <button type="button" class="header-btn" id="btn-search-toggle" aria-label="Cerca ricette" aria-controls="search-bar" aria-expanded="false">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
