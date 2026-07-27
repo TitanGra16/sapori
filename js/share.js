@@ -255,7 +255,8 @@
           ctx.fillStyle = gc[0];
           ctx.font = 'bold 12px system-ui, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText('titangra16.github.io/sapori', sX + cW, footerY);
+          var appLocation = window.location.host + window.location.pathname.replace(/\/index\.html$/, '');
+          ctx.fillText(appLocation, sX + cW, footerY);
 
           resolve(canvas.toDataURL('image/png'));
         };
@@ -330,13 +331,6 @@
                 '<span class="share-modal__action-label">Copia Testo</span>' +
               '</button>' +
 
-              (!hasNativeShare
-                ? '<button class="share-modal__action-btn share-modal__action-btn--primary" id="btn-share-native">' +
-                    '<span class="share-modal__action-icon">🔗</span>' +
-                    '<span class="share-modal__action-label">Condividi Link</span>' +
-                  '</button>'
-                : '') +
-
               // Divider
               '<div class="share-modal__divider"></div>' +
 
@@ -354,8 +348,8 @@
 
             // Link section
             '<div class="share-modal__link-section">' +
-              '<span class="share-modal__link-url">' + esc(pwaUrl) + '</span>' +
-              '<button class="share-modal__link-copy" id="btn-share-copy-link">Copia Link</button>' +
+              '<span class="share-modal__link-url" title="Le ricette restano locali: questo link apre soltanto Sapori">' + esc(pwaUrl) + '</span>' +
+              '<button class="share-modal__link-copy" id="btn-share-copy-link">Copia link app</button>' +
             '</div>' +
 
           '</div>' + // body
@@ -404,16 +398,16 @@
       if (btnCopyLink) {
         btnCopyLink.addEventListener('click', function () {
           var url = window.location.origin + window.location.pathname;
-          navigator.clipboard.writeText(url).then(function () {
+          self._copyText(url).then(function () {
             btnCopyLink.textContent = 'Copiato ✓';
             btnCopyLink.style.background = 'var(--primary)';
             btnCopyLink.style.color = '#fff';
             setTimeout(function () {
-              btnCopyLink.textContent = 'Copia Link';
+              btnCopyLink.textContent = 'Copia link app';
               btnCopyLink.style.background = '';
               btnCopyLink.style.color = '';
             }, 2000);
-            Utils.showToast('Link copiato! 🔗', 'success');
+            Utils.showToast('Link dell’app copiato. Le ricette restano sul dispositivo.', 'success');
           }).catch(function () {
             Utils.showToast('Impossibile copiare il link', 'error');
           });
@@ -426,16 +420,32 @@
     ──────────────────────────────────────────────────────── */
     async _shareImageNatively(recipe, dataUrl) {
       try {
+        var fullText = this._buildShareText(recipe);
         var blob = await (await fetch(dataUrl)).blob();
         var fname = recipe.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        var file = new File([blob], fname + '_ricetta.png', { type: blob.type });
+        var imageFile = new File([blob], fname + '_ricetta.png', { type: blob.type });
+        var recipeFile = new File(
+          [JSON.stringify(Recipes.formatRecipeForExport(recipe), null, 2)],
+          fname + '_ricetta.json',
+          { type: 'application/json' }
+        );
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: recipe.name, text: 'Guarda questa ricetta su Sapori! 🍴' });
+        if (navigator.canShare && navigator.canShare({ files: [imageFile, recipeFile] })) {
+          await navigator.share({
+            files: [imageFile, recipeFile],
+            title: recipe.name,
+            text: 'Cartolina e file importabile della ricetta “' + recipe.name + '”.'
+          });
+        } else if (navigator.canShare && navigator.canShare({ files: [recipeFile] })) {
+          await navigator.share({
+            files: [recipeFile],
+            title: recipe.name,
+            text: 'File importabile della ricetta “' + recipe.name + '”.'
+          });
         } else {
           await navigator.share({
             title: recipe.name,
-            text: 'Prova la ricetta di "' + recipe.name + '" su Sapori!',
+            text: fullText,
             url: window.location.origin + window.location.pathname
           });
         }
@@ -457,47 +467,7 @@
     },
 
     _copyRecipeText(recipe) {
-      var esc = function (s) { return (s || '').toString(); };
-      var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
-
-      var lines = [];
-      lines.push('🍴 *' + esc(recipe.name).toUpperCase() + '*');
-      if (recipe.description) lines.push('_' + esc(recipe.description) + '_');
-      lines.push('');
-      lines.push('⏱ Preparazione: ' + (recipe.prepTime || 0) + ' min');
-      lines.push('🍳 Cottura: ' + (recipe.cookTime || 0) + ' min');
-      lines.push('👥 Porzioni: ' + (recipe.servings || 4));
-      lines.push('⭐ Difficoltà: ' + (diffMap[recipe.difficulty] || 'Facile'));
-      lines.push('');
-
-      if (recipe.ingredients && recipe.ingredients.length > 0) {
-        lines.push('🧂 *INGREDIENTI:*');
-        recipe.ingredients.forEach(function (ing) {
-          var qty = ing.quantity ? ing.quantity + (ing.unit ? ' ' + ing.unit : '') + ' ' : '';
-          lines.push('• ' + qty + esc(ing.name));
-        });
-        lines.push('');
-      }
-
-      if (recipe.steps && recipe.steps.length > 0) {
-        lines.push('👨‍🍳 *PREPARAZIONE:*');
-        recipe.steps.forEach(function (s, i) {
-          var text = typeof s === 'object' ? s.text : s;
-          var notes = typeof s === 'object' && s.notes ? ' _(💡 ' + s.notes + ')_' : '';
-          lines.push((i + 1) + '. ' + esc(text) + notes);
-        });
-        lines.push('');
-      }
-
-      if (recipe.notes) {
-        lines.push('📝 Note: ' + esc(recipe.notes));
-        lines.push('');
-      }
-
-      lines.push('—\nFatto con ❤️ su *Sapori App* 📱');
-      lines.push(window.location.origin + window.location.pathname);
-
-      navigator.clipboard.writeText(lines.join('\n')).then(function () {
+      this._copyText(this._buildShareText(recipe)).then(function () {
         Utils.showToast('Testo copiato! Incollalo su WhatsApp o Telegram 📋', 'success');
       }).catch(function () {
         Utils.showToast('Impossibile copiare il testo', 'error');
@@ -514,24 +484,68 @@
       var text = this._buildShareText(recipe);
       var url = 'https://t.me/share/url?url=' +
         encodeURIComponent(window.location.origin + window.location.pathname) +
-        '&text=' + encodeURIComponent('🍴 ' + recipe.name + '\n' + (recipe.description || '') + '\n\nVedi la ricetta completa su Sapori!');
+        '&text=' + encodeURIComponent(text);
       window.open(url, '_blank', 'noopener,noreferrer');
     },
 
     _buildShareText(recipe) {
       var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
-      var lines = [
-        '🍴 *' + recipe.name + '*',
-        (recipe.description ? recipe.description + '\n' : ''),
-        '⏱ Prep: ' + (recipe.prepTime || 0) + ' min | 🍳 Cottura: ' + (recipe.cookTime || 0) + ' min | 👥 ' + (recipe.servings || 4) + ' porzioni',
-        '',
-        '🧂 Ingredienti: ' + (recipe.ingredients || []).slice(0, 4).map(function (i) { return i.name; }).join(', ') +
-          ((recipe.ingredients || []).length > 4 ? ' e altri...' : ''),
-        '',
-        '👉 Ricetta completa: ' + window.location.origin + window.location.pathname,
-        'Scarica Sapori App — il tuo ricettario personale! 📱'
-      ];
+      var lines = ['🍴 *' + String(recipe.name || '').toUpperCase() + '*'];
+      if (recipe.description) lines.push('_' + recipe.description + '_');
+      lines.push('');
+      lines.push('⏱ Preparazione: ' + (recipe.prepTime || 0) + ' min');
+      lines.push('🍳 Cottura: ' + (recipe.cookTime || 0) + ' min');
+      lines.push('👥 Porzioni: ' + (recipe.servings || 4));
+      lines.push('⭐ Difficoltà: ' + (diffMap[recipe.difficulty] || 'Media'));
+      lines.push('');
+
+      lines.push('🧂 *INGREDIENTI:*');
+      (recipe.ingredients || []).forEach(function (ing) {
+        var qty = ing.quantity ? ing.quantity + (ing.unit ? ' ' + ing.unit : '') + ' ' : '';
+        var notes = ing.notes ? ' (' + ing.notes + ')' : '';
+        lines.push('• ' + qty + String(ing.name || '') + notes);
+      });
+      lines.push('');
+
+      lines.push('👨‍🍳 *PREPARAZIONE:*');
+      (recipe.steps || []).forEach(function (step, index) {
+        var text = typeof step === 'object' ? step.text : step;
+        var notes = typeof step === 'object' && step.notes ? ' (💡 ' + step.notes + ')' : '';
+        lines.push((index + 1) + '. ' + String(text || '') + notes);
+      });
+      if (recipe.notes) {
+        lines.push('');
+        lines.push('📝 Note: ' + recipe.notes);
+      }
+      lines.push('');
+      lines.push('—');
+      lines.push('Creata con Sapori. Le ricette dell’app restano salvate localmente sul dispositivo.');
+      lines.push(window.location.origin + window.location.pathname);
       return lines.join('\n');
+    },
+
+    _copyText(text) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        return navigator.clipboard.writeText(text);
+      }
+
+      return new Promise(function (resolve, reject) {
+        var textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          if (document.execCommand('copy')) resolve();
+          else reject(new Error('Copy command unavailable'));
+        } catch (err) {
+          reject(err);
+        } finally {
+          document.body.removeChild(textarea);
+        }
+      });
     },
 
     _getDifficultyLabel(diffId) {

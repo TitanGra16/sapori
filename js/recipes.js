@@ -356,6 +356,7 @@ window.Recipes = {
       name: recipe.name || '',
       category: recipe.category || 'altro',
       description: recipe.description || '',
+      notes: recipe.notes || '',
       ingredients: [],
       steps: [],
       prepTime: typeof recipe.prepTime === 'number' ? recipe.prepTime : 0,
