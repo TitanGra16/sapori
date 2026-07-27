@@ -3,17 +3,6 @@
 
   var Share = {
 
-    // Gradient definitions per palette
-    _gradients: {
-      classico:  ['#E85D3A', '#FFA726'],
-      oceano:    ['#0EA5E9', '#06B6D4'],
-      bosco:     ['#16A34A', '#84CC16'],
-      tramonto:  ['#DB2777', '#EC4899'],
-      ametista:  ['#8B5CF6', '#A78BFA'],
-      autunno:   ['#8C5A3C', '#F5BE94'],
-      zafferano: ['#D97706', '#FBBF24']
-    },
-
     /* ────────────────────────────────────────────────────────
        PUBLIC: Open share menu
     ──────────────────────────────────────────────────────── */
@@ -44,7 +33,10 @@
         var activeTheme = window.Theme ? window.Theme.getCurrentTheme() : { mode: 'dark', palette: 'classico' };
         var palette = activeTheme.palette || 'classico';
         var isDark = activeTheme.mode === 'dark';
-        var gc = self._gradients[palette] || self._gradients.classico;
+        var paletteList = window.Theme ? window.Theme.PALETTES : [];
+        var paletteInfo = paletteList.find(function (item) { return item.id === palette; }) ||
+          paletteList.find(function (item) { return item.id === 'classico'; });
+        var gc = paletteInfo && paletteInfo.colors ? paletteInfo.colors : ['#E85D3A', '#FFA726'];
 
         // Colors
         var bgCard  = isDark ? '#18181b' : '#ffffff';
@@ -92,8 +84,9 @@
 
           // Watermark on band
           ctx.textAlign = 'right';
-          ctx.fillStyle = 'rgba(255,255,255,0.92)';
           ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
+          self._drawRoundedRect(ctx, W - 164, 17, 128, 34, 17, 'rgba(0,0,0,0.58)');
+          ctx.fillStyle = '#ffffff';
           ctx.fillText('🍴 SAPORI', W - 36, 40);
 
           // Category pill on band
@@ -101,7 +94,7 @@
           var catLabel = (cat ? cat.icon + ' ' + cat.label : '🍽 Cucina').toUpperCase();
           ctx.font = 'bold 13px system-ui, sans-serif';
           var catW = ctx.measureText(catLabel).width + 28;
-          self._drawRoundedRect(ctx, 36, bandH - 140, catW, 28, 14, 'rgba(255,255,255,0.22)');
+          self._drawRoundedRect(ctx, 36, bandH - 140, catW, 28, 14, 'rgba(0,0,0,0.58)');
           ctx.fillStyle = '#ffffff';
           ctx.textAlign = 'left';
           ctx.fillText(catLabel, 36 + 14, bandH - 121);
@@ -401,7 +394,7 @@
           self._copyText(url).then(function () {
             btnCopyLink.textContent = 'Copiato ✓';
             btnCopyLink.style.background = 'var(--primary)';
-            btnCopyLink.style.color = '#fff';
+            btnCopyLink.style.color = 'var(--on-primary)';
             setTimeout(function () {
               btnCopyLink.textContent = 'Copia link app';
               btnCopyLink.style.background = '';

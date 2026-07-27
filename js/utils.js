@@ -363,6 +363,30 @@ window.Utils = {
   },
 
   /**
+   * Pick an accessible foreground for a solid hexadecimal background.
+   * @param {string} hexColor
+   * @returns {'#030303'|'#FFFFFF'}
+   */
+  getContrastText(hexColor) {
+    const match = /^#([0-9a-f]{6})$/i.exec(String(hexColor || '').trim());
+    if (!match) return '#030303';
+
+    const value = match[1];
+    const channels = [0, 2, 4].map(index => {
+      const channel = parseInt(value.slice(index, index + 2), 16) / 255;
+      return channel <= 0.04045
+        ? channel / 12.92
+        : Math.pow((channel + 0.055) / 1.055, 2.4);
+    });
+    const luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    const darkLuminance = 0.00091;
+    const darkContrast = (luminance + 0.05) / (darkLuminance + 0.05);
+    const lightContrast = 1.05 / (luminance + 0.05);
+
+    return darkContrast >= lightContrast ? '#030303' : '#FFFFFF';
+  },
+
+  /**
    * Trigger a file download in the browser.
    * @param {string} content - File content
    * @param {string} filename - Download filename

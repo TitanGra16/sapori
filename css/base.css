@@ -183,12 +183,12 @@ strong {
    ============================================================ */
 ::selection {
   background-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--on-primary);
 }
 
 ::-moz-selection {
   background-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--on-primary);
 }
 
 /* ============================================================
@@ -232,7 +232,7 @@ strong {
    LINK STYLES
    ============================================================ */
 a:not([class]) {
-  color: var(--primary);
+  color: var(--primary-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--primary-light);
@@ -240,8 +240,8 @@ a:not([class]) {
 }
 
 a:not([class]):hover {
-  color: var(--primary-dark);
-  text-decoration-color: var(--primary-dark);
+  color: var(--primary-ink);
+  text-decoration-color: var(--primary-ink);
 }
 
 /* ============================================================

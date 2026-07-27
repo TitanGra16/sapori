@@ -8,6 +8,11 @@ window.Views = (function () {
 
   /* ──────────────────── HELPERS ──────────────────── */
 
+  function categoryStyle(category) {
+    var color = Utils.escapeHtml(category.color);
+    return 'background:' + color + ';color:' + Utils.getContrastText(category.color);
+  }
+
   function recipeCardHTML(recipe, index) {
     const esc = Utils.escapeHtml;
     const cat = Utils.getCategoryInfo(recipe.category);
@@ -36,7 +41,7 @@ window.Views = (function () {
               '<span class="recipe-card__meta-item">⏱️ ' + esc(totalTime) + '</span>' +
               '<span class="recipe-card__meta-item">' + esc(diffEmoji) + '</span>' +
             '</div>' +
-            '<span class="recipe-card__category" style="background:' + esc(cat.color) + '22;color:' + esc(cat.color) + '">' +
+            '<span class="recipe-card__category" style="' + categoryStyle(cat) + '">' +
               esc(cat.icon) + ' ' + esc(cat.label) +
             '</span>' +
           '</div>' +
@@ -69,7 +74,7 @@ window.Views = (function () {
   function categoryChipsHTML(activeCategory) {
     var esc = Utils.escapeHtml;
     var html = '<div class="filter-bar">';
-    html += '<button type="button" class="filter-chip filter-chip--pantry" data-action="go-pantry" style="background:linear-gradient(135deg,#E85D3A,#FFA726);color:#fff;font-weight:600;border:none;">' +
+    html += '<button type="button" class="filter-chip filter-chip--pantry" data-action="go-pantry" style="background:var(--gradient);color:var(--on-primary);font-weight:600;border:none;">' +
               '👨‍🍳 Svuotafrigo</button>';
     html += '<button type="button" class="filter-chip' + (activeCategory === '' ? ' active' : '') + '" data-action="filter-category" data-category="" aria-pressed="' + (activeCategory === '') + '">' +
               '🍽️ Tutte</button>';
@@ -445,7 +450,7 @@ window.Views = (function () {
     html += '<h1 class="recipe-detail__title">' + esc(recipe.name) + '</h1>';
 
     // Category badge
-    html += '<span class="recipe-card__category" style="background:' + esc(cat.color) + '22;color:' + esc(cat.color) + ';display:inline-block;margin:0 1rem .75rem">' +
+    html += '<span class="recipe-card__category" style="' + categoryStyle(cat) + ';display:inline-block;margin:0 1rem .75rem">' +
               esc(cat.icon) + ' ' + esc(cat.label) +
             '</span>';
 
@@ -610,15 +615,7 @@ window.Views = (function () {
     var recipes = await DB.getAllRecipes();
     var count = recipes.length;
 
-    var palettes = [
-      { id: 'classico', label: 'Classico', gradient: 'linear-gradient(135deg,#E85D3A,#FFA726)' },
-      { id: 'oceano', label: 'Oceano', gradient: 'linear-gradient(135deg,#0EA5E9,#06B6D4)' },
-      { id: 'bosco', label: 'Bosco', gradient: 'linear-gradient(135deg,#16A34A,#84CC16)' },
-      { id: 'tramonto', label: 'Tramonto', gradient: 'linear-gradient(135deg,#A855F7,#EC4899)' },
-      { id: 'ametista', label: 'Ametista', gradient: 'linear-gradient(135deg,#8B5CF6,#EC4899)' },
-      { id: 'autunno', label: 'Autunno', gradient: 'linear-gradient(135deg,#8C5A3C,#D4A373)' },
-      { id: 'zafferano', label: 'Zafferano', gradient: 'linear-gradient(135deg,#D97706,#FBBF24)' }
-    ];
+    var palettes = Theme.PALETTES;
 
     var html = '<div class="view animate-fade-in">';
     html += '<div class="view-header"><h1 class="view-header__title">Impostazioni</h1></div>';
@@ -674,9 +671,9 @@ window.Views = (function () {
       html += '<p style="font-size:0.875rem; color:var(--text-muted); margin: 4px 0;">Non hai ancora creato categorie personalizzate.</p>';
     } else {
       customCats.forEach(function (cat) {
-        html += '<div class="custom-cat-chip" style="display:inline-flex; align-items:center; gap:0.4rem; background:' + esc(cat.color) + '22; color:' + esc(cat.color) + '; border:1px solid ' + esc(cat.color) + '33; padding:6px 12px; border-radius:var(--radius-full); font-size:0.85rem; font-weight:600;">' +
+        html += '<div class="custom-cat-chip" style="display:inline-flex; align-items:center; gap:0.4rem; ' + categoryStyle(cat) + '; border:1px solid ' + esc(cat.color) + '; padding:6px 12px; border-radius:var(--radius-full); font-size:0.85rem; font-weight:600;">' +
                   '<span>' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>' +
-                  '<button type="button" class="btn-delete-cat" data-action="delete-category" data-id="' + esc(cat.id) + '" aria-label="Elimina categoria ' + esc(cat.label) + '" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:' + esc(cat.color) + '; width:32px; height:32px; margin-left:4px; opacity:0.8; transition:opacity var(--transition-fast);">' + Icons.x + '</button>' +
+                  '<button type="button" class="btn-delete-cat" data-action="delete-category" data-id="' + esc(cat.id) + '" aria-label="Elimina categoria ' + esc(cat.label) + '" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:inherit; width:32px; height:32px; margin-left:4px; opacity:0.8; transition:opacity var(--transition-fast);">' + Icons.x + '</button>' +
                 '</div>';
       });
     }
@@ -809,9 +806,9 @@ window.Views = (function () {
       html += '</div>';
       html += '<div style="display:flex;flex-wrap:wrap;gap:.5rem">';
       userIngredients.forEach(function(ing, idx) {
-        html += '<span class="pantry-chip" style="background:var(--primary);color:#fff;padding:6px 12px;border-radius:99px;font-size:.85rem;font-weight:500;display:inline-flex;align-items:center;gap:.4rem">';
+        html += '<span class="pantry-chip" style="background:var(--primary);color:var(--on-primary);padding:6px 12px;border-radius:99px;font-size:.85rem;font-weight:500;display:inline-flex;align-items:center;gap:.4rem">';
         html += esc(ing);
-        html += '<button type="button" data-action="remove-pantry-ingredient" data-index="' + idx + '" aria-label="Rimuovi" style="background:none;border:none;color:#fff;cursor:pointer;padding:0;display:flex;align-items:center">' + Icons.x + '</button>';
+        html += '<button type="button" data-action="remove-pantry-ingredient" data-index="' + idx + '" aria-label="Rimuovi ' + esc(ing) + '" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;display:flex;align-items:center">' + Icons.x + '</button>';
         html += '</span>';
       });
       html += '</div>';
@@ -861,7 +858,8 @@ window.Views = (function () {
     var esc = Utils.escapeHtml;
     var r = matchItem.recipe;
     var cat = Utils.getCategoryInfo(r.category);
-    var badgeColor = matchItem.isComplete ? '#10B981' : '#F59E0B';
+    var badgeColor = matchItem.isComplete ? 'var(--success)' : 'var(--warning)';
+    var badgeTextColor = matchItem.isComplete ? 'var(--on-success)' : 'var(--on-warning)';
     var badgeText = matchItem.isComplete 
       ? '🟢 100% Ingredienti' 
       : '🟡 ' + matchItem.matchedCount + ' su ' + matchItem.totalCount + ' ingredienti';
@@ -869,8 +867,8 @@ window.Views = (function () {
     var html = '<div class="recipe-card animate-fade-in" data-id="' + esc(r.id) + '">';
     html += '<div class="recipe-card__content">';
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.4rem">';
-    html += '<span class="recipe-card__category" style="background:' + esc(cat.color) + '22;color:' + esc(cat.color) + '">' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>';
-    html += '<span style="background:' + badgeColor + '22;color:' + badgeColor + ';font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px">' + esc(badgeText) + '</span>';
+    html += '<span class="recipe-card__category" style="' + categoryStyle(cat) + '">' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>';
+    html += '<span style="background:' + badgeColor + ';color:' + badgeTextColor + ';font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px">' + esc(badgeText) + '</span>';
     html += '</div>';
 
     html += '<h3 class="recipe-card__title" style="margin-bottom:.4rem">' + esc(r.name) + '</h3>';

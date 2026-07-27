@@ -88,7 +88,7 @@ body.search-open #app-content {
 
 #app-header .header-btn:hover {
   background: var(--bg-tertiary);
-  color: var(--primary);
+  color: var(--primary-ink);
   transform: scale(1.05);
 }
 
@@ -177,7 +177,7 @@ body.search-open #app-content {
 }
 
 .nav-item.active {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .nav-item.active::before {
@@ -270,7 +270,7 @@ body.search-open #app-content {
 }
 
 .search-bar input:focus ~ .search-icon {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .search-bar .search-clear {
@@ -337,7 +337,7 @@ body.search-open #app-content {
 
 .filter-chip:hover {
   border-color: var(--primary-light);
-  color: var(--primary);
+  color: var(--primary-ink);
   transform: translateY(-1px);
 }
 
@@ -347,7 +347,7 @@ body.search-open #app-content {
 
 .filter-chip.active {
   background: var(--gradient);
-  color: #FFFFFF;
+  color: var(--on-primary);
   border-color: transparent;
   box-shadow: 0 4px 14px var(--shadow);
 }
@@ -543,7 +543,7 @@ body.search-open #app-content {
 }
 
 .recipe-card__favorite.is-favorite {
-  color: #EF4444;
+  color: var(--danger);
   animation: heartBeat 0.6s ease;
 }
 
@@ -597,7 +597,7 @@ body.search-open #app-content {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--primary);
+  color: var(--primary-ink);
   background: var(--bg-tertiary);
   border-radius: var(--radius-full);
   width: fit-content;
@@ -714,7 +714,7 @@ body.search-open #app-content {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--primary);
+  color: var(--primary-ink);
   margin-top: 0;
   margin-bottom: var(--space-xs);
 }
@@ -749,7 +749,7 @@ body.search-open #app-content {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--primary);
+  color: var(--primary-ink);
   margin-top: 0;
   margin-bottom: var(--space-xs);
 }
@@ -791,7 +791,7 @@ body.search-open #app-content {
   width: 20px;
   height: 20px;
   font-size: 20px;
-  color: var(--primary);
+  color: var(--primary-ink);
   flex-shrink: 0;
 }
 
@@ -861,7 +861,7 @@ body.search-open #app-content {
 .recipe-detail__ingredients li.checked .ingredient-check {
   background: var(--gradient);
   border-color: transparent;
-  color: #FFFFFF;
+  color: var(--on-primary);
 }
 
 .recipe-detail__ingredients li.checked {
@@ -905,7 +905,7 @@ body.search-open #app-content {
   font-family: var(--font-heading);
   font-size: 0.85rem;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--on-primary);
   background: var(--gradient);
   border-radius: var(--radius-full);
   flex-shrink: 0;
@@ -958,7 +958,7 @@ body.search-open #app-content {
 }
 
 .ingredient-bullet {
-  color: var(--primary);
+  color: var(--primary-ink);
   font-weight: bold;
   flex-shrink: 0;
   margin-top: 1px;
@@ -988,7 +988,7 @@ body.search-open #app-content {
 
 .ingredient-item__qty {
   font-size: 0.88rem;
-  color: var(--primary);
+  color: var(--primary-ink);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1057,7 +1057,7 @@ body.search-open #app-content {
   font-family: var(--font-heading);
   font-size: 0.85rem;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--on-primary);
   background: var(--gradient);
   border-radius: var(--radius-full);
   flex-shrink: 0;
@@ -1116,7 +1116,7 @@ body.search-open #app-content {
 
 /* Primary */
 .btn--primary {
-  color: #FFFFFF;
+  color: var(--on-primary);
   background: var(--gradient);
   box-shadow: 0 4px 16px var(--shadow);
 }
@@ -1134,7 +1134,7 @@ body.search-open #app-content {
 
 /* Secondary */
 .btn--secondary {
-  color: var(--primary);
+  color: var(--primary-ink);
   background: var(--bg-tertiary);
   border: 1.5px solid var(--border);
 }
@@ -1148,7 +1148,7 @@ body.search-open #app-content {
 
 /* Danger */
 .btn--danger {
-  color: #FFFFFF;
+  color: var(--on-danger);
   background: var(--danger);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
 }
@@ -1166,7 +1166,7 @@ body.search-open #app-content {
 }
 
 .btn--ghost:hover {
-  color: var(--primary);
+  color: var(--primary-ink);
   background: var(--bg-tertiary);
 }
 
@@ -1203,7 +1203,7 @@ body.search-open #app-content {
   height: 60px;
   padding: 0;
   border-radius: var(--radius-full);
-  color: #FFFFFF;
+  color: var(--on-primary);
   background: var(--gradient);
   box-shadow: 0 6px 24px var(--shadow);
   font-size: 1.6rem;
@@ -1250,7 +1250,7 @@ body.search-open #app-content {
 }
 
 .form-group:focus-within .form-label {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .form-input,
@@ -1418,7 +1418,7 @@ body.search-open #app-content {
 }
 
 .form-group .file-drop-zone .drop-text strong {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .form-group .file-drop-zone input[type="file"] {
@@ -1453,7 +1453,7 @@ body.search-open #app-content {
 .image-upload__placeholder:hover {
   border-color: var(--primary);
   background: var(--bg-secondary);
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .image-upload__placeholder span {
@@ -1509,6 +1509,7 @@ body.search-open #app-content {
 
 .image-upload__remove:hover {
   background: var(--danger);
+  color: var(--on-danger);
   transform: scale(1.1);
 }
 
@@ -1567,7 +1568,7 @@ body.search-open #app-content {
   font-family: var(--font-heading);
   font-size: 0.8rem;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--on-primary);
   background: var(--gradient);
   border-radius: var(--radius-full);
 }
@@ -1616,7 +1617,7 @@ body.search-open #app-content {
   padding: 12px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--primary);
+  color: var(--primary-ink);
   background: transparent;
   border: 2px dashed var(--border);
   border-radius: var(--radius-md);
@@ -1816,7 +1817,7 @@ body.search-open #app-content {
 }
 
 .toast--info .toast-icon {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .toast .toast-message {
@@ -1857,7 +1858,7 @@ body.search-open #app-content {
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #FFFFFF;
+  color: var(--on-primary);
   background: var(--gradient);
   border-radius: var(--radius-full);
   line-height: 1.6;
@@ -1865,14 +1866,17 @@ body.search-open #app-content {
 
 .badge--success {
   background: var(--success);
+  color: var(--on-success);
 }
 
 .badge--warning {
   background: var(--warning);
+  color: var(--on-warning);
 }
 
 .badge--danger {
   background: var(--danger);
+  color: var(--on-danger);
 }
 
 .tag {
@@ -1882,7 +1886,7 @@ body.search-open #app-content {
   padding: 4px 12px;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--primary);
+  color: var(--primary-ink);
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
@@ -1893,7 +1897,7 @@ body.search-open #app-content {
 
 .tag:hover {
   background: var(--bg-secondary);
-  color: var(--primary-dark);
+  color: var(--primary-ink);
 }
 
 /* ============================================================
@@ -1918,7 +1922,7 @@ body.search-open #app-content {
   justify-content: center;
   border-radius: var(--radius-full);
   background: var(--bg-tertiary);
-  color: var(--primary);
+  color: var(--primary-ink);
   margin-bottom: var(--space-xl);
   position: relative;
 }
@@ -2067,23 +2071,6 @@ body.search-open #app-content {
   overflow: hidden;
 }
 
-/* Individual palette circles */
-.theme-option[data-palette="classico"] .theme-circle {
-  background: linear-gradient(135deg, #E85D3A, #FFA726);
-}
-
-.theme-option[data-palette="oceano"] .theme-circle {
-  background: linear-gradient(135deg, #0EA5E9, #06B6D4);
-}
-
-.theme-option[data-palette="bosco"] .theme-circle {
-  background: linear-gradient(135deg, #16A34A, #84CC16);
-}
-
-.theme-option[data-palette="tramonto"] .theme-circle {
-  background: linear-gradient(135deg, #A855F7, #EC4899);
-}
-
 .theme-option .theme-name {
   font-size: 0.7rem;
   font-weight: 600;
@@ -2097,7 +2084,7 @@ body.search-open #app-content {
 }
 
 .theme-option.active .theme-name {
-  color: var(--primary);
+  color: var(--primary-ink);
   font-weight: 700;
 }
 
@@ -2131,7 +2118,7 @@ body.search-open #app-content {
   justify-content: center;
   border-radius: var(--radius-sm);
   background: var(--bg-tertiary);
-  color: var(--primary);
+  color: var(--primary-ink);
   transition:
     background var(--transition-fast),
     color var(--transition-fast);
@@ -3048,12 +3035,12 @@ body.search-open #app-content {
 .form-steps-btn.active .step-num {
   background: var(--primary);
   border-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--on-primary);
   box-shadow: 0 0 10px rgba(232, 93, 58, 0.3);
 }
 
 .form-steps-btn.active .step-lbl {
-  color: var(--primary);
+  color: var(--primary-ink);
   font-weight: 700;
 }
 
@@ -3250,7 +3237,7 @@ body.search-open #app-content {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--primary);
+  color: var(--primary-ink);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -3289,7 +3276,7 @@ body.search-open #app-content {
 
 .cooking-modal__wakelock--active {
   background: rgba(16, 185, 129, 0.15);
-  color: #10B981;
+  color: var(--success);
   border: 1px solid rgba(16,185,129,0.25);
 }
 
@@ -3321,7 +3308,7 @@ body.search-open #app-content {
 
 .cooking-modal__close:hover {
   background: rgba(239,68,68,0.1);
-  color: #EF4444;
+  color: var(--danger);
   border-color: rgba(239,68,68,0.3);
   transform: rotate(90deg) scale(1.05);
 }
@@ -3355,7 +3342,7 @@ body.search-open #app-content {
 .cooking-modal__progress-pct {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .cooking-modal__progress-bar-bg {
@@ -3423,20 +3410,20 @@ body.search-open #app-content {
 
 .cooking-modal__dot:hover {
   border-color: var(--primary-light);
-  color: var(--primary);
+  color: var(--primary-ink);
   transform: scale(1.15);
 }
 
 .cooking-modal__dot--done {
   background: rgba(16,185,129,0.15);
   border-color: rgba(16,185,129,0.4);
-  color: #10B981;
+  color: var(--success);
 }
 
 .cooking-modal__dot--active {
   background: var(--gradient);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-primary);
   box-shadow: 0 2px 10px var(--shadow);
   transform: scale(1.2);
 }
@@ -3493,7 +3480,7 @@ body.search-open #app-content {
   align-items: center;
   gap: 6px;
   background: var(--gradient);
-  color: #fff;
+  color: var(--on-primary);
   font-size: 0.8rem;
   font-weight: 800;
   padding: 5px 14px;
@@ -3537,7 +3524,7 @@ body.search-open #app-content {
 .cooking-modal__step-notes strong {
   font-style: normal;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-ink);
   white-space: nowrap;
 }
 
@@ -3565,17 +3552,17 @@ body.search-open #app-content {
 }
 
 .cooking-modal__timer-display--running {
-  color: var(--primary);
+  color: var(--primary-ink);
   animation: timerPulse 1s ease-in-out infinite;
 }
 
 .cooking-modal__timer-display--warning {
-  color: #F59E0B;
+  color: var(--warning);
   animation: timerPulse 0.5s ease-in-out infinite;
 }
 
 .cooking-modal__timer-display--danger {
-  color: #EF4444;
+  color: var(--danger);
   animation: timerPulse 0.3s ease-in-out infinite;
 }
 
@@ -3611,7 +3598,7 @@ body.search-open #app-content {
 
 .cooking-modal__timer-btn:hover {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border-color: var(--primary);
   transform: scale(1.08);
 }
@@ -3620,13 +3607,14 @@ body.search-open #app-content {
 
 .cooking-modal__timer-btn--start {
   background: var(--gradient);
-  color: #fff;
+  color: var(--on-primary);
   border-color: transparent;
   box-shadow: 0 3px 10px var(--shadow);
 }
 
 .cooking-modal__timer-btn--start:hover {
-  background: var(--primary-dark);
+  background: var(--gradient);
+  filter: brightness(1.08);
   box-shadow: 0 5px 15px var(--shadow);
 }
 
@@ -3702,7 +3690,7 @@ body.search-open #app-content {
 .cooking-modal__ing-progress {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-ink);
   background: rgba(var(--primary-rgb, 232,93,58), 0.1);
   padding: 2px 8px;
   border-radius: var(--radius-full);
@@ -3770,7 +3758,7 @@ body.search-open #app-content {
 }
 
 .cooking-modal__ing-chip--checked .ing-chip-check {
-  color: #10B981;
+  color: var(--success);
 }
 
 .ing-chip-check {
@@ -3817,7 +3805,7 @@ body.search-open #app-content {
 .cooking-modal__nav-btn:hover:not(:disabled) {
   background: var(--bg-tertiary);
   border-color: var(--primary-light);
-  color: var(--primary);
+  color: var(--primary-ink);
   transform: translateY(-2px);
 }
 
@@ -3834,16 +3822,17 @@ body.search-open #app-content {
 .cooking-modal__nav-btn--primary {
   background: var(--gradient);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-primary);
   box-shadow: 0 4px 16px var(--shadow);
   flex: 1.5;
 }
 
 .cooking-modal__nav-btn--primary:hover:not(:disabled) {
-  background: var(--primary-dark);
+  background: var(--gradient);
+  filter: brightness(1.08);
   box-shadow: 0 6px 24px var(--shadow);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-primary);
 }
 
 /* ── Cooking: Finish overlay ── */
@@ -3977,7 +3966,7 @@ body.search-open #app-content {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .print-preview-modal__title {
@@ -4383,7 +4372,7 @@ body.search-open #app-content {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .share-modal__title {
@@ -4471,7 +4460,7 @@ body.search-open #app-content {
 .share-modal__action-btn:hover {
   background: var(--bg-secondary);
   border-color: var(--primary-light);
-  color: var(--primary);
+  color: var(--primary-ink);
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
@@ -4494,14 +4483,15 @@ body.search-open #app-content {
 .share-modal__action-btn--primary {
   background: var(--gradient);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-primary);
   box-shadow: 0 4px 14px var(--shadow);
 }
 
 .share-modal__action-btn--primary:hover {
-  background: var(--primary-dark);
+  background: var(--gradient);
+  filter: brightness(1.08);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-primary);
   box-shadow: 0 6px 20px var(--shadow);
 }
 
@@ -4560,7 +4550,7 @@ body.search-open #app-content {
 .share-modal__link-copy {
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-ink);
   cursor: pointer;
   white-space: nowrap;
   padding: 4px 10px;
@@ -4573,5 +4563,5 @@ body.search-open #app-content {
 
 .share-modal__link-copy:hover {
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
 }

@@ -24,9 +24,9 @@ window.Theme = {
     classico:  { light: '#E85D3A', dark: '#FF7F5C' },
     oceano:    { light: '#0EA5E9', dark: '#38BDF8' },
     bosco:     { light: '#16A34A', dark: '#4ADE80' },
-    tramonto:  { light: '#DB2777', dark: '#F472B6' },
+    tramonto:  { light: '#A855F7', dark: '#C084FC' },
     ametista:  { light: '#8B5CF6', dark: '#A78BFA' },
-    autunno:   { light: '#8C5A3C', dark: '#D4A373' },
+    autunno:   { light: '#A67C58', dark: '#D4A373' },
     zafferano: { light: '#D97706', dark: '#F59E0B' }
   },
 
@@ -141,13 +141,13 @@ window.Theme = {
 
   get PALETTES() {
     return [
-      { id: 'classico', label: 'Classico', gradient: 'linear-gradient(135deg,#E85D3A,#FFA726)' },
-      { id: 'oceano', label: 'Oceano', gradient: 'linear-gradient(135deg,#0EA5E9,#06B6D4)' },
-      { id: 'bosco', label: 'Bosco', gradient: 'linear-gradient(135deg,#16A34A,#84CC16)' },
-      { id: 'tramonto', label: 'Tramonto', gradient: 'linear-gradient(135deg,#A855F7,#EC4899)' },
-      { id: 'ametista', label: 'Ametista', gradient: 'linear-gradient(135deg,#8B5CF6,#A78BFA)' },
-      { id: 'autunno', label: 'Autunno', gradient: 'linear-gradient(135deg,#8C5A3C,#D4A373)' },
-      { id: 'zafferano', label: 'Zafferano', gradient: 'linear-gradient(135deg,#D97706,#F59E0B)' }
+      { id: 'classico', label: 'Classico', colors: ['#E85D3A', '#FFA726'], gradient: 'linear-gradient(135deg,#E85D3A,#FFA726)' },
+      { id: 'oceano', label: 'Oceano', colors: ['#0EA5E9', '#06B6D4'], gradient: 'linear-gradient(135deg,#0EA5E9,#06B6D4)' },
+      { id: 'bosco', label: 'Bosco', colors: ['#16A34A', '#84CC16'], gradient: 'linear-gradient(135deg,#16A34A,#84CC16)' },
+      { id: 'tramonto', label: 'Tramonto', colors: ['#A855F7', '#EC4899'], gradient: 'linear-gradient(135deg,#A855F7,#EC4899)' },
+      { id: 'ametista', label: 'Ametista', colors: ['#8B5CF6', '#EC4899'], gradient: 'linear-gradient(135deg,#8B5CF6,#EC4899)' },
+      { id: 'autunno', label: 'Autunno', colors: ['#A67C58', '#D4A373'], gradient: 'linear-gradient(135deg,#A67C58,#D4A373)' },
+      { id: 'zafferano', label: 'Zafferano', colors: ['#D97706', '#FBBF24'], gradient: 'linear-gradient(135deg,#D97706,#FBBF24)' }
     ];
   },
 
