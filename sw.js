@@ -1,9 +1,8 @@
-const CACHE_NAME = 'sapori-v38';
+const CACHE_NAME = 'sapori-v40';
 
-const STATIC_ASSETS = [
+const APP_SHELL = [
   './',
   './index.html',
-  './test.html',
   './manifest.json',
   './css/variables.css',
   './css/base.css',
@@ -18,72 +17,96 @@ const STATIC_ASSETS = [
   './js/share.js',
   './js/app.js',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon-maskable-192.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon-180.png'
 ];
 
-// Install — pre-cache static assets
-self.addEventListener('install', (event) => {
+function isCacheable(response) {
+  return Boolean(
+    response &&
+    response.ok &&
+    response.type === 'basic'
+  );
+}
+
+async function cacheResponse(request, response) {
+  if (!isCacheable(response)) return;
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(request, response.clone());
+}
+
+async function handleNavigation(request) {
+  try {
+    const response = await fetch(request);
+    const contentType = response.headers.get('content-type') || '';
+    if (isCacheable(response) && contentType.includes('text/html')) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put('./index.html', response.clone());
+    }
+    return response;
+  } catch (error) {
+    const cachedShell = await caches.match('./index.html');
+    return cachedShell || Response.error();
+  }
+}
+
+async function handleAsset(event) {
+  const request = event.request;
+  const cached = await caches.match(request);
+  const networkUpdate = fetch(request).then(async response => {
+    await cacheResponse(request, response);
+    return response;
+  });
+
+  if (cached) {
+    event.waitUntil(networkUpdate.catch(() => undefined));
+    return cached;
+  }
+
+  try {
+    return await networkUpdate;
+  } catch (error) {
+    return Response.error();
+  }
+}
+
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
   );
 });
 
-// Activate — clean old caches and claim clients
-self.addEventListener('activate', (event) => {
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
-      )
+      .then(keys => Promise.all(
+        keys
+          .filter(key => key.startsWith('sapori-') && key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch — network-first for navigation, cache-first for static assets
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-
-  // Skip non-GET requests
+self.addEventListener('fetch', event => {
+  const request = event.request;
   if (request.method !== 'GET') return;
 
-  // Navigation requests: network-first
+  const requestUrl = new URL(request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => caches.match('./index.html'))
-    );
+    event.respondWith(handleNavigation(request));
     return;
   }
 
-  // Static assets: cache-first
-  event.respondWith(
-    caches.match(request)
-      .then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
-      })
-      .catch(() => {
-        // Fallback for HTML navigation
-        if (request.headers.get('accept') && request.headers.get('accept').includes('text/html')) {
-          return caches.match('./index.html');
-        }
-      })
-  );
+  event.respondWith(handleAsset(event));
 });

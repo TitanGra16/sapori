@@ -1074,17 +1074,21 @@ window.Views = (function () {
     }
   }
 
-  function showConfirmModal(title, message, onConfirm) {
+  function showConfirmModal(title, message, onConfirm, options) {
     var esc = Utils.escapeHtml;
     var overlay = document.getElementById('modal-overlay');
+    options = options || {};
+    var cancelLabel = options.cancelLabel || 'Annulla';
+    var confirmLabel = options.confirmLabel || 'Conferma';
+    var confirmClass = options.confirmClass === 'btn--primary' ? 'btn--primary' : 'btn--danger';
 
     overlay.innerHTML =
       '<div class="modal animate-slide-up" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">' +
         '<div class="modal__header"><h3 id="confirm-modal-title">' + esc(title) + '</h3></div>' +
         '<div class="modal__body"><p>' + esc(message) + '</p></div>' +
         '<div class="modal__footer">' +
-          '<button type="button" class="btn btn--ghost" data-action="modal-cancel">Annulla</button>' +
-          '<button type="button" class="btn btn--danger" data-action="modal-confirm">Conferma</button>' +
+          '<button type="button" class="btn btn--ghost" data-action="modal-cancel">' + esc(cancelLabel) + '</button>' +
+          '<button type="button" class="btn ' + confirmClass + '" data-action="modal-confirm">' + esc(confirmLabel) + '</button>' +
         '</div>' +
       '</div>';
 

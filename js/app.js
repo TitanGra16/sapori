@@ -2159,16 +2159,83 @@
 
   /* ──────────────────── SERVICE WORKER ──────────────────── */
 
+  var pendingServiceWorker = null;
+  var promptedServiceWorker = null;
+  var updateReloadRequested = false;
+  var updatePromptTimer = null;
+
+  function offerServiceWorkerUpdate(worker) {
+    if (!worker || promptedServiceWorker === worker) return;
+    pendingServiceWorker = worker;
+
+    if (updatePromptTimer !== null) return;
+    updatePromptTimer = window.setTimeout(function tryToShowUpdate() {
+      updatePromptTimer = null;
+      if (!pendingServiceWorker) return;
+
+      if (modalOverlay && !modalOverlay.classList.contains('hidden')) {
+        updatePromptTimer = window.setTimeout(tryToShowUpdate, 1000);
+        return;
+      }
+
+      var workerToActivate = pendingServiceWorker;
+      pendingServiceWorker = null;
+      promptedServiceWorker = workerToActivate;
+      Views.showConfirmModal(
+        'Aggiornamento disponibile',
+        'È pronta una nuova versione di Sapori. Aggiorna ora per usare le ultime correzioni.',
+        function () {
+          updateReloadRequested = true;
+          Views.hideModal();
+          workerToActivate.postMessage({ type: 'SKIP_WAITING' });
+        },
+        {
+          cancelLabel: 'Più tardi',
+          confirmLabel: 'Aggiorna ora',
+          confirmClass: 'btn--primary'
+        }
+      );
+    }, 0);
+  }
+
   function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
-        .then(function (reg) {
-          console.log('Service Worker registrato con successo', reg.scope);
-        })
-        .catch(function (err) {
-          console.error('Registrazione Service Worker fallita:', err);
+    if (!('serviceWorker' in navigator)) return;
+
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!updateReloadRequested) return;
+      updateReloadRequested = false;
+      window.location.reload();
+    });
+
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then(function (reg) {
+        console.log('Service Worker registrato con successo', reg.scope);
+
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          offerServiceWorkerUpdate(reg.waiting);
+        }
+
+        reg.addEventListener('updatefound', function () {
+          var installingWorker = reg.installing;
+          if (!installingWorker) return;
+
+          installingWorker.addEventListener('statechange', function () {
+            if (
+              installingWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
+              offerServiceWorkerUpdate(installingWorker);
+            }
+          });
         });
-    }
+
+        reg.update().catch(function () {
+          // Il controllo automatico del browser riproverà al prossimo avvio.
+        });
+      })
+      .catch(function (err) {
+        console.error('Registrazione Service Worker fallita:', err);
+      });
   }
 
   /* ──────────────────── BOOT ──────────────────── */
