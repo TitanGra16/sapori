@@ -74,7 +74,7 @@ window.Views = (function () {
   function categoryChipsHTML(activeCategory) {
     var esc = Utils.escapeHtml;
     var html = '<div class="filter-bar">';
-    html += '<button type="button" class="filter-chip filter-chip--pantry" data-action="go-pantry" style="background:var(--gradient);color:var(--on-primary);font-weight:600;border:none;">' +
+    html += '<button type="button" class="filter-chip filter-chip--pantry" data-action="go-pantry">' +
               '👨‍🍳 Svuotafrigo</button>';
     html += '<button type="button" class="filter-chip' + (activeCategory === '' ? ' active' : '') + '" data-action="filter-category" data-category="" aria-pressed="' + (activeCategory === '') + '">' +
               '🍽️ Tutte</button>';
@@ -127,16 +127,18 @@ window.Views = (function () {
       sortBy: sortMap[filters.sortBy] || 'recent'
     });
 
-    var html = '<div class="view animate-fade-in">';
+    var html = '<div class="view home-view animate-fade-in">';
+    html += '<div class="home-toolbar">';
     html += categoryChipsHTML(filters.category);
     html += sortBarHTML(filters.sortBy);
+    html += '</div>';
 
     if (filtered.length > 0) {
       html += recipeGridHTML(filtered);
     } else if (recipes.length === 0) {
-      html += emptyStateHTML(Icons.bookOpen, 'Nessuna ricetta ancora!', 'Inizia creando la tua prima ricetta', 'Crea Ricetta', 'go-create');
+      html += emptyStateHTML(Icons.bookOpen, 'Il tuo ricettario è vuoto', 'Crea la prima ricetta e ritrovala qui, sempre ordinata.', 'Crea la prima ricetta', 'go-create');
     } else {
-      html += emptyStateHTML(Icons.searchLg, 'Nessun risultato', 'Prova a cambiare i filtri di ricerca', null, null);
+      html += emptyStateHTML(Icons.searchLg, 'Nessuna ricetta trovata', 'Prova a cambiare ricerca, categoria o ordinamento.', null, null);
     }
 
     html += '</div>';
@@ -161,10 +163,11 @@ window.Views = (function () {
       r.steps = [''];
     }
 
-    var html = '<div class="view animate-fade-in">';
-    html += '<div class="view-header" style="display:flex; align-items:center; gap:var(--space-sm);">';
-    html += '<button type="button" class="btn btn--icon" data-action="cancel-form" aria-label="Annulla e torna indietro" style="margin-right:var(--space-xs); border:1px solid var(--border); background:var(--glass-bg); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); color:var(--text-primary); width:40px; height:40px; border-radius:var(--radius-full); display:flex; align-items:center; justify-content:center; cursor:pointer;">' + Icons.arrowLeft + '</button>';
-    html += '<h1 class="view-header__title" style="margin:0;">' + esc(title) + '</h1></div>';
+    var html = '<div class="view form-view animate-fade-in">';
+    html += '<div class="view-header view-header--back">';
+    html += '<button type="button" class="btn btn--icon view-back-button" data-action="cancel-form" aria-label="Annulla e torna indietro">' + Icons.arrowLeft + '</button>';
+    html += '<h1 class="view-header__title">' + esc(title) + '</h1></div>';
+    html += '<div class="recipe-editor">';
     
     // Step Navigation Header
     html +=
@@ -342,15 +345,15 @@ window.Views = (function () {
 
     // Tab 3 Actions
     html +=
-      '<div class="form-tab-actions" style="display:flex;gap:.75rem;padding-top:.5rem">' +
+      '<div class="form-tab-actions form-tab-actions--submit">' +
         '<button type="button" class="btn btn--ghost" data-action="prev-tab" data-prev="tab-prep">Indietro</button>' +
-        '<button type="submit" class="btn btn--primary" style="flex:1">' + Icons.save + (isEdit ? ' Salva Modifiche' : ' Salva Ricetta') + '</button>' +
-        '<button type="button" class="btn btn--ghost" data-action="cancel-form" style="flex:0 0 auto">Annulla</button>' +
+        '<button type="button" class="btn btn--ghost" data-action="cancel-form">Annulla</button>' +
+        '<button type="submit" class="btn btn--primary btn--grow">' + Icons.save + (isEdit ? ' Salva modifiche' : ' Salva ricetta') + '</button>' +
       '</div>';
 
     html += '</div>'; // close tab-cook
 
-    html += '</form></div>';
+    html += '</form></div></div>';
     container.innerHTML = html;
   }
 
@@ -602,7 +605,7 @@ window.Views = (function () {
     var favs = recipes.filter(function (r) { return r.isFavorite; });
 
     var html = '<div class="view animate-fade-in">';
-    html += '<div class="view-header"><h1 class="view-header__title">I Miei Preferiti</h1></div>';
+    html += '<div class="view-header"><h1 class="view-header__title">Le mie ricette preferite</h1></div>';
 
     if (favs.length > 0) {
       html += recipeGridHTML(favs);
@@ -625,11 +628,12 @@ window.Views = (function () {
 
     var palettes = Theme.PALETTES;
 
-    var html = '<div class="view animate-fade-in">';
+    var html = '<div class="view settings-view animate-fade-in">';
     html += '<div class="view-header"><h1 class="view-header__title">Impostazioni</h1></div>';
+    html += '<div class="settings-grid">';
 
     // — CARD: Aspetto —
-    html += '<div class="settings-card">';
+    html += '<div class="settings-card settings-card--appearance">';
     html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.palette + '</span><h2 class="settings-card__title">Aspetto</h2></div>';
     html += '<div class="settings-card__body">';
     // Dark mode toggle
@@ -637,7 +641,7 @@ window.Views = (function () {
       '<div class="settings-item">' +
         '<div class="settings-item__info">' +
           '<div class="settings-item__label">Tema scuro</div>' +
-          '<div class="settings-item__description">Attiva la modalità scura per riposare gli occhi</div>' +
+          '<div class="settings-item__description">Riduce la luminosità e affatica meno gli occhi</div>' +
         '</div>' +
         '<div class="settings-item__control">' +
           '<label class="toggle-switch">' +
@@ -661,27 +665,27 @@ window.Views = (function () {
     html += '</div></div>';
     html += '</div></div>'; // close body + card
 
-    // — CARD: Gestione Categorie —
-    html += '<div class="settings-card">';
-    html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.bookOpen + '</span><h2 class="settings-card__title">Gestione Categorie</h2></div>';
+    // — CARD: Categorie —
+    html += '<div class="settings-card settings-card--categories">';
+    html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.bookOpen + '</span><h2 class="settings-card__title">Categorie</h2></div>';
     html += '<div class="settings-card__body">';
     
     // Categorie personalizzate esistenti
     html += '<div class="settings-item settings-item--column">';
     html += '<div class="settings-item__label">Le tue categorie</div>';
-    html += '<div class="custom-categories-list" style="display:flex; flex-wrap:wrap; gap:6px; margin: var(--space-sm) 0; width:100%;">';
+    html += '<div class="custom-categories-list">';
     
     var customCats = Recipes.CATEGORIES.filter(function (cat) {
       return cat.isCustom;
     });
     
     if (customCats.length === 0) {
-      html += '<p style="font-size:0.875rem; color:var(--text-muted); margin: 4px 0;">Non hai ancora creato categorie personalizzate.</p>';
+      html += '<p class="settings-empty-copy">Non hai ancora creato categorie personalizzate.</p>';
     } else {
       customCats.forEach(function (cat) {
-        html += '<div class="custom-cat-chip" style="display:inline-flex; align-items:center; gap:0.4rem; ' + categoryStyle(cat) + '; border:1px solid ' + esc(cat.color) + '; padding:6px 12px; border-radius:var(--radius-full); font-size:0.85rem; font-weight:600;">' +
+        html += '<div class="custom-cat-chip" style="' + categoryStyle(cat) + '; border-color:' + esc(cat.color) + '">' +
                   '<span>' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>' +
-                  '<button type="button" class="btn-delete-cat" data-action="delete-category" data-id="' + esc(cat.id) + '" aria-label="Elimina categoria ' + esc(cat.label) + '" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:inherit; width:32px; height:32px; margin-left:4px; opacity:0.8; transition:opacity var(--transition-fast);">' + Icons.x + '</button>' +
+                  '<button type="button" class="btn-delete-cat" data-action="delete-category" data-id="' + esc(cat.id) + '" aria-label="Elimina categoria ' + esc(cat.label) + '">' + Icons.x + '</button>' +
                 '</div>';
       });
     }
@@ -690,10 +694,10 @@ window.Views = (function () {
     // Form aggiungi categoria
     html += '<div class="settings-item settings-item--column">';
     html += '<div class="settings-item__label">Aggiungi nuova categoria</div>';
-    html += '<div class="add-category-form" style="display:flex; flex-wrap:wrap; gap:var(--space-sm); width:100%; margin-top:var(--space-xs);">';
-    html += '<input type="text" id="input-cat-label" class="form-input" maxlength="60" placeholder="Es. Ricette Veloci" style="flex:1; min-width:150px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem;">';
-    html += '<input type="text" id="input-cat-icon" class="form-input" maxlength="16" placeholder="Emoji (es. ⏱️)" style="width:100px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem; text-align:center;">';
-    html += '<select id="input-cat-color" class="form-select" style="width:120px; border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); font-size:0.9rem; background-color:var(--bg-secondary);">' +
+    html += '<div class="add-category-form">';
+    html += '<input type="text" id="input-cat-label" class="form-input add-category-form__name" maxlength="60" placeholder="Es. Ricette veloci" aria-label="Nome nuova categoria">';
+    html += '<input type="text" id="input-cat-icon" class="form-input add-category-form__icon" maxlength="16" placeholder="Emoji" aria-label="Emoji nuova categoria">';
+    html += '<select id="input-cat-color" class="form-select add-category-form__color" aria-label="Colore nuova categoria">' +
               '<option value="#E85D3A">Arancione</option>' +
               '<option value="#0EA5E9">Azzurro</option>' +
               '<option value="#16A34A">Verde</option>' +
@@ -701,21 +705,21 @@ window.Views = (function () {
               '<option value="#EC4899">Rosa</option>' +
               '<option value="#FBBF24">Giallo</option>' +
             '</select>';
-    html += '<button type="button" class="btn btn--secondary" data-action="add-category" style="padding:10px 20px; font-size:0.9rem; flex-shrink:0;">' + Icons.plus + ' Aggiungi</button>';
+    html += '<button type="button" class="btn btn--secondary add-category-form__submit" data-action="add-category">' + Icons.plus + ' Aggiungi</button>';
     html += '</div></div>';
     
     html += '</div></div>'; // close body + card
 
-    // — CARD: Gestione Dati —
-    html += '<div class="settings-card">';
-    html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.database + '</span><h2 class="settings-card__title">Gestione Dati</h2></div>';
+    // — CARD: Dati e backup —
+    html += '<div class="settings-card settings-card--data">';
+    html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.database + '</span><h2 class="settings-card__title">Dati e backup</h2></div>';
     html += '<div class="settings-card__body">';
-    html += '<div class="settings-warning-banner" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:var(--text-primary); padding:12px; border-radius:var(--radius-md); font-size:0.85rem; margin-bottom:var(--space-md); display:flex; gap:10px; align-items:flex-start;">' +
-              '<span style="font-size:1.2rem; line-height:1;">⚠️</span>' +
+    html += '<div class="settings-warning-banner">' +
+              '<span class="settings-warning-banner__icon">⚠️</span>' +
               '<div>' +
-                '<strong style="color:var(--text-primary); font-weight:700;">Nota sulla conservazione dei dati:</strong>' +
-                '<p style="color:var(--text-secondary); margin-top:4px; line-height:1.4;">' +
-                  'Le tue ricette sono salvate al 100% in locale sul browser. Se cancelli la cronologia di navigazione (compresi i cookie o i dati dei siti web), le ricette andranno perse definitivamente. Esporta regolarmente un <strong>Backup JSON</strong> per sicurezza.' +
+                '<strong>Proteggi il tuo ricettario</strong>' +
+                '<p>' +
+                  'Le ricette restano su questo dispositivo. Se cancelli i dati del browser, vengono eliminate: salva periodicamente un <strong>Backup JSON</strong>.' +
                 '</p>' +
               '</div>' +
             '</div>';
@@ -728,7 +732,7 @@ window.Views = (function () {
       '</div>';
     html +=
       '<div class="settings-actions">' +
-        '<button type="button" class="btn btn--secondary" data-action="export-pdf-all">' + Icons.download + ' Esporta PDF</button>' +
+        '<button type="button" class="btn btn--secondary" data-action="export-pdf-all">' + Icons.download + ' Ricettario PDF</button>' +
         '<button type="button" class="btn btn--secondary" data-action="export-data">' + Icons.download + ' Backup JSON</button>' +
         '<button type="button" class="btn btn--secondary" data-action="import-data">' + Icons.upload + ' Importa</button>' +
         '<input type="file" id="import-file-input" accept=".json,application/json" class="hidden">' +
@@ -736,7 +740,7 @@ window.Views = (function () {
     html += '</div></div>';
 
     // — CARD: Informazioni —
-    html += '<div class="settings-card">';
+    html += '<div class="settings-card settings-card--info">';
     html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.infoCircle + '</span><h2 class="settings-card__title">Informazioni</h2></div>';
     html += '<div class="settings-card__body">';
     html +=
@@ -761,9 +765,10 @@ window.Views = (function () {
         '</div>' +
       '</div>';
     html += '</div></div>';
+    html += '</div>'; // close settings-grid
 
     // Footer
-    html += '<div class="settings-footer"><p>Creato con cura in Italia</p></div>';
+    html += '<div class="settings-footer"><p>Creato con cura in Italia 🇮🇹</p></div>';
     html += '</div>';
 
     container.innerHTML = html;
@@ -779,56 +784,56 @@ window.Views = (function () {
     var recipes = await DB.getRecipeSummaries();
     var matches = Recipes.matchPantry(recipes, userIngredients);
 
-    var html = '<div class="view pantry-view animate-fade-in" style="padding-bottom:2rem">';
+    var html = '<div class="view pantry-view animate-fade-in">';
     
     // Header
-    html += '<div class="view-header" style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">';
-    html += '<button type="button" class="btn btn--icon" data-action="go-home" aria-label="Torna indietro" style="border:1px solid var(--border);background:var(--glass-bg);width:40px;height:40px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;">' + Icons.arrowLeft + '</button>';
-    html += '<div><h1 class="view-header__title" style="margin:0;font-size:1.5rem">👨‍🍳 Modalità Svuotafrigo</h1>';
-    html += '<p style="margin:0;font-size:.85rem;color:var(--text-muted)">Inserisci gli ingredienti che hai in casa per scoprire cosa cucinare</p></div></div>';
+    html += '<div class="view-header view-header--back pantry-header">';
+    html += '<button type="button" class="btn btn--icon view-back-button" data-action="go-home" aria-label="Torna indietro">' + Icons.arrowLeft + '</button>';
+    html += '<div class="pantry-header__copy"><h1 class="view-header__title">👨‍🍳 Svuotafrigo</h1>';
+    html += '<p class="view-header__subtitle">Scrivi ciò che hai in casa: ti mostriamo cosa puoi cucinare.</p></div></div>';
 
     // Input form for ingredients
-    html += '<div class="pantry-card" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem">';
-    html += '<form id="pantry-form" style="display:flex;gap:.5rem;margin-bottom:1rem">';
-    html += '<input type="text" id="pantry-input" class="form-input" placeholder="Es. uova, guanciale, mascarpone..." style="flex:1" autocomplete="off">';
+    html += '<div class="pantry-card">';
+    html += '<form id="pantry-form" class="pantry-input-row">';
+    html += '<input type="text" id="pantry-input" class="form-input" placeholder="Es. uova" autocomplete="off">';
     html += '<button type="submit" class="btn btn--primary" data-action="add-pantry-ingredient">' + Icons.plus + ' Aggiungi</button>';
     html += '</form>';
 
     // Quick suggestions
     var quicks = ['Uova', 'Farina', 'Latte', 'Pomodoro', 'Burro', 'Pasta', 'Riso', 'Carne', 'Zucchine', 'Patate', 'Formaggio', 'Olio'];
-    html += '<div style="margin-bottom:1rem"><span style="font-size:.75rem;color:var(--text-muted);display:block;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em">Suggerimenti rapidi:</span>';
-    html += '<div style="display:flex;flex-wrap:wrap;gap:.4rem">';
+    html += '<div class="pantry-suggestions"><span class="pantry-section-label">Suggerimenti rapidi</span>';
+    html += '<div class="pantry-suggestions__list">';
     quicks.forEach(function(q) {
       var isAdded = userIngredients.some(function(u){ return u.toLowerCase() === q.toLowerCase(); });
       if (!isAdded) {
-        html += '<button type="button" class="btn btn--ghost btn--small" data-action="add-quick-pantry" data-ingredient="' + esc(q) + '" style="font-size:.78rem;padding:4px 10px;border-radius:99px">+ ' + esc(q) + '</button>';
+        html += '<button type="button" class="pantry-quick-btn" data-action="add-quick-pantry" data-ingredient="' + esc(q) + '">+ ' + esc(q) + '</button>';
       }
     });
     html += '</div></div>';
 
     // Selected ingredient chips
     if (userIngredients.length > 0) {
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">';
-      html += '<span style="font-size:.85rem;font-weight:600">Ingredienti selezionati (' + userIngredients.length + '):</span>';
-      html += '<button type="button" class="btn btn--ghost btn--small" data-action="clear-pantry" style="color:var(--danger);font-size:.78rem">Pulisci tutti</button>';
+      html += '<div class="pantry-selected__header">';
+      html += '<span>Ingredienti selezionati (' + userIngredients.length + ')</span>';
+      html += '<button type="button" class="btn btn--ghost btn--small pantry-clear-btn" data-action="clear-pantry">Pulisci</button>';
       html += '</div>';
-      html += '<div style="display:flex;flex-wrap:wrap;gap:.5rem">';
+      html += '<div class="pantry-selected__list">';
       userIngredients.forEach(function(ing, idx) {
-        html += '<span class="pantry-chip" style="background:var(--primary);color:var(--on-primary);padding:6px 12px;border-radius:99px;font-size:.85rem;font-weight:500;display:inline-flex;align-items:center;gap:.4rem">';
+        html += '<span class="pantry-chip">';
         html += esc(ing);
-        html += '<button type="button" data-action="remove-pantry-ingredient" data-index="' + idx + '" aria-label="Rimuovi ' + esc(ing) + '" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;display:flex;align-items:center">' + Icons.x + '</button>';
+        html += '<button type="button" data-action="remove-pantry-ingredient" data-index="' + idx + '" aria-label="Rimuovi ' + esc(ing) + '">' + Icons.x + '</button>';
         html += '</span>';
       });
       html += '</div>';
     } else {
-      html += '<div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.85rem;font-style:italic">Nessun ingrediente inserito. Aggiungine uno per iniziare la ricerca!</div>';
+      html += '<p class="pantry-empty-copy">Aggiungi almeno un ingrediente per iniziare la ricerca.</p>';
     }
 
     html += '</div>'; // close pantry-card
 
     // Results section
     if (userIngredients.length === 0) {
-      html += emptyStateHTML(Icons.searchLg, 'Svuota la tua dispensa!', 'Aggiungi gli ingredienti che hai a disposizione per trovare ricette gustose', null, null);
+      html += emptyStateHTML(Icons.searchLg, 'Trova la ricetta giusta', 'Aggiungi ciò che hai in casa e confrontalo con il tuo ricettario.', null, null);
     } else if (matches.length === 0) {
       html += emptyStateHTML(Icons.frown, 'Nessuna ricetta trovata', 'Nessuna ricetta nel tuo ricettario contiene gli ingredienti selezionati', null, null);
     } else {

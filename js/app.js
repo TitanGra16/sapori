@@ -652,9 +652,11 @@
     if (visible) {
       header.classList.remove('hidden');
       bottomNav.classList.remove('hidden');
+      document.body.classList.remove('app-chrome-hidden');
     } else {
       header.classList.add('hidden');
       bottomNav.classList.add('hidden');
+      document.body.classList.add('app-chrome-hidden');
     }
   }
 

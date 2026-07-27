@@ -56,8 +56,8 @@ npm run test:e2e
 ```
 
 `npm run test:all` esegue controlli statici, test unitari e test browser.
-Playwright prova i flussi principali sia in viewport desktop sia mobile; lo
-stesso comando può essere usato in una pipeline CI.
+Playwright prova i flussi principali su telefono compatto, smartphone moderno,
+tablet e desktop; lo stesso comando può essere usato in una pipeline CI.
 
 ## Struttura
 

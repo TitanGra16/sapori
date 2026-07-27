@@ -29,6 +29,17 @@ async function fillMinimumRecipe(page, name = 'Ricetta automatica') {
   await page.getByRole('button', { name: 'Salva Ricetta' }).click();
 }
 
+async function expectNoHorizontalOverflow(page) {
+  const dimensions = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    content: Math.max(
+      document.documentElement.scrollWidth,
+      document.body ? document.body.scrollWidth : 0
+    )
+  }));
+  expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport + 1);
+}
+
 test.beforeEach(async ({ page }) => {
   await openCleanApp(page);
 });
@@ -125,7 +136,7 @@ test('protegge una bozza e intrappola il focus nella conferma', async ({ page })
 
   await page.getByRole('button', { name: 'Annulla e torna indietro' }).click();
   await dialog.getByRole('button', { name: 'Conferma' }).click();
-  await expect(page.getByRole('heading', { name: 'Nessuna ricetta ancora!' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Il tuo ricettario è vuoto' })).toBeVisible();
 });
 
 test('applica tema e palette dalle impostazioni', async ({ page }) => {
@@ -186,4 +197,41 @@ test('tutte le palette rispettano il contrasto AA nei due temi', async ({ page }
 
     await page.locator('label.toggle-switch').click();
   }
+});
+
+test('adatta box e navigazione senza overflow al viewport corrente', async ({ page }) => {
+  const viewport = page.viewportSize();
+  await expectNoHorizontalOverflow(page);
+
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await expect(page.getByRole('heading', { name: 'Impostazioni' })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  const settingsView = await page.locator('.settings-view').boundingBox();
+  expect(settingsView.width).toBeLessThanOrEqual(1160);
+  const navigation = await page.locator('#bottom-nav').boundingBox();
+  if (viewport.width >= 1024) {
+    expect(navigation.y).toBeLessThan(80);
+    const dataCard = await page.locator('.settings-card--data').boundingBox();
+    const infoCard = await page.locator('.settings-card--info').boundingBox();
+    expect(Math.abs(dataCard.y - infoCard.y)).toBeLessThanOrEqual(1);
+  } else {
+    expect(navigation.y + navigation.height).toBeGreaterThan(viewport.height - 2);
+  }
+
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: '👨‍🍳 Svuotafrigo' }).click();
+  await expect(page.getByRole('heading', { name: '👨‍🍳 Svuotafrigo' })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  const pantryHeader = await page.locator('.pantry-header').boundingBox();
+  expect(pantryHeader.y).toBeLessThan(100);
+
+  await page.getByRole('button', { name: 'Torna indietro' }).click();
+  await page.getByRole('button', { name: 'Nuova ricetta' }).click();
+  await expect(page.getByRole('heading', { name: 'Nuova Ricetta' })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  const editor = await page.locator('.recipe-editor').boundingBox();
+  const formHeader = await page.locator('.form-view > .view-header').boundingBox();
+  expect(editor.width).toBeLessThanOrEqual(880);
+  expect(formHeader.y).toBeLessThan(100);
 });
