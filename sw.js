@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sapori-v45';
+const CACHE_NAME = 'sapori-v46';
 
 const APP_SHELL = [
   './',

@@ -738,6 +738,7 @@
     var category = document.getElementById('input-category').value;
     var description = (document.getElementById('input-description').value || '').trim();
     var notes = (document.getElementById('input-notes').value || '').trim();
+    var storage = (document.getElementById('input-storage').value || '').trim();
     var imageData = document.getElementById('input-image-data').value || '';
     var imageThumbnailData = document.getElementById('input-image-thumbnail-data').value || '';
     var prepTime = readInteger('input-preptime', 0);
@@ -774,6 +775,7 @@
       category: category,
       description: description,
       notes: notes,
+      storage: storage,
       ingredients: ingredients,
       steps: steps,
       prepTime: prepTime,
@@ -839,6 +841,7 @@
       if (current.difficulty && current.difficulty !== emptyDefaults.difficulty) return true;
       if (current.description && current.description.trim() !== '') return true;
       if (current.notes && current.notes.trim() !== '') return true;
+      if (current.storage && current.storage.trim() !== '') return true;
       if (current.image) return true;
       if (current.prepTime) return true;
       if (current.cookTime) return true;
@@ -865,6 +868,7 @@
       if ((current.category || '') !== (original.category || '')) return true;
       if ((current.description || '') !== (original.description || '')) return true;
       if ((current.notes || '') !== (original.notes || '')) return true;
+      if ((current.storage || '') !== (original.storage || '')) return true;
       if ((current.image || '') !== (original.image || '')) return true;
       if ((current.prepTime || '') != (original.prepTime || '')) return true;
       if ((current.cookTime || '') != (original.cookTime || '')) return true;
@@ -909,6 +913,7 @@
     category: { spanId: 'error-category', tab: 'tab-info' },
     description: { spanId: 'error-description', tab: 'tab-info' },
     notes: { spanId: 'error-notes', tab: 'tab-info' },
+    storage: { spanId: 'error-storage', tab: 'tab-info' },
     prepTime: { spanId: 'error-preptime', tab: 'tab-cook' },
     cookTime: { spanId: 'error-cooktime', tab: 'tab-cook' },
     servings: { spanId: 'error-servings', tab: 'tab-cook' },

@@ -439,7 +439,7 @@ window.DB = {
       return Number.isFinite(number) && Number.isInteger(number) ? number : fallback;
     };
     const limits = window.Recipes ? window.Recipes.LIMITS : {
-      name: 120, description: 2000, notes: 4000, ingredients: 100,
+      name: 120, description: 2000, notes: 4000, storage: 1000, ingredients: 100,
       ingredientName: 160, ingredientQuantity: 50, ingredientNotes: 500,
       steps: 100, stepText: 2000, stepNotes: 1000
     };
@@ -476,6 +476,7 @@ window.DB = {
       category,
       description: asString(recipe.description, limits.description),
       notes: asString(recipe.notes, limits.notes),
+      storage: asString(recipe.storage, limits.storage),
       ingredients,
       steps,
       prepTime: asInteger(recipe.prepTime, 0),

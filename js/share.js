@@ -569,6 +569,10 @@
         lines.push('');
         lines.push('📝 Note: ' + recipe.notes);
       }
+      if (recipe.storage) {
+        lines.push('');
+        lines.push('🧊 Conservazione: ' + recipe.storage);
+      }
       lines.push('');
       lines.push('—');
       lines.push('Creata con Sapori. Le ricette dell’app restano salvate localmente sul dispositivo.');

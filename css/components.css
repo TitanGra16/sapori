@@ -4295,6 +4295,10 @@ body.search-open #app-content {
   margin-top: 2em;
 }
 
+.print-recipe-sheet__aftercare--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .print-recipe-sheet__notes,
 .print-recipe-sheet__storage {
   padding: 1em;

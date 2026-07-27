@@ -13,6 +13,7 @@ async function fillMinimumRecipeForm(page, name = 'Ricetta automatica') {
   await page.getByRole('textbox', { name: 'Nome ricetta' }).fill(name);
   await page.getByRole('textbox', { name: 'Descrizione' }).fill('Descrizione creata dal test end-to-end.');
   await page.getByRole('textbox', { name: 'Note' }).fill('Note conservate.');
+  await page.getByRole('textbox', { name: 'Conservazione' }).fill('In frigorifero per 2 giorni.');
 
   await page.getByRole('tab', { name: 'Ingredienti e preparazione' }).click();
   await page.getByRole('textbox', { name: 'Ingrediente *', exact: true }).fill('Farina');
@@ -51,6 +52,7 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
   await page.getByRole('link', { name: 'Apri la ricetta Ricetta automatica' }).click();
   await expect(page.getByRole('heading', { name: 'Ricetta automatica', level: 1 })).toBeVisible();
   await expect(page.getByText('Note conservate.')).toBeVisible();
+  await expect(page.getByText('In frigorifero per 2 giorni.')).toBeVisible();
   await expect(page.getByText('Farina')).toBeVisible();
 
   await page.getByRole('button', { name: 'Esporta PDF' }).click();

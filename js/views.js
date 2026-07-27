@@ -234,8 +234,15 @@ window.Views = (function () {
     html +=
       '<div class="form-group">' +
         '<label class="form-label" for="input-notes">Note</label>' +
-        '<textarea class="form-textarea" id="input-notes" maxlength="' + Recipes.LIMITS.notes + '" rows="3" placeholder="Annotazioni personali, consigli di conservazione, varianti...">' + esc(r.notes || '') + '</textarea>' +
+        '<textarea class="form-textarea" id="input-notes" maxlength="' + Recipes.LIMITS.notes + '" rows="3" placeholder="Annotazioni personali, consigli e varianti...">' + esc(r.notes || '') + '</textarea>' +
         '<span class="form-error" id="error-notes"></span>' +
+      '</div>';
+
+    html +=
+      '<div class="form-group">' +
+        '<label class="form-label" for="input-storage">Conservazione</label>' +
+        '<textarea class="form-textarea" id="input-storage" maxlength="' + Recipes.LIMITS.storage + '" rows="2" placeholder="Es. In frigorifero per 2 giorni, in contenitore ermetico...">' + esc(r.storage || '') + '</textarea>' +
+        '<span class="form-error" id="error-storage"></span>' +
       '</div>';
 
     // Immagine
@@ -509,6 +516,14 @@ window.Views = (function () {
           ? '<p>' + esc(recipe.notes) + '</p>' 
           : '<div class="print-dotted-line"></div><div class="print-dotted-line"></div><div class="print-dotted-line"></div>') +
       '</div>';
+
+    if (recipe.storage) {
+      html +=
+        '<div class="recipe-detail__section recipe-detail__notes-section recipe-detail__storage-section">' +
+          '<h3 class="recipe-detail__notes-title">Conservazione</h3>' +
+          '<p>' + esc(recipe.storage) + '</p>' +
+        '</div>';
+    }
 
     // Wrap ingredients and steps in a layout container for desktop side-by-side / cookbook print layout
     html += '<div class="recipe-detail__body-layout">';
@@ -1213,6 +1228,9 @@ window.Views = (function () {
     var notesHtml = recipe.notes
       ? '<p class="print-recipe-sheet__notes-text">' + esc(recipe.notes) + '</p>'
       : '<div class="print-recipe-sheet__writing-lines" aria-label="Spazio per annotazioni"><span></span><span></span><span></span></div>';
+    var storageHtml = recipe.storage
+      ? '<section class="print-recipe-sheet__storage"><h2>Conservazione</h2><p class="print-recipe-sheet__notes-text">' + esc(recipe.storage) + '</p></section>'
+      : '';
     var photoHtml = recipe.image
       ? '<figure class="print-recipe-sheet__photo"><img src="' + esc(recipe.image) + '" alt="Foto di ' + esc(recipe.name) + '"></figure>'
       : '';
@@ -1249,14 +1267,11 @@ window.Views = (function () {
           '<h2>Preparazione</h2>' +
           '<ol class="print-recipe-sheet__steps">' + stepsHtml + '</ol>' +
         '</section>' +
-        '<div class="print-recipe-sheet__aftercare">' +
+        '<div class="print-recipe-sheet__aftercare' + (storageHtml ? '' : ' print-recipe-sheet__aftercare--single') + '">' +
           '<section class="print-recipe-sheet__notes">' +
             '<h2>Note</h2>' + notesHtml +
           '</section>' +
-          '<section class="print-recipe-sheet__storage">' +
-            '<h2>Conservazione</h2>' +
-            '<div class="print-recipe-sheet__writing-lines" aria-label="Spazio per indicazioni di conservazione"><span></span><span></span><span></span></div>' +
-          '</section>' +
+          storageHtml +
         '</div>' +
         '<footer class="print-recipe-sheet__footer">' +
           '<span>Stampato il ' + esc(printedOn) + '</span>' +

@@ -8,6 +8,7 @@ window.Recipes = {
     name: 120,
     description: 2000,
     notes: 4000,
+    storage: 1000,
     ingredients: 100,
     ingredientName: 160,
     ingredientQuantity: 50,
@@ -79,6 +80,12 @@ window.Recipes = {
       errors.notes = 'Le note devono essere testo';
     } else if (recipe.notes && recipe.notes.length > limits.notes) {
       errors.notes = `Le note non possono superare ${limits.notes} caratteri`;
+    }
+
+    if (recipe.storage !== undefined && recipe.storage !== null && typeof recipe.storage !== 'string') {
+      errors.storage = 'Le indicazioni di conservazione devono essere testo';
+    } else if (recipe.storage && recipe.storage.length > limits.storage) {
+      errors.storage = `Le indicazioni di conservazione non possono superare ${limits.storage} caratteri`;
     }
 
     // Category: must be one of CATEGORIES
@@ -313,6 +320,8 @@ window.Recipes = {
       name: '',
       category: 'altro',
       description: '',
+      notes: '',
+      storage: '',
       ingredients: [{ name: '', quantity: '', unit: '' }],
       steps: [''],
       prepTime: 0,
@@ -358,6 +367,7 @@ window.Recipes = {
       category: recipe.category || 'altro',
       description: recipe.description || '',
       notes: recipe.notes || '',
+      storage: recipe.storage || '',
       ingredients: [],
       steps: [],
       prepTime: typeof recipe.prepTime === 'number' ? recipe.prepTime : 0,

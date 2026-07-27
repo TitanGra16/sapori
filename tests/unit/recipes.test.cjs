@@ -9,6 +9,7 @@ function makeRecipe(overrides = {}) {
     category: 'primi',
     description: '',
     notes: '',
+    storage: '',
     ingredients: [{ name: 'Pomodoro', quantity: '200', unit: 'g', notes: '' }],
     steps: [{ text: 'Cuoci la pasta', notes: '' }],
     prepTime: 10,
@@ -94,15 +95,17 @@ test('le quantità frazionarie vengono scalate correttamente', () => {
   assert.equal(Utils.scaleQuantity('q.b.', 2), 'q.b.');
 });
 
-test('l’export conserva note di ricetta, ingredienti e passaggi', () => {
+test('l’export conserva note, conservazione, ingredienti e passaggi', () => {
   const { Recipes } = loadAppScripts(['js/recipes.js']);
   const exported = Recipes.formatRecipeForExport(makeRecipe({
     notes: 'Nota ricetta',
+    storage: 'In frigorifero per 2 giorni',
     ingredients: [{ name: 'Farina', notes: 'setacciata' }],
     steps: [{ text: 'Mescola', notes: 'senza grumi' }]
   }));
 
   assert.equal(exported.notes, 'Nota ricetta');
+  assert.equal(exported.storage, 'In frigorifero per 2 giorni');
   assert.equal(exported.ingredients[0].notes, 'setacciata');
   assert.equal(exported.steps[0].notes, 'senza grumi');
 });
