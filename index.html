@@ -6,6 +6,8 @@
   <title>Sapori — Il Tuo Ricettario Personale</title>
   <meta name="description" content="Crea e salva le tue ricette personali italiane. Un ricettario digitale sempre disponibile, anche offline.">
   <meta name="author" content="Sapori">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 
   <!-- PWA Meta -->
   <meta name="theme-color" content="#E85D3A">
@@ -16,21 +18,8 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180.png">
   <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 
-  <!-- FOUC Prevention — must run before CSS loads -->
-  <script>
-    (function(){
-      var t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
-      var p='classico';
-      try {
-        var savedTheme=localStorage.getItem('sapori-theme');
-        var savedPalette=localStorage.getItem('sapori-palette');
-        if(savedTheme==='light'||savedTheme==='dark')t=savedTheme;
-        if(['classico','oceano','bosco','tramonto','ametista','autunno','zafferano'].indexOf(savedPalette)!==-1)p=savedPalette;
-      } catch(e) {}
-      document.documentElement.setAttribute('data-theme',t);
-      document.documentElement.setAttribute('data-palette',p);
-    })();
-  </script>
+  <!-- FOUC prevention must run before CSS loads. -->
+  <script src="./js/bootstrap-theme.js"></script>
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="./css/variables.css">
