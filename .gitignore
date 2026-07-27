@@ -1,13 +1,3 @@
 node_modules/
-.DS_Store
-Thumbs.db
-*.log
-.env
-.env.local
-.vscode/
-*.swp
-*.swo
-*~
-.idea/
-dist/
-build/
+playwright-report/
+test-results/

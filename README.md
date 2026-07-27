@@ -1,77 +1,102 @@
-# 🍴 Sapori — Il Tuo Ricettario Personale
+# 🍴 Sapori — Il tuo ricettario personale
 
-**Sapori** è una Progressive Web App (PWA) per gestire le tue ricette preferite. Funziona offline, è installabile su qualsiasi dispositivo e salva tutti i dati localmente.
+Sapori è una Progressive Web App in italiano per creare, organizzare, cucinare,
+stampare e condividere ricette. Funziona offline e conserva ricette e
+preferenze esclusivamente nel browser tramite IndexedDB.
 
-🚀 **Provala subito online:** [https://titangra16.github.io/sapori/](https://titangra16.github.io/sapori/)
+Provala online: [titangra16.github.io/sapori](https://titangra16.github.io/sapori/)
 
-## ✨ Funzionalità
+## Funzionalità
 
-- 📝 **Crea e modifica ricette** con ingredienti, passaggi, foto e altro
-- 🔍 **Cerca e filtra** per nome, categoria o ordinamento
-- ❤️ **Preferiti** per tenere a portata di mano le ricette del cuore
-- 📸 **Foto delle ricette** con compressione automatica
-- 🌙 **Tema scuro** e palette colori personalizzabili
-- 📦 **Esporta e importa** le tue ricette in formato JSON
-- 📱 **Installabile** come app su smartphone e desktop
-- 🔒 **Offline** — funziona senza connessione internet
-- 🇮🇹 **Interfaccia in italiano**
+- Creazione e modifica con ingredienti, quantità, note, passaggi e foto.
+- Ricerca senza distinzione di accenti su nome, descrizione, note e preparazione.
+- Filtri per categoria, preferiti e ordinamento.
+- Modalità Svuotafrigo con confronto per ingredienti.
+- Modalità cottura con timer, avanzamento, wake lock e controlli da tastiera.
+- Tema chiaro/scuro e sette palette con contrasti accessibili.
+- Cartolina di condivisione, testo completo e file JSON portabile.
+- Anteprima A4, stampa della singola ricetta e ricettario completo.
+- Backup versione 2 con ricette, note, categorie personalizzate e tema.
+- Installazione PWA, uso offline e aggiornamenti senza versioni miste in cache.
 
-## 📱 Installazione come PWA
+## Dati e backup
 
-### Su smartphone (Android / iOS)
-1. Apri l'app nel browser (Chrome, Safari, Edge)
-2. Tocca il menu del browser (⋮ o condividi)
-3. Seleziona **"Aggiungi alla schermata Home"** / **"Installa app"**
-4. Conferma l'installazione
+Le ricette non vengono inviate a un server: restano nel database locale del
+browser. Cancellare i dati del sito o usare una pulizia completa del browser può
+eliminarle. È quindi consigliato creare periodicamente un **Backup JSON** dalla
+pagina Impostazioni.
 
-### Su desktop (Chrome / Edge)
-1. Apri l'app nel browser
-2. Clicca sull'icona di installazione nella barra degli indirizzi
-3. Conferma l'installazione
+L’importazione mostra un’anteprima e permette di:
 
-## 🛠️ Tecnologie
+- unire dati, aggiornando gli ID esistenti e ignorando i duplicati;
+- sostituire il ricettario in una singola transazione;
+- ripristinare categorie personalizzate e preferenze del tema.
 
-| Tecnologia | Utilizzo |
-|---|---|
-| **HTML5** | Struttura semantica |
-| **CSS3** | Custom Properties, Grid, Flexbox, animazioni |
-| **JavaScript ES6+** | Logica applicativa, moduli |
-| **IndexedDB** | Database locale per ricette e impostazioni |
-| **Service Worker** | Cache offline e strategia di aggiornamento |
-| **Web App Manifest** | Installabilità PWA |
+## Avvio locale
 
-## 📁 Struttura del progetto
+Il progetto non richiede una build. Serve però un server HTTP, perché service
+worker e PWA non funzionano aprendo direttamente `index.html` dal filesystem.
 
+```bash
+python -m http.server 8000
 ```
-cucina/
-├── index.html          # Shell dell'applicazione SPA
-├── manifest.json       # Manifest PWA
-├── sw.js               # Service Worker
+
+Poi apri `http://127.0.0.1:8000/`.
+
+## Test e controlli
+
+Richiede Node.js 22 o successivo.
+
+```bash
+npm install
+npx playwright install chromium
+npm run check
+npm test
+npm run test:e2e
+```
+
+`npm run test:all` esegue controlli statici, test unitari e test browser.
+Playwright prova i flussi principali sia in viewport desktop sia mobile; lo
+stesso comando può essere usato in una pipeline CI.
+
+## Struttura
+
+```text
+sapori/
+├── index.html
+├── manifest.json
+├── sw.js
 ├── css/
-│   ├── variables.css   # Variabili CSS e temi
-│   ├── base.css        # Stili base e reset
-│   ├── components.css  # Componenti UI
-│   └── animations.css  # Animazioni e transizioni
+│   ├── variables.css
+│   ├── base.css
+│   ├── components.css
+│   └── animations.css
 ├── js/
-│   ├── db.js           # Modulo IndexedDB
-│   ├── utils.js        # Utility e helpers
-│   ├── theme.js        # Gestione temi
-│   ├── recipes.js      # Logica ricette e validazione
-│   ├── views.js        # Rendering delle viste
-│   └── app.js          # Controller principale
-└── icons/
-    ├── icon-192.png    # Icona PWA 192x192
-    └── icon-512.png    # Icona PWA 512x512
+│   ├── bootstrap-theme.js
+│   ├── db.js
+│   ├── utils.js
+│   ├── theme.js
+│   ├── recipes.js
+│   ├── icons.js
+│   ├── views.js
+│   ├── share.js
+│   └── app.js
+├── icons/
+├── scripts/
+└── tests/
+    ├── unit/
+    └── e2e/
 ```
 
-## 📸 Screenshot
+## Sicurezza e compatibilità
 
-> _Aggiungi qui gli screenshot dell'app_
+- I contenuti inseriti dall’utente vengono sottoposti a escaping prima del rendering.
+- Le immagini accettate sono JPEG, PNG o WebP e vengono validate e compresse.
+- La Content Security Policy consente script e connessioni solo dalla stessa origine.
+- I font sono locali al sistema, quindi l’interfaccia non dipende da servizi esterni.
+- Le aree sicure iOS, la tastiera, il focus nelle modali e le preferenze di movimento
+  ridotto sono gestite dall’interfaccia.
 
-## 📄 Licenza
+## Licenza
 
-Distribuito sotto licenza [MIT](https://opensource.org/licenses/MIT).
-
----
-
-Creato con ❤️ in Italia
+Distribuito con licenza [MIT](./LICENSE).

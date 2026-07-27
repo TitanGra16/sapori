@@ -1,0 +1,16 @@
+{
+  "name": "sapori",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PWA locale per creare, organizzare e condividere ricette.",
+  "scripts": {
+    "check": "node scripts/check-project.cjs",
+    "test": "node --test tests/unit/*.test.cjs",
+    "test:e2e": "playwright test",
+    "test:all": "npm run check && npm test && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "fake-indexeddb": "6.2.5"
+  }
+}
