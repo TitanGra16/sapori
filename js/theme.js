@@ -115,6 +115,11 @@ window.Theme = {
     this.currentMode = isDark ? 'dark' : 'light';
     this.apply();
 
+    // Scritto anche su localStorage: e' l'unico storage leggibile in modo
+    // sincrono dallo script anti-FOUC in <head> di index.html, prima ancora
+    // che DB.init()/Theme.init() (asincroni) possano applicare il tema reale.
+    localStorage.setItem('sapori-theme', this.currentMode);
+
     try {
       await window.DB.setSetting('themeMode', this.currentMode);
     } catch (e) {
@@ -150,6 +155,9 @@ window.Theme = {
 
     this.currentPalette = paletteName;
     this.apply();
+
+    // Vedi commento in setDarkMode: serve anche qui allo script anti-FOUC.
+    localStorage.setItem('sapori-palette', this.currentPalette);
 
     try {
       await window.DB.setSetting('themePalette', this.currentPalette);

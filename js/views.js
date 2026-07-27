@@ -108,10 +108,10 @@ window.Views = (function () {
     var sortMap = {
       'recent': 'recent',
       'oldest': 'oldest',
-      'name-az': 'name-az',
-      'name-za': 'name-za',
-      'time-asc': 'time-asc',
-      'time-desc': 'time-desc'
+      'name-az': 'name_asc',
+      'name-za': 'name_desc',
+      'time-asc': 'time_asc',
+      'time-desc': 'time_desc'
     };
 
     var filtered = Recipes.filterRecipes(recipes, {
@@ -302,6 +302,7 @@ window.Views = (function () {
       '<div class="form-group">' +
         '<label class="form-label" for="input-preptime">Tempo preparazione (minuti)</label>' +
         '<input type="number" class="form-input" id="input-preptime" min="0" placeholder="0" value="' + (r.prepTime || '') + '">' +
+        '<span class="form-error" id="error-preptime"></span>' +
       '</div>';
 
     // Tempo cottura
@@ -309,6 +310,7 @@ window.Views = (function () {
       '<div class="form-group">' +
         '<label class="form-label" for="input-cooktime">Tempo cottura (minuti)</label>' +
         '<input type="number" class="form-input" id="input-cooktime" min="0" placeholder="0" value="' + (r.cookTime || '') + '">' +
+        '<span class="form-error" id="error-cooktime"></span>' +
       '</div>';
 
     // Difficoltà
@@ -320,13 +322,14 @@ window.Views = (function () {
       var sel = r.difficulty === d.id ? ' selected' : '';
       html += '<option value="' + esc(d.id) + '"' + sel + '>' + esc(d.emoji) + ' ' + esc(d.label) + '</option>';
     });
-    html += '</select></div>';
+    html += '</select><span class="form-error" id="error-difficulty"></span></div>';
 
     // Porzioni
     html +=
       '<div class="form-group">' +
         '<label class="form-label" for="input-servings">Porzioni</label>' +
         '<input type="number" class="form-input" id="input-servings" min="1" placeholder="4" value="' + (r.servings || '') + '">' +
+        '<span class="form-error" id="error-servings"></span>' +
       '</div>';
 
     // Tab 3 Actions
@@ -378,7 +381,9 @@ window.Views = (function () {
         '<span class="step-number">' + (index + 1) + '</span>' +
         '<div class="step-inputs" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
           '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" required>' + esc(stepText || '') + '</textarea>' +
-          '<input type="text" class="form-input" placeholder="Note per questo passaggio (es. attenzione a non far bollire)" data-field="step-notes" value="' + esc(stepNotes || '') + '">' +
+          '<div class="step-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
+            '<input type="text" class="form-input" placeholder="Suggerimento / nota per questo passaggio (opzionale)" data-field="step-notes" value="' + esc(stepNotes || '') + '">' +
+          '</div>' +
         '</div>';
     if (total > 1) {
       html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
@@ -446,10 +451,10 @@ window.Views = (function () {
         '<div class="recipe-detail__info-item"><span>' + esc(diffEmoji) + '</span><span>' + esc(recipe.difficulty || 'facile') + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span>' +
           '<div style="display:inline-flex;align-items:center;gap:.3rem;">' +
-            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-down" aria-label="Riduci porzioni" style="width:22px;height:22px;min-width:22px;padding:0;font-size:12px;border:1px solid var(--border-color);border-radius:99px;line-height:1">-</button>' +
+            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-down" aria-label="Riduci porzioni" style="width:22px;height:22px;min-width:22px;padding:0;font-size:12px;border:1px solid var(--border);border-radius:99px;line-height:1">-</button>' +
             '<span id="detail-servings-val" data-base-servings="' + (recipe.servings || 4) + '" style="font-weight:700;">' + (recipe.servings || 4) + '</span>' +
             '<span>porzioni</span>' +
-            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-up" aria-label="Aumenta porzioni" style="width:22px;height:22px;min-width:22px;padding:0;font-size:12px;border:1px solid var(--border-color);border-radius:99px;line-height:1">+</button>' +
+            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-up" aria-label="Aumenta porzioni" style="width:22px;height:22px;min-width:22px;padding:0;font-size:12px;border:1px solid var(--border);border-radius:99px;line-height:1">+</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -492,7 +497,7 @@ window.Views = (function () {
         '<ul class="ingredient-list">';
     if (recipe.ingredients && recipe.ingredients.length > 0) {
       recipe.ingredients.forEach(function (ing) {
-        var qtyPart = ing.quantity ? '<span class="ingredient-item__qty ing-qty" data-base-qty="' + esc(ing.quantity) + '">' + esc(ing.quantity) + (ing.unit ? ' ' + esc(ing.unit) : '') + '</span>' : '';
+        var qtyPart = ing.quantity ? '<span class="ingredient-item__qty ing-qty" data-base-qty="' + esc(ing.quantity) + '" data-unit="' + esc(ing.unit || '') + '">' + esc(ing.quantity) + (ing.unit ? ' ' + esc(ing.unit) : '') + '</span>' : '';
         var namePart = '<span class="ingredient-item__name ing-name">' + esc(ing.name) + '</span>';
         var notesHTML = ing.notes ? '<span class="ingredient-item__notes">💡 ' + esc(ing.notes) + '</span>' : '';
 
@@ -772,7 +777,7 @@ window.Views = (function () {
     html += '<p style="margin:0;font-size:.85rem;color:var(--text-muted)">Inserisci gli ingredienti che hai in casa per scoprire cosa cucinare</p></div></div>';
 
     // Input form for ingredients
-    html += '<div class="pantry-card" style="background:var(--surface-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem">';
+    html += '<div class="pantry-card" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem">';
     html += '<form id="pantry-form" style="display:flex;gap:.5rem;margin-bottom:1rem">';
     html += '<input type="text" id="pantry-input" class="form-input" placeholder="Es. uova, guanciale, mascarpone..." style="flex:1" autocomplete="off">';
     html += '<button type="submit" class="btn btn--primary" data-action="add-pantry-ingredient">' + Icons.plus + ' Aggiungi</button>';
@@ -794,11 +799,11 @@ window.Views = (function () {
     if (userIngredients.length > 0) {
       html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">';
       html += '<span style="font-size:.85rem;font-weight:600">Ingredienti selezionati (' + userIngredients.length + '):</span>';
-      html += '<button type="button" class="btn btn--ghost btn--small" data-action="clear-pantry" style="color:var(--error-color);font-size:.78rem">Pulisci tutti</button>';
+      html += '<button type="button" class="btn btn--ghost btn--small" data-action="clear-pantry" style="color:var(--danger);font-size:.78rem">Pulisci tutti</button>';
       html += '</div>';
       html += '<div style="display:flex;flex-wrap:wrap;gap:.5rem">';
       userIngredients.forEach(function(ing, idx) {
-        html += '<span class="pantry-chip" style="background:var(--primary-color);color:#fff;padding:6px 12px;border-radius:99px;font-size:.85rem;font-weight:500;display:inline-flex;align-items:center;gap:.4rem">';
+        html += '<span class="pantry-chip" style="background:var(--primary);color:#fff;padding:6px 12px;border-radius:99px;font-size:.85rem;font-weight:500;display:inline-flex;align-items:center;gap:.4rem">';
         html += esc(ing);
         html += '<button type="button" data-action="remove-pantry-ingredient" data-index="' + idx + '" aria-label="Rimuovi" style="background:none;border:none;color:#fff;cursor:pointer;padding:0;display:flex;align-items:center">' + Icons.x + '</button>';
         html += '</span>';
@@ -822,7 +827,7 @@ window.Views = (function () {
       html += '<div class="pantry-results">';
 
       if (complete.length > 0) {
-        html += '<h2 style="font-size:1.1rem;font-weight:700;color:var(--success-color);margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem">🟢 Pronti da cucinare (Hai tutti gli ingredienti - ' + complete.length + ')</h2>';
+        html += '<h2 style="font-size:1.1rem;font-weight:700;color:var(--success);margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem">🟢 Pronti da cucinare (Hai tutti gli ingredienti - ' + complete.length + ')</h2>';
         html += '<div class="recipe-grid" style="margin-bottom:1.5rem">';
         complete.forEach(function(m) {
           html += pantryCardHTML(m);
@@ -831,7 +836,7 @@ window.Views = (function () {
       }
 
       if (partial.length > 0) {
-        html += '<h2 style="font-size:1.1rem;font-weight:700;color:var(--warning-color);margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem">🟡 Ti manca pochissimo (' + partial.length + ')</h2>';
+        html += '<h2 style="font-size:1.1rem;font-weight:700;color:var(--warning);margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem">🟡 Ti manca pochissimo (' + partial.length + ')</h2>';
         html += '<div class="recipe-grid">';
         partial.forEach(function(m) {
           html += pantryCardHTML(m);
@@ -856,7 +861,7 @@ window.Views = (function () {
       : '🟡 ' + matchItem.matchedCount + ' su ' + matchItem.totalCount + ' ingredienti';
 
     var html = '<div class="recipe-card animate-fade-in" data-id="' + esc(r.id) + '">';
-    html += '<div class="recipe-card__body">';
+    html += '<div class="recipe-card__content">';
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.4rem">';
     html += '<span class="recipe-card__category" style="background:' + esc(cat.color) + '22;color:' + esc(cat.color) + '">' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>';
     html += '<span style="background:' + badgeColor + '22;color:' + badgeColor + ';font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px">' + esc(badgeText) + '</span>';
@@ -865,9 +870,9 @@ window.Views = (function () {
     html += '<h3 class="recipe-card__title" style="margin-bottom:.4rem">' + esc(r.name) + '</h3>';
 
     if (matchItem.missingNames.length > 0) {
-      html += '<div style="font-size:.75rem;color:var(--error-color);margin-bottom:.6rem"><strong>Mancano:</strong> ' + esc(matchItem.missingNames.join(', ')) + '</div>';
+      html += '<div style="font-size:.75rem;color:var(--danger);margin-bottom:.6rem"><strong>Mancano:</strong> ' + esc(matchItem.missingNames.join(', ')) + '</div>';
     } else {
-      html += '<div style="font-size:.75rem;color:var(--success-color);margin-bottom:.6rem"><strong>Includi:</strong> ' + esc(matchItem.matchedNames.join(', ')) + '</div>';
+      html += '<div style="font-size:.75rem;color:var(--success);margin-bottom:.6rem"><strong>Includi:</strong> ' + esc(matchItem.matchedNames.join(', ')) + '</div>';
     }
 
     html += '<button type="button" class="btn btn--primary btn--small" data-action="open-recipe" data-id="' + esc(r.id) + '" style="width:100%">Vedi Ricetta</button>';
@@ -1238,7 +1243,7 @@ window.Views = (function () {
         // ── FOOTER BAR ──
         '<div class="print-preview-modal__footer">' +
           '<span class="print-preview-modal__tip">💡 Suggerimento: nel dialogo di stampa seleziona <strong>Salva come PDF</strong> per creare il file</span>' +
-          '<button type="button" class="btn btn--ghost btn--sm" data-action="modal-cancel">Chiudi</button>' +
+          '<button type="button" class="btn btn--ghost btn--small" data-action="modal-cancel">Chiudi</button>' +
         '</div>' +
       '</div>';
 

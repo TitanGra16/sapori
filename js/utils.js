@@ -142,7 +142,7 @@ window.Utils = {
   _dismissToast(toast) {
     if (!toast || !toast.parentNode) return;
 
-    toast.classList.add('toast--fade-out');
+    toast.classList.add('is-exiting');
     toast.addEventListener('animationend', () => {
       if (toast.parentNode) {
         toast.parentNode.removeChild(toast);

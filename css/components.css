@@ -472,6 +472,17 @@
   font-size: 3rem;
 }
 
+/* Placeholder realmente usato da recipeCardHTML() quando la ricetta non ha foto */
+.recipe-card__placeholder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Favorite heart button */
 .recipe-card__favorite {
   position: absolute;
@@ -593,6 +604,22 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Placeholder usato da renderDetail() quando la ricetta non ha foto:
+   stesse dimensioni/posizionamento di .recipe-detail__hero, altrimenti
+   i pulsanti indietro/preferito (position:absolute) non hanno un
+   genitore posizionato correttamente. */
+.recipe-detail__hero-placeholder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .recipe-detail__hero::after {
@@ -1128,6 +1155,20 @@
   font-size: 1.2rem;
 }
 
+/* Variante compatta, usata su bottoni pillola (Annulla/Installa, azioni
+   secondarie) e in combinazione con .btn--icon (rimuovi ingrediente/passaggio,
+   chiudi anteprima stampa, ecc.) */
+.btn--small {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+}
+
+.btn--icon.btn--small {
+  width: 32px;
+  height: 32px;
+  font-size: 0.95rem;
+}
+
 /* FAB - Floating Action Button */
 .btn--fab {
   position: fixed;
@@ -1360,24 +1401,58 @@
   display: none;
 }
 
-/* Image preview */
-.image-preview {
+/* Area upload foto (form crea/modifica ricetta): nomi reali usati da views.js/app.js */
+.image-upload {
+  margin-top: var(--space-sm);
+}
+
+.image-upload__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  min-height: 180px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.image-upload__placeholder:hover {
+  border-color: var(--primary);
+  background: var(--bg-secondary);
+  color: var(--primary);
+}
+
+.image-upload__placeholder span {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.image-upload__preview {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
   border-radius: var(--radius-md);
   overflow: hidden;
-  margin-top: var(--space-sm);
   background: var(--bg-tertiary);
 }
 
-.image-preview img {
+.image-upload__preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.image-preview .image-preview__remove {
+.image-upload__remove {
   position: absolute;
   top: var(--space-sm);
   right: var(--space-sm);
@@ -1395,7 +1470,7 @@
   transition: background var(--transition-fast), transform var(--transition-fast);
 }
 
-.image-preview .image-preview__remove:hover {
+.image-upload__remove:hover {
   background: var(--danger);
   transform: scale(1.1);
 }

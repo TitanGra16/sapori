@@ -137,8 +137,10 @@
     var qtyEls = document.querySelectorAll('.ingredient-list .ing-qty');
     qtyEls.forEach(function (el) {
       var baseQty = el.getAttribute('data-base-qty');
+      var unit = el.getAttribute('data-unit') || '';
       if (baseQty) {
-        el.textContent = Utils.scaleQuantity(baseQty, ratio);
+        var scaledNum = Utils.scaleQuantity(baseQty, ratio);
+        el.textContent = scaledNum + (unit ? ' ' + unit : '');
       }
     });
   }
@@ -512,8 +514,8 @@
   function clearFormErrors() {
     var errors = document.querySelectorAll('.form-error');
     errors.forEach(function (el) { el.textContent = ''; });
-    var inputs = document.querySelectorAll('.form-input.error, .form-select.error, .form-textarea.error');
-    inputs.forEach(function (el) { el.classList.remove('error'); });
+    var groups = document.querySelectorAll('.form-group.has-error');
+    groups.forEach(function (el) { el.classList.remove('has-error'); });
   }
 
   function switchFormTab(targetId) {
@@ -542,9 +544,14 @@
     var original = state.editingRecipe;
 
     if (!original) {
-      // In creazione: controlla se è stato digitato qualcosa
+      // In creazione: confronta contro i default reali del form vuoto
+      // (category e difficulty partono già pre-valorizzate da
+      // Recipes.createEmptyRecipe(), quindi "non vuoto" da solo non basta
+      // a dire che l'utente ha davvero modificato qualcosa).
+      var emptyDefaults = Recipes.createEmptyRecipe();
       if (current.name && current.name.trim() !== '') return true;
-      if (current.category && current.category.trim() !== '') return true;
+      if (current.category && current.category !== emptyDefaults.category) return true;
+      if (current.difficulty && current.difficulty !== emptyDefaults.difficulty) return true;
       if (current.description && current.description.trim() !== '') return true;
       if (current.notes && current.notes.trim() !== '') return true;
       if (current.image) return true;
@@ -608,35 +615,61 @@
     }
   }
 
+  // Mappa chiave-errore (restituita da Recipes.validate) -> span di errore + tab da aprire.
+  // Instradare per CHIAVE invece che cercando parole nel testo del messaggio evita
+  // collisioni tipo "Ingrediente 1: il nome è obbligatorio" (contiene "nome") che finiva
+  // nello slot del nome ricetta invece che in quello degli ingredienti.
+  var FIELD_ERROR_MAP = {
+    name: { spanId: 'error-name', tab: 'tab-info' },
+    category: { spanId: 'error-category', tab: 'tab-info' },
+    prepTime: { spanId: 'error-preptime', tab: 'tab-cook' },
+    cookTime: { spanId: 'error-cooktime', tab: 'tab-cook' },
+    servings: { spanId: 'error-servings', tab: 'tab-cook' },
+    difficulty: { spanId: 'error-difficulty', tab: 'tab-cook' },
+    ingredients: { spanId: 'error-ingredients', tab: 'tab-prep' },
+    steps: { spanId: 'error-steps', tab: 'tab-prep' }
+  };
+  // Priorità di apertura tab quando ci sono errori su più tab insieme:
+  // Info > Preparazione > Cottura (si apre sempre la tab più "a monte").
+  var TAB_OPEN_PRIORITY = { 'tab-info': 0, 'tab-prep': 1, 'tab-cook': 2 };
+
   function showFormErrors(errors) {
     var switchTarget = null;
-    // errors è un oggetto { fieldName: "messaggio" }, non un array
-    Object.values(errors).forEach(function (err) {
-      if (!err) return;
-      var errLower = err.toLowerCase();
-      if (errLower.includes('nome')) {
-        setFieldError('error-name', err);
-        if (!switchTarget) switchTarget = 'tab-info';
-      } else if (errLower.includes('categoria')) {
-        setFieldError('error-category', err);
-        if (!switchTarget) switchTarget = 'tab-info';
-      } else if (errLower.includes('ingrediente') || errLower.includes('ingredienti')) {
-        setFieldError('error-ingredients', err);
-        if (!switchTarget || switchTarget === 'tab-cook') switchTarget = 'tab-prep';
-      } else if (errLower.includes('passagg') || errLower.includes('preparazione')) {
-        setFieldError('error-steps', err);
-        if (!switchTarget || switchTarget === 'tab-cook') switchTarget = 'tab-prep';
+
+    // errors è un oggetto { fieldName: "messaggio" }; fieldName può essere un nome
+    // fisso (name, category, prepTime...) oppure "ingredient_0", "step_2", ecc.
+    Object.keys(errors).forEach(function (key) {
+      var message = errors[key];
+      if (!message) return;
+
+      var mapping = FIELD_ERROR_MAP[key];
+      if (!mapping) {
+        if (key.indexOf('ingredient_') === 0) {
+          mapping = FIELD_ERROR_MAP.ingredients;
+        } else if (key.indexOf('step_') === 0) {
+          mapping = FIELD_ERROR_MAP.steps;
+        }
+      }
+      if (!mapping) return; // chiave senza slot dedicato (es. _general): nessun posto dove mostrarla
+
+      setFieldError(mapping.spanId, message);
+
+      if (switchTarget === null || TAB_OPEN_PRIORITY[mapping.tab] < TAB_OPEN_PRIORITY[switchTarget]) {
+        switchTarget = mapping.tab;
       }
     });
+
     if (switchTarget) {
       switchFormTab(switchTarget);
     }
-
   }
 
   function setFieldError(errorId, message) {
     var el = document.getElementById(errorId);
-    if (el) el.textContent = message;
+    if (!el) return;
+    el.textContent = message;
+    var group = el.closest('.form-group');
+    if (group) group.classList.add('has-error');
   }
 
   /* ──────────────────── FORM: SAVE ──────────────────── */
