@@ -704,7 +704,7 @@ window.Views = (function () {
               '<div>' +
                 '<strong style="color:var(--text-primary); font-weight:700;">Nota sulla conservazione dei dati:</strong>' +
                 '<p style="color:var(--text-secondary); margin-top:4px; line-height:1.4;">' +
-                  'Le tue ricette sono salvate al 100% in locale sul browser. Se cancelli la cronologia di navigazione (compresi i cookie o i dati dei siti web), le ricette andranno perse definitivamente. Esporta regolarmente un **Backup JSON** per sicurezza.' +
+                  'Le tue ricette sono salvate al 100% in locale sul browser. Se cancelli la cronologia di navigazione (compresi i cookie o i dati dei siti web), le ricette andranno perse definitivamente. Esporta regolarmente un <strong>Backup JSON</strong> per sicurezza.' +
                 '</p>' +
               '</div>' +
             '</div>';

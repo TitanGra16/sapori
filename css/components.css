@@ -12,9 +12,13 @@
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  padding-top: 72px;   /* header height */
-  padding-bottom: 88px; /* nav height + safe area */
+  padding-top: calc(72px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   transition: padding var(--transition-normal);
+}
+
+body.search-open #app-content {
+  padding-top: calc(138px + env(safe-area-inset-top, 0px));
 }
 
 .view {
@@ -34,11 +38,11 @@
   left: 0;
   right: 0;
   z-index: var(--z-header);
-  height: 64px;
+  height: calc(64px + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-md);
+  padding: env(safe-area-inset-top, 0px) max(var(--space-md), env(safe-area-inset-right, 0px)) 0 max(var(--space-md), env(safe-area-inset-left, 0px));
   background: var(--glass-bg);
   backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
@@ -131,7 +135,7 @@
   display: flex;
   align-items: stretch;
   justify-content: space-around;
-  height: 64px;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--glass-bg);
   backdrop-filter: blur(24px) saturate(1.6);
@@ -214,15 +218,23 @@
    SEARCH BAR
    ============================================================ */
 .search-bar {
-  position: relative;
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: calc(var(--z-header) - 1);
   width: 100%;
-  margin-bottom: var(--space-md);
+  padding: var(--space-sm) max(var(--space-md), env(safe-area-inset-right, 0px)) var(--space-sm) max(var(--space-md), env(safe-area-inset-left, 0px));
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
   animation: slideDown 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .search-bar .search-icon {
   position: absolute;
-  left: var(--space-md);
+  left: max(calc(var(--space-md) * 2), calc(env(safe-area-inset-left, 0px) + var(--space-md)));
   top: 50%;
   transform: translateY(-50%);
   width: 20px;
@@ -263,7 +275,7 @@
 
 .search-bar .search-clear {
   position: absolute;
-  right: var(--space-sm);
+  right: max(calc(var(--space-md) + var(--space-sm)), calc(env(safe-area-inset-right, 0px) + var(--space-sm)));
   top: 50%;
   transform: translateY(-50%);
   width: 32px;
@@ -2236,12 +2248,20 @@
 /* ≥ 768px — Tablets */
 @media (min-width: 768px) {
   #app-content {
-    padding-top: 80px;
+    padding-top: calc(80px + env(safe-area-inset-top, 0px));
+  }
+
+  body.search-open #app-content {
+    padding-top: calc(146px + env(safe-area-inset-top, 0px));
   }
 
   #app-header {
-    height: 72px;
-    padding: 0 var(--space-lg);
+    height: calc(72px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) max(var(--space-lg), env(safe-area-inset-right, 0px)) 0 max(var(--space-lg), env(safe-area-inset-left, 0px));
+  }
+
+  .search-bar {
+    top: calc(72px + env(safe-area-inset-top, 0px));
   }
 
   #app-header .header-logo {

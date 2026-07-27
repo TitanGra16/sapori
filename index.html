@@ -35,9 +35,9 @@
 <body>
   <!-- App Header -->
   <header id="app-header">
-    <div class="header-logo">Sapori</div>
+    <button type="button" class="header-logo" data-view="home" aria-label="Vai alla home">Sapori</button>
     <div class="header-actions">
-      <button type="button" class="header-btn" id="btn-search-toggle" aria-label="Cerca ricette">
+      <button type="button" class="header-btn" id="btn-search-toggle" aria-label="Cerca ricette" aria-controls="search-bar" aria-expanded="false">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       </button>
       <button type="button" class="header-btn" id="btn-theme-toggle" aria-label="Cambia tema">
@@ -48,7 +48,7 @@
   </header>
 
   <!-- Search Bar (hidden by default) -->
-  <div class="search-bar hidden" id="search-bar">
+  <div class="search-bar hidden" id="search-bar" role="search">
     <span class="search-icon">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
     </span>

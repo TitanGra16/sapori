@@ -406,11 +406,15 @@
 
   function openSearch() {
     searchBar.classList.remove('hidden');
+    document.body.classList.add('search-open');
+    btnSearchToggle.setAttribute('aria-expanded', 'true');
     searchInput.focus();
   }
 
   function closeSearch() {
     searchBar.classList.add('hidden');
+    document.body.classList.remove('search-open');
+    btnSearchToggle.setAttribute('aria-expanded', 'false');
     searchInput.value = '';
     if (state.filters.search !== '') {
       state.filters.search = '';
@@ -1687,7 +1691,7 @@
         var promptConfirm = document.getElementById('btn-install-confirm');
         
         if (promptTitle) promptTitle.textContent = "Installa Sapori su iPhone";
-        if (promptDesc) promptDesc.innerHTML = "Tocca il tasto di **Condivisione** <span style=\"font-size:1.1rem;\">⎋</span> in Safari e seleziona **\"Aggiungi alla schermata Home\"**.";
+        if (promptDesc) promptDesc.innerHTML = 'Tocca il tasto <strong>Condivisione</strong> <span style="font-size:1.1rem;" aria-hidden="true">⎋</span> in Safari e seleziona <strong>&quot;Aggiungi alla schermata Home&quot;</strong>.';
         
         if (promptConfirm) promptConfirm.style.display = 'none';
         if (btnInstallCancel) btnInstallCancel.textContent = "Ho capito";
