@@ -55,30 +55,26 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
   await expect(page.getByText('In frigorifero per 2 giorni.')).toBeVisible();
   await expect(page.getByText('Farina')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Esporta PDF' }).click();
-  const printDialog = page.getByRole('dialog', { name: 'Ricetta automatica' });
-  await expect(printDialog).toBeVisible();
-  await expect(printDialog.getByText('Mescolare tutti gli ingredienti.')).toBeVisible();
-  await expect(printDialog.getByText('Tempo totale')).toBeVisible();
-  await expect(printDialog.getByText('30 min', { exact: true })).toBeVisible();
-
   await page.evaluate(() => {
     window.__printSnapshot = null;
     window.print = () => {
-      const root = document.querySelector('.print-document-root--preview');
+      const root = document.querySelector('.print-document-root--recipe');
       window.__printSnapshot = {
-        bodyClassActive: document.body.classList.contains('printing-preview'),
+        bodyClassActive: document.body.classList.contains('printing-recipe'),
         sheets: root ? root.querySelectorAll('.print-recipe-sheet').length : 0,
-        title: root ? root.querySelector('.print-recipe-sheet__title').textContent : ''
+        title: root ? root.querySelector('.print-recipe-sheet__title').textContent : '',
+        storage: root ? root.textContent.includes('In frigorifero per 2 giorni.') : false
       };
     };
   });
-  await printDialog.getByRole('button', { name: /Stampa o salva PDF/i }).click();
+  await page.getByRole('button', { name: 'Esporta PDF' }).click();
   await expect.poll(() => page.evaluate(() => window.__printSnapshot)).toEqual({
     bodyClassActive: true,
     sheets: 1,
-    title: 'Ricetta automatica'
+    title: 'Ricetta automatica',
+    storage: true
   });
+  await expect(page.getByRole('dialog', { name: 'Ricetta automatica' })).toHaveCount(0);
 });
 
 test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', async ({ page }) => {
@@ -114,7 +110,9 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
           : [],
         titles: root
           ? Array.from(root.querySelectorAll('.print-recipe-sheet__title')).map(item => item.textContent)
-          : []
+          : [],
+        storageBlocks: root ? root.querySelectorAll('.print-recipe-sheet__storage').length : -1,
+        singleColumnAftercare: root ? root.querySelectorAll('.print-recipe-sheet__aftercare--single').length : -1
       };
     };
   });
@@ -124,7 +122,9 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
     bodyClassActive: true,
     sheets: 2,
     index: ['01ArrostoPrimi Piatti', '02ZuppaPrimi Piatti'],
-    titles: ['Arrosto', 'Zuppa']
+    titles: ['Arrosto', 'Zuppa'],
+    storageBlocks: 0,
+    singleColumnAftercare: 2
   });
 });
 

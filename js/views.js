@@ -595,20 +595,6 @@ window.Views = (function () {
           : '') +
       '</div>';
 
-    // Print-only footer box (replicates the RICETTARIO UFFICIALE.pdf bottom layout)
-    html +=
-      '<div class="print-footer-container">' +
-        '<div class="print-photo-box">' +
-          (recipe.image ? '<img src="' + esc(recipe.image) + '" alt="Foto Ricetta">' : '<span class="print-photo-label">FOTO</span>') +
-        '</div>' +
-        '<div class="print-storage-box">' +
-          '<h4 class="print-storage-title">Conservazione:</h4>' +
-          '<div class="print-dotted-line"></div>' +
-          '<div class="print-dotted-line"></div>' +
-          '<div class="print-dotted-line"></div>' +
-        '</div>' +
-      '</div>';
-
     html += '</div>';
     container.innerHTML = html;
   }
@@ -1282,63 +1268,21 @@ window.Views = (function () {
   }
 
   /**
-   * Show an exact-ratio A4 preview for a single recipe.
+   * Build the printable document and open the browser print dialog directly.
    * @param {Object} recipe
+   * @returns {Promise<void>}
    */
-  function showPrintPreviewModal(recipe) {
-    var esc = Utils.escapeHtml;
-    var overlay = document.getElementById('modal-overlay');
-    if (!overlay) return;
+  async function printRecipePDF(recipe) {
+    var printRoot = document.createElement('div');
+    printRoot.className = 'print-document-root print-document-root--recipe';
+    printRoot.innerHTML = buildPrintableRecipeHTML(recipe);
+    document.body.appendChild(printRoot);
 
-    overlay.innerHTML =
-      '<div class="print-preview-modal" role="dialog" aria-modal="true" aria-labelledby="print-preview-title">' +
-        '<div class="print-preview-modal__header">' +
-          '<div class="print-preview-modal__header-left">' +
-            '<span class="print-preview-modal__label">Documento A4</span>' +
-            '<h2 class="print-preview-modal__title" id="print-preview-title">' + esc(recipe.name) + '</h2>' +
-          '</div>' +
-          '<div class="print-preview-modal__header-actions">' +
-            '<button type="button" class="btn btn--primary print-preview-modal__print" id="btn-print-now" aria-label="Stampa o salva PDF">' +
-              '🖨️ <span>Stampa o salva PDF</span>' +
-            '</button>' +
-            '<button type="button" class="btn btn--icon print-preview-modal__close" data-action="modal-cancel" aria-label="Chiudi anteprima">' +
-              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-            '</button>' +
-          '</div>' +
-        '</div>' +
-        '<div class="print-preview-modal__body">' +
-          '<div class="print-preview-modal__paper">' + buildPrintableRecipeHTML(recipe) + '</div>' +
-        '</div>' +
-        '<div class="print-preview-modal__footer">' +
-          '<span class="print-preview-modal__tip">A4 verticale · Nel dialogo scegli “Salva come PDF” oppure la tua stampante.</span>' +
-          '<button type="button" class="btn btn--ghost btn--small" data-action="modal-cancel">Chiudi</button>' +
-        '</div>' +
-      '</div>';
-
-    overlay.classList.remove('hidden');
-
-    // Print button
-    var btnPrint = document.getElementById('btn-print-now');
-    if (btnPrint) {
-      btnPrint.addEventListener('click', async function () {
-        var paper = overlay.querySelector('.print-preview-modal__paper');
-        if (!paper || btnPrint.disabled) return;
-
-        var printRoot = document.createElement('div');
-        printRoot.className = 'print-document-root print-document-root--preview';
-        printRoot.appendChild(paper.cloneNode(true));
-        document.body.appendChild(printRoot);
-
-        btnPrint.disabled = true;
-        try {
-          await Utils.printDocument(printRoot, 'printing-preview');
-        } catch (error) {
-          console.error('Errore durante la stampa della ricetta:', error);
-          Utils.showToast('Impossibile preparare la stampa', 'error');
-        } finally {
-          btnPrint.disabled = false;
-        }
-      });
+    try {
+      await Utils.printDocument(printRoot, 'printing-recipe');
+    } catch (error) {
+      console.error('Errore durante la stampa della ricetta:', error);
+      Utils.showToast('Impossibile preparare la stampa', 'error');
     }
   }
 
@@ -1364,7 +1308,7 @@ window.Views = (function () {
     showConfirmModal: showConfirmModal,
     showImportPreviewModal: showImportPreviewModal,
     buildPrintableRecipeHTML: buildPrintableRecipeHTML,
-    showPrintPreviewModal: showPrintPreviewModal,
+    printRecipePDF: printRecipePDF,
     hideModal: hideModal
   };
 

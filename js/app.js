@@ -1596,10 +1596,15 @@
         case 'export-pdf': {
           var pdfId = actionEl.getAttribute('data-id');
           if (pdfId) {
-            DB.getRecipe(pdfId).then(function (recipe) {
+            actionEl.disabled = true;
+            DB.getRecipe(pdfId).then(async function (recipe) {
               if (recipe && window.Views) {
-                Views.showPrintPreviewModal(recipe);
+                await Views.printRecipePDF(recipe);
               }
+            }).catch(function () {
+              Utils.showToast('Impossibile preparare il PDF', 'error');
+            }).finally(function () {
+              actionEl.disabled = false;
             });
           } else {
             // Fallback: print current page
