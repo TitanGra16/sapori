@@ -1229,7 +1229,7 @@
       var pwaUrl = window.location.origin + window.location.pathname;
 
       var printDiv = document.createElement('div');
-      printDiv.className = 'print-all-recipes-container';
+      printDiv.className = 'print-document-root print-document-root--cookbook print-all-recipes-container';
 
       var html = '';
 
@@ -1378,13 +1378,7 @@
 
       printDiv.innerHTML = html;
       document.body.appendChild(printDiv);
-      document.body.classList.add('printing-all-recipes');
-
-      setTimeout(function () {
-        window.print();
-        document.body.classList.remove('printing-all-recipes');
-        if (printDiv.parentNode) printDiv.parentNode.removeChild(printDiv);
-      }, 200);
+      await Utils.printDocument(printDiv, 'printing-all-recipes');
 
     } catch (err) {
       console.error(err);

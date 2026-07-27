@@ -2482,7 +2482,8 @@ body.search-open #app-content {
 .print-footer-container,
 .print-only,
 .print-cover-page,
-.print-all-recipes-container {
+.print-all-recipes-container,
+.print-document-root {
   display: none !important;
 }
 
@@ -2503,6 +2504,36 @@ body.search-open #app-content {
   @page {
     size: A4 portrait;
     margin: 1.5cm 2cm 2cm 2cm;
+  }
+
+  @page sapori-preview {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  body.printing-preview > *:not(.print-document-root--preview),
+  body.printing-all-recipes > *:not(.print-document-root--cookbook) {
+    display: none !important;
+  }
+
+  .print-document-root {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-document-root--preview .print-preview-modal__paper {
+    page: sapori-preview;
+    display: block !important;
+    width: 210mm !important;
+    max-width: none !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    padding: 1.5cm 2cm !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
   }
 
   /* ── Hide screen-only UI ── */

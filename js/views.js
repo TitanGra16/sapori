@@ -1288,8 +1288,24 @@ window.Views = (function () {
     // Print button
     var btnPrint = document.getElementById('btn-print-now');
     if (btnPrint) {
-      btnPrint.addEventListener('click', function () {
-        window.print();
+      btnPrint.addEventListener('click', async function () {
+        var paper = overlay.querySelector('.print-preview-modal__paper');
+        if (!paper || btnPrint.disabled) return;
+
+        var printRoot = document.createElement('div');
+        printRoot.className = 'print-document-root print-document-root--preview';
+        printRoot.appendChild(paper.cloneNode(true));
+        document.body.appendChild(printRoot);
+
+        btnPrint.disabled = true;
+        try {
+          await Utils.printDocument(printRoot, 'printing-preview');
+        } catch (error) {
+          console.error('Errore durante la stampa della ricetta:', error);
+          Utils.showToast('Impossibile preparare la stampa', 'error');
+        } finally {
+          btnPrint.disabled = false;
+        }
       });
     }
   }
