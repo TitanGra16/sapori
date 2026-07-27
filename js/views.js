@@ -27,19 +27,21 @@ window.Views = (function () {
     }
 
     return (
-      '<article class="recipe-card animate-scale-in stagger-' + stagger + '" data-id="' + esc(recipe.id) + '" data-action="open-recipe">' +
-        imageBlock +
-        '<div class="recipe-card__content">' +
-          '<h3 class="recipe-card__title">' + esc(recipe.name) + '</h3>' +
-          '<div class="recipe-card__meta">' +
-            '<span class="recipe-card__meta-item">⏱️ ' + esc(totalTime) + '</span>' +
-            '<span class="recipe-card__meta-item">' + esc(diffEmoji) + '</span>' +
+      '<article class="recipe-card animate-scale-in stagger-' + stagger + '" data-id="' + esc(recipe.id) + '">' +
+        '<a class="recipe-card__link" href="#detail/' + esc(recipe.id) + '" data-action="open-recipe" data-id="' + esc(recipe.id) + '" aria-label="Apri la ricetta ' + esc(recipe.name) + '">' +
+          imageBlock +
+          '<div class="recipe-card__content">' +
+            '<h3 class="recipe-card__title">' + esc(recipe.name) + '</h3>' +
+            '<div class="recipe-card__meta">' +
+              '<span class="recipe-card__meta-item">⏱️ ' + esc(totalTime) + '</span>' +
+              '<span class="recipe-card__meta-item">' + esc(diffEmoji) + '</span>' +
+            '</div>' +
+            '<span class="recipe-card__category" style="background:' + esc(cat.color) + '22;color:' + esc(cat.color) + '">' +
+              esc(cat.icon) + ' ' + esc(cat.label) +
+            '</span>' +
           '</div>' +
-          '<span class="recipe-card__category" style="background:' + esc(cat.color) + '22;color:' + esc(cat.color) + '">' +
-            esc(cat.icon) + ' ' + esc(cat.label) +
-          '</span>' +
-        '</div>' +
-        '<button type="button" class="recipe-card__favorite ' + favClass + '" data-action="toggle-fav" data-id="' + esc(recipe.id) + '" aria-label="Preferito">' +
+        '</a>' +
+        '<button type="button" class="recipe-card__favorite ' + favClass + '" data-action="toggle-fav" data-id="' + esc(recipe.id) + '" aria-label="' + (recipe.isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti') + '">' +
           (recipe.isFavorite ? Icons.heartFilled : Icons.heartOutline) +
         '</button>' +
       '</article>'
@@ -69,10 +71,10 @@ window.Views = (function () {
     var html = '<div class="filter-bar">';
     html += '<button type="button" class="filter-chip filter-chip--pantry" data-action="go-pantry" style="background:linear-gradient(135deg,#E85D3A,#FFA726);color:#fff;font-weight:600;border:none;">' +
               '👨‍🍳 Svuotafrigo</button>';
-    html += '<button type="button" class="filter-chip' + (activeCategory === '' ? ' active' : '') + '" data-action="filter-category" data-category="">' +
+    html += '<button type="button" class="filter-chip' + (activeCategory === '' ? ' active' : '') + '" data-action="filter-category" data-category="" aria-pressed="' + (activeCategory === '') + '">' +
               '🍽️ Tutte</button>';
     Recipes.CATEGORIES.forEach(function (cat) {
-      html += '<button type="button" class="filter-chip' + (activeCategory === cat.id ? ' active' : '') + '" data-action="filter-category" data-category="' + esc(cat.id) + '">' +
+      html += '<button type="button" class="filter-chip' + (activeCategory === cat.id ? ' active' : '') + '" data-action="filter-category" data-category="' + esc(cat.id) + '" aria-pressed="' + (activeCategory === cat.id) + '">' +
                 esc(cat.icon) + ' ' + esc(cat.label) +
               '</button>';
     });
@@ -161,18 +163,18 @@ window.Views = (function () {
     
     // Step Navigation Header
     html +=
-      '<div class="form-steps-nav">' +
-        '<button type="button" class="form-steps-btn active" data-action="switch-tab" data-target="tab-info" aria-label="Informazioni generali">' +
+      '<div class="form-steps-nav" role="tablist" aria-label="Sezioni della ricetta">' +
+        '<button type="button" id="form-tab-info" role="tab" aria-selected="true" aria-controls="tab-info" class="form-steps-btn active" data-action="switch-tab" data-target="tab-info" aria-label="Informazioni generali">' +
           '<span class="step-num">1</span>' +
           '<span class="step-lbl">Info</span>' +
         '</button>' +
         '<div class="form-steps-line"></div>' +
-        '<button type="button" class="form-steps-btn" data-action="switch-tab" data-target="tab-prep" aria-label="Ingredienti e preparazione">' +
+        '<button type="button" id="form-tab-prep" role="tab" aria-selected="false" aria-controls="tab-prep" class="form-steps-btn" data-action="switch-tab" data-target="tab-prep" aria-label="Ingredienti e preparazione">' +
           '<span class="step-num">2</span>' +
           '<span class="step-lbl">Preparazione</span>' +
         '</button>' +
         '<div class="form-steps-line"></div>' +
-        '<button type="button" class="form-steps-btn" data-action="switch-tab" data-target="tab-cook" aria-label="Dettagli di cottura">' +
+        '<button type="button" id="form-tab-cook" role="tab" aria-selected="false" aria-controls="tab-cook" class="form-steps-btn" data-action="switch-tab" data-target="tab-cook" aria-label="Dettagli di cottura">' +
           '<span class="step-num">3</span>' +
           '<span class="step-lbl">Cottura</span>' +
         '</button>' +
@@ -186,7 +188,7 @@ window.Views = (function () {
     }
 
     // ──────────────────── TAB 1: INFO ────────────────────
-    html += '<div id="tab-info" class="form-tab active">';
+    html += '<div id="tab-info" class="form-tab active" role="tabpanel" aria-labelledby="form-tab-info" aria-hidden="false">';
     
     // Nome
     html +=
@@ -201,11 +203,11 @@ window.Views = (function () {
       '<div class="form-group">' +
         '<label class="form-label">Categoria *</label>' +
         '<input type="hidden" id="input-category" value="' + esc(r.category || '') + '" required>' +
-        '<div class="category-selector-grid">';
+        '<div class="category-selector-grid" role="radiogroup" aria-label="Categoria della ricetta">';
     Recipes.CATEGORIES.forEach(function (cat) {
       var activeClass = r.category === cat.id ? ' active' : '';
       html +=
-        '<button type="button" class="category-select-btn' + activeClass + '" data-action="select-form-category" data-category="' + esc(cat.id) + '">' +
+        '<button type="button" role="radio" aria-checked="' + (r.category === cat.id) + '" class="category-select-btn' + activeClass + '" data-action="select-form-category" data-category="' + esc(cat.id) + '">' +
           '<span class="category-select-btn__icon">' + esc(cat.icon) + '</span>' +
           '<span class="category-select-btn__label">' + esc(cat.label) + '</span>' +
         '</button>';
@@ -235,15 +237,17 @@ window.Views = (function () {
     if (r.image) {
       html +=
         '<div class="image-upload__preview">' +
-          '<img src="' + esc(r.image) + '" alt="Anteprima" id="image-preview">' +
+          '<button type="button" class="image-upload__change" data-action="trigger-image-upload" aria-label="Cambia foto">' +
+            '<img src="' + esc(r.image) + '" alt="Anteprima" id="image-preview">' +
+          '</button>' +
           '<button type="button" class="image-upload__remove" data-action="remove-image" aria-label="Rimuovi foto">' + Icons.x + '</button>' +
         '</div>';
     } else {
       html +=
-        '<div class="image-upload__placeholder" id="image-placeholder">' +
+        '<button type="button" class="image-upload__placeholder" id="image-placeholder" data-action="trigger-image-upload">' +
           Icons.camera +
           '<span>Tocca per aggiungere una foto</span>' +
-        '</div>';
+        '</button>';
     }
     html += '</div>';
     html += '<input type="file" id="input-image" accept="image/*" class="hidden" aria-label="Seleziona foto">';
@@ -259,7 +263,7 @@ window.Views = (function () {
     html += '</div>'; // close tab-info
 
     // ──────────────────── TAB 2: PREPARATION ────────────────────
-    html += '<div id="tab-prep" class="form-tab">';
+    html += '<div id="tab-prep" class="form-tab" role="tabpanel" aria-labelledby="form-tab-prep" aria-hidden="true">';
 
     // Ingredienti
     html +=
@@ -297,7 +301,7 @@ window.Views = (function () {
     html += '</div>'; // close tab-prep
 
     // ──────────────────── TAB 3: COOKING ────────────────────
-    html += '<div id="tab-cook" class="form-tab">';
+    html += '<div id="tab-cook" class="form-tab" role="tabpanel" aria-labelledby="form-tab-cook" aria-hidden="true">';
 
     // Tempo preparazione
     html +=
@@ -363,7 +367,7 @@ window.Views = (function () {
     });
     html += '</select>';
     if (total > 1) {
-      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
+      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi ingrediente ' + (index + 1) + '">' + Icons.x + '</button>';
     }
     html += '</div>';
     html += '<div class="ingredient-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
@@ -388,7 +392,7 @@ window.Views = (function () {
           '</div>' +
         '</div>';
     if (total > 1) {
-      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi">' + Icons.x + '</button>';
+      html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi passaggio ' + (index + 1) + '">' + Icons.x + '</button>';
     }
     html += '</div>';
     return html;
@@ -453,10 +457,10 @@ window.Views = (function () {
         '<div class="recipe-detail__info-item"><span>' + esc(diffEmoji) + '</span><span>' + esc(recipe.difficulty || 'facile') + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span>' +
           '<div style="display:inline-flex;align-items:center;gap:.3rem;">' +
-            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-down" aria-label="Riduci porzioni" style="width:22px;height:22px;min-width:22px;padding:0;font-size:12px;border:1px solid var(--border);border-radius:99px;line-height:1">-</button>' +
+            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-down" aria-label="Riduci porzioni" style="width:40px;height:40px;min-width:40px;padding:0;font-size:18px;border:1px solid var(--border);border-radius:99px;line-height:1">-</button>' +
             '<span id="detail-servings-val" data-base-servings="' + (recipe.servings || 4) + '" style="font-weight:700;">' + (recipe.servings || 4) + '</span>' +
             '<span>porzioni</span>' +
-            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-up" aria-label="Aumenta porzioni" style="width:22px;height:22px;min-width:22px;padding:0;font-size:12px;border:1px solid var(--border);border-radius:99px;line-height:1">+</button>' +
+            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-up" aria-label="Aumenta porzioni" style="width:40px;height:40px;min-width:40px;padding:0;font-size:18px;border:1px solid var(--border);border-radius:99px;line-height:1">+</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -632,7 +636,7 @@ window.Views = (function () {
         '</div>' +
         '<div class="settings-item__control">' +
           '<label class="toggle-switch">' +
-            '<input type="checkbox" data-action="toggle-dark"' + (isDark ? ' checked' : '') + '>' +
+            '<input type="checkbox" data-action="toggle-dark" aria-label="Tema scuro"' + (isDark ? ' checked' : '') + '>' +
             '<span class="toggle-slider"></span>' +
           '</label>' +
         '</div>' +
@@ -672,7 +676,7 @@ window.Views = (function () {
       customCats.forEach(function (cat) {
         html += '<div class="custom-cat-chip" style="display:inline-flex; align-items:center; gap:0.4rem; background:' + esc(cat.color) + '22; color:' + esc(cat.color) + '; border:1px solid ' + esc(cat.color) + '33; padding:6px 12px; border-radius:var(--radius-full); font-size:0.85rem; font-weight:600;">' +
                   '<span>' + esc(cat.icon) + ' ' + esc(cat.label) + '</span>' +
-                  '<button type="button" class="btn-delete-cat" data-action="delete-category" data-id="' + esc(cat.id) + '" aria-label="Elimina categoria" style="cursor:pointer; display:inline-flex; align-items:center; border:none; background:transparent; color:' + esc(cat.color) + '; padding:0; margin-left:4px; opacity:0.8; transition:opacity var(--transition-fast);">' + Icons.x + '</button>' +
+                  '<button type="button" class="btn-delete-cat" data-action="delete-category" data-id="' + esc(cat.id) + '" aria-label="Elimina categoria ' + esc(cat.label) + '" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; color:' + esc(cat.color) + '; width:32px; height:32px; margin-left:4px; opacity:0.8; transition:opacity var(--transition-fast);">' + Icons.x + '</button>' +
                 '</div>';
       });
     }
@@ -912,7 +916,7 @@ window.Views = (function () {
       : '';
     var timerInputDisabled = timerState.running ? ' disabled' : '';
 
-    var html = '<div class="cooking-modal" id="cooking-modal-inner">';
+    var html = '<div class="cooking-modal" id="cooking-modal-inner" role="dialog" aria-modal="true" aria-labelledby="cooking-modal-title">';
 
     // Accent bar
     html += '<div class="cooking-modal__accent-bar"></div>';
@@ -923,7 +927,7 @@ window.Views = (function () {
     html += '<div class="cooking-modal__header">';
     html +=   '<div class="cooking-modal__header-left">';
     html +=     '<span class="cooking-modal__label">👨‍🍳 Modalità Cucina</span>';
-    html +=     '<h2 class="cooking-modal__title">' + esc(recipe.name) + '</h2>';
+    html +=     '<h2 class="cooking-modal__title" id="cooking-modal-title">' + esc(recipe.name) + '</h2>';
     html +=   '</div>';
     html +=   '<div class="cooking-modal__header-right">';
     html +=     '<span class="cooking-modal__wakelock ' + wlClass + '">' + wlText + '</span>';
@@ -938,7 +942,7 @@ window.Views = (function () {
       html +=     '<span class="cooking-modal__step-counter">Passaggio ' + (stepIndex + 1) + ' di ' + totalSteps + '</span>';
       html +=     '<span class="cooking-modal__progress-pct">' + pct + '%</span>';
       html +=   '</div>';
-      html +=   '<div class="cooking-modal__progress-bar-bg">';
+      html +=   '<div class="cooking-modal__progress-bar-bg" role="progressbar" aria-label="Avanzamento preparazione" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '">';
       html +=     '<div class="cooking-modal__progress-bar-fill" style="width:' + pct + '%"></div>';
       html +=   '</div>';
       html += '</div>';
@@ -975,12 +979,12 @@ window.Views = (function () {
         var ingPct = totalIng > 0 ? checkedCount + '/' + totalIng : '';
 
         html += '<div class="cooking-modal__ing-panel">';
-        html +=   '<div class="cooking-modal__ing-header" data-action="toggle-cooking-ing-panel">';
+        html +=   '<button type="button" class="cooking-modal__ing-header" data-action="toggle-cooking-ing-panel" aria-expanded="' + ingExpanded + '" aria-controls="cooking-ing-list">';
         html +=     '<span class="cooking-modal__ing-title">🛒 Ingredienti';
         if (ingPct) html += '&nbsp;<span class="cooking-modal__ing-progress">' + ingPct + ' ✓</span>';
         html +=     '</span>';
         html +=     '<span class="' + toggleClass + '">▼</span>';
-        html +=   '</div>';
+        html +=   '</button>';
         html +=   '<div class="' + ingListClass + '" id="cooking-ing-list">';
         recipe.ingredients.forEach(function(ing, idx) {
           var isChecked = !!checkedIngredients[idx];
@@ -989,7 +993,7 @@ window.Views = (function () {
           if (ing.quantity) parts.push(esc(ing.quantity));
           if (ing.unit) parts.push(esc(ing.unit));
           parts.push(esc(ing.name));
-          html += '<button type="button" class="' + chipClass + '" data-action="toggle-cooking-ing" data-index="' + idx + '">';
+          html += '<button type="button" class="' + chipClass + '" data-action="toggle-cooking-ing" data-index="' + idx + '" aria-pressed="' + isChecked + '">';
           html +=   '<span class="ing-chip-check">' + (isChecked ? '✓' : '○') + '</span>';
           html +=   parts.join(' ');
           html += '</button>';
@@ -1077,8 +1081,8 @@ window.Views = (function () {
     var overlay = document.getElementById('modal-overlay');
 
     overlay.innerHTML =
-      '<div class="modal animate-slide-up">' +
-        '<div class="modal__header"><h3>' + esc(title) + '</h3></div>' +
+      '<div class="modal animate-slide-up" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">' +
+        '<div class="modal__header"><h3 id="confirm-modal-title">' + esc(title) + '</h3></div>' +
         '<div class="modal__body"><p>' + esc(message) + '</p></div>' +
         '<div class="modal__footer">' +
           '<button type="button" class="btn btn--ghost" data-action="modal-cancel">Annulla</button>' +
@@ -1198,18 +1202,18 @@ window.Views = (function () {
       : '<span class="print-preview__photo-placeholder">FOTO</span>';
 
     overlay.innerHTML =
-      '<div class="print-preview-modal">' +
+      '<div class="print-preview-modal" role="dialog" aria-modal="true" aria-labelledby="print-preview-title">' +
         // ── HEADER ──
         '<div class="print-preview-modal__header">' +
           '<div class="print-preview-modal__header-left">' +
             '<span class="print-preview-modal__label">🖨️ Anteprima Stampa</span>' +
-            '<h2 class="print-preview-modal__title">' + esc(recipe.name) + '</h2>' +
+            '<h2 class="print-preview-modal__title" id="print-preview-title">' + esc(recipe.name) + '</h2>' +
           '</div>' +
           '<div class="print-preview-modal__header-actions">' +
             '<button type="button" class="btn btn--primary" id="btn-print-now" style="display:flex;align-items:center;gap:6px">' +
               '🖨️ <span>Stampa / Salva PDF</span>' +
             '</button>' +
-            '<button type="button" class="btn btn--icon" data-action="modal-cancel" style="border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+            '<button type="button" class="btn btn--icon" data-action="modal-cancel" aria-label="Chiudi anteprima" style="border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
               '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
             '</button>' +
           '</div>' +

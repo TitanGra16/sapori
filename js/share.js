@@ -284,7 +284,7 @@
       var hasNativeShare = !!(navigator.share);
 
       overlay.innerHTML =
-        '<div class="share-modal">' +
+        '<div class="share-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">' +
           // Accent band
           '<div class="share-modal__accent"></div>' +
 
@@ -292,9 +292,9 @@
           '<div class="share-modal__header">' +
             '<div class="share-modal__header-left">' +
               '<span class="share-modal__label">📲 Condividi Ricetta</span>' +
-              '<h2 class="share-modal__title">' + esc(recipe.name) + '</h2>' +
+              '<h2 class="share-modal__title" id="share-modal-title">' + esc(recipe.name) + '</h2>' +
             '</div>' +
-            '<button type="button" class="btn btn--icon" data-action="modal-cancel" ' +
+            '<button type="button" class="btn btn--icon" data-action="modal-cancel" aria-label="Chiudi condivisione" ' +
               'style="border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
               '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">' +
                 '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' +

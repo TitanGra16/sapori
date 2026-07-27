@@ -201,6 +201,9 @@
 
   function rerenderCookingModal() {
     if (state.cooking && state.cooking.recipe) {
+      var focusedAction = document.activeElement && document.activeElement.getAttribute
+        ? document.activeElement.getAttribute('data-action')
+        : null;
       Views.showCookingModal(
         state.cooking.recipe,
         state.cooking.stepIndex,
@@ -209,6 +212,10 @@
         state.cooking.timer,
         state.cooking.ingExpanded
       );
+      if (focusedAction) {
+        var replacement = document.querySelector('[data-action="' + focusedAction + '"]');
+        if (replacement) replacement.focus();
+      }
     }
   }
 
@@ -261,6 +268,100 @@
     }
   }
 
+  function setupModalAccessibility() {
+    var previousFocus = null;
+    var modalActive = false;
+    var backgroundNodes = [appContent, document.getElementById('app-header'), bottomNav, searchBar].filter(Boolean);
+
+    function setBackgroundInert(active) {
+      backgroundNodes.forEach(function (node) {
+        node.inert = active;
+      });
+    }
+
+    function focusableElements() {
+      return Array.from(modalOverlay.querySelectorAll(
+        'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+      )).filter(function (element) {
+        return element.getClientRects().length > 0;
+      });
+    }
+
+    function ensureDialogSemantics() {
+      var dialog = modalOverlay.firstElementChild;
+      if (!dialog) return;
+      if (!dialog.hasAttribute('role')) dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      if (!dialog.hasAttribute('aria-label') && !dialog.hasAttribute('aria-labelledby')) {
+        var heading = dialog.querySelector('h1,h2,h3');
+        if (heading) {
+          if (!heading.id) heading.id = 'active-modal-title';
+          dialog.setAttribute('aria-labelledby', heading.id);
+        }
+      }
+    }
+
+    function syncModalState() {
+      var isOpen = !modalOverlay.classList.contains('hidden') && !!modalOverlay.firstElementChild;
+      if (isOpen) {
+        ensureDialogSemantics();
+        modalOverlay.setAttribute('aria-hidden', 'false');
+        if (!modalActive) {
+          modalActive = true;
+          previousFocus = document.activeElement;
+          setBackgroundInert(true);
+          var first = focusableElements()[0];
+          if (first) first.focus();
+        } else if (!modalOverlay.contains(document.activeElement)) {
+          var fallback = focusableElements()[0];
+          if (fallback) fallback.focus();
+        }
+      } else if (modalActive) {
+        modalActive = false;
+        modalOverlay.setAttribute('aria-hidden', 'true');
+        setBackgroundInert(false);
+        if (previousFocus && previousFocus.isConnected && typeof previousFocus.focus === 'function') {
+          previousFocus.focus();
+        }
+        previousFocus = null;
+      }
+    }
+
+    new MutationObserver(syncModalState).observe(modalOverlay, {
+      attributes: true,
+      attributeFilter: ['class'],
+      childList: true,
+      subtree: false
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (!modalActive) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (document.getElementById('cooking-modal-inner')) closeCookingSession();
+        else Views.hideModal();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      var focusable = focusableElements();
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+
+    syncModalState();
+  }
+
   /* ──────────────────── INITIALIZATION ──────────────────── */
 
   async function init() {
@@ -271,6 +372,7 @@
     updateThemeIcon();
     setupRouter();
     setupEventListeners();
+    setupModalAccessibility();
     setupDataWarning();
     navigateTo(window.location.hash || '#home');
     registerServiceWorker();
@@ -564,8 +666,10 @@
     items.forEach(function (item) {
       if (item.getAttribute('data-view') === view) {
         item.classList.add('active');
+        item.setAttribute('aria-current', 'page');
       } else {
         item.classList.remove('active');
+        item.removeAttribute('aria-current');
       }
     });
   }
@@ -706,16 +810,20 @@
     tabs.forEach(function (tab) {
       if (tab.id === targetId) {
         tab.classList.add('active');
+        tab.setAttribute('aria-hidden', 'false');
       } else {
         tab.classList.remove('active');
+        tab.setAttribute('aria-hidden', 'true');
       }
     });
 
     navBtns.forEach(function (btn) {
       if (btn.getAttribute('data-target') === targetId) {
         btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
       } else {
         btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
       }
     });
   }
@@ -1067,7 +1175,9 @@
       var uploadArea = document.getElementById('image-upload-area');
       uploadArea.innerHTML =
         '<div class="image-upload__preview">' +
-          '<img src="' + Utils.escapeHtml(base64) + '" alt="Anteprima" id="image-preview">' +
+          '<button type="button" class="image-upload__change" data-action="trigger-image-upload" aria-label="Cambia foto">' +
+            '<img src="' + Utils.escapeHtml(base64) + '" alt="Anteprima" id="image-preview">' +
+          '</button>' +
           '<button type="button" class="image-upload__remove" data-action="remove-image" aria-label="Rimuovi foto">✕</button>' +
         '</div>';
     } catch (e) {
@@ -1082,10 +1192,10 @@
 
     var uploadArea = document.getElementById('image-upload-area');
     uploadArea.innerHTML =
-      '<div class="image-upload__placeholder" id="image-placeholder">' +
+      '<button type="button" class="image-upload__placeholder" id="image-placeholder" data-action="trigger-image-upload">' +
         '<span style="font-size:2rem">📷</span>' +
         '<span>Tocca per aggiungere una foto</span>' +
-      '</div>';
+      '</button>';
   }
 
   /* ──────────────────── EXPORT / IMPORT ──────────────────── */
@@ -1410,6 +1520,31 @@
       }
     });
 
+    document.addEventListener('keydown', function (e) {
+      var tabButton = e.target.closest && e.target.closest('.form-steps-btn');
+      if (tabButton && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+        var tabs = Array.from(document.querySelectorAll('.form-steps-btn'));
+        var index = tabs.indexOf(tabButton);
+        var nextIndex = e.key === 'Home' ? 0 :
+          e.key === 'End' ? tabs.length - 1 :
+          (index + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+        e.preventDefault();
+        tabs[nextIndex].focus();
+        tabs[nextIndex].click();
+      }
+
+      var radio = e.target.closest && e.target.closest('.category-select-btn');
+      if (radio && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        var radios = Array.from(document.querySelectorAll('.category-select-btn'));
+        var radioIndex = radios.indexOf(radio);
+        var direction = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
+        var nextRadio = radios[(radioIndex + direction + radios.length) % radios.length];
+        e.preventDefault();
+        nextRadio.focus();
+        nextRadio.click();
+      }
+    });
+
     // File input for image
     document.addEventListener('change', function (e) {
       if (e.target.id === 'input-image') {
@@ -1679,9 +1814,11 @@
           if (grid) {
             grid.querySelectorAll('.category-select-btn').forEach(function (btn) {
               btn.classList.remove('active');
+              btn.setAttribute('aria-checked', 'false');
             });
           }
           actionEl.classList.add('active');
+          actionEl.setAttribute('aria-checked', 'true');
           break;
         }
 
@@ -1709,6 +1846,10 @@
         case 'remove-image': {
           e.stopPropagation();
           removeImage();
+          break;
+        }
+        case 'trigger-image-upload': {
+          triggerImageUpload();
           break;
         }
 
@@ -1865,18 +2006,6 @@
       }
     });
 
-    // Image upload area click (delegate)
-    document.addEventListener('click', function (e) {
-      var placeholder = e.target.closest('.image-upload__placeholder');
-      var uploadArea = e.target.closest('.image-upload');
-      // Only trigger if clicking placeholder or the upload area itself (not remove button)
-      if (placeholder || (uploadArea && !e.target.closest('.image-upload__remove') && !e.target.closest('.image-upload__preview img'))) {
-        if (uploadArea && !e.target.closest('.image-upload__preview')) {
-          triggerImageUpload();
-        }
-      }
-    });
-
     // PWA Custom Install Prompt setup
     setupInstallPrompt();
   }
@@ -1985,23 +2114,53 @@
 
     if (!warningModal) return;
 
+    var previousFocus = null;
+    var backgroundNodes = [appContent, document.getElementById('app-header'), bottomNav, searchBar].filter(Boolean);
+
+    function setWarningOpen(open) {
+      warningModal.classList.toggle('hidden', !open);
+      warningModal.setAttribute('aria-hidden', open ? 'false' : 'true');
+      backgroundNodes.forEach(function (node) { node.inert = open; });
+      if (open) {
+        previousFocus = document.activeElement;
+        if (btnClose) btnClose.focus();
+      } else if (previousFocus && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    }
+
     var dismissed = safeStorageGet('sapori-warning-dismissed');
     if (dismissed !== 'true') {
-      warningModal.classList.remove('hidden');
+      setWarningOpen(true);
     }
 
     if (btnClose) {
       btnClose.addEventListener('click', function () {
-        warningModal.classList.add('hidden');
+        setWarningOpen(false);
       });
     }
 
     if (btnDontShow) {
       btnDontShow.addEventListener('click', function () {
         safeStorageSet('sapori-warning-dismissed', 'true');
-        warningModal.classList.add('hidden');
+        setWarningOpen(false);
       });
     }
+
+    warningModal.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setWarningOpen(false);
+      } else if (event.key === 'Tab' && btnClose && btnDontShow) {
+        if (event.shiftKey && document.activeElement === btnDontShow) {
+          event.preventDefault();
+          btnClose.focus();
+        } else if (!event.shiftKey && document.activeElement === btnClose) {
+          event.preventDefault();
+          btnDontShow.focus();
+        }
+      }
+    });
   }
 
   /* ──────────────────── SERVICE WORKER ──────────────────── */

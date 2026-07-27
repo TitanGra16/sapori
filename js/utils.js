@@ -108,8 +108,7 @@ window.Utils = {
 
     const toast = document.createElement('div');
     toast.className = `toast toast--${type} animate-slide-up`;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'polite');
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
     // Icon based on type
     const icons = {
@@ -119,17 +118,19 @@ window.Utils = {
     };
     const icon = icons[type] || icons.info;
 
-    toast.innerHTML = `<span class="toast__icon">${icon}</span><span class="toast__message">${this.escapeHtml(message)}</span>`;
+    toast.innerHTML =
+      `<span class="toast-icon" aria-hidden="true">${icon}</span>` +
+      `<span class="toast-message">${this.escapeHtml(message)}</span>` +
+      '<button type="button" class="toast-dismiss" aria-label="Chiudi notifica">×</button>';
 
     container.appendChild(toast);
 
-    // Auto-dismiss after 3 seconds
+    // Errors remain visible longer so they can be read comfortably.
     const dismissTimeout = setTimeout(() => {
       this._dismissToast(toast);
-    }, 3000);
+    }, type === 'error' ? 6500 : 4000);
 
-    // Allow manual dismiss on click
-    toast.addEventListener('click', () => {
+    toast.querySelector('.toast-dismiss').addEventListener('click', () => {
       clearTimeout(dismissTimeout);
       this._dismissToast(toast);
     }, { once: true });
