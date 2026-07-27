@@ -75,6 +75,53 @@ test('merge aggiorna gli ID esistenti e ignora duplicati di contenuto', async t 
   assert.equal((await context.DB.getAllRecipes()).length, 1);
 });
 
+test('anteprima e merge deduplicano rispetto allo stato finale in ordine', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const original = {
+    id: 'fixed-id',
+    name: 'Versione originale',
+    category: 'altro',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Tosta' }]
+  };
+  await context.DB.importData(JSON.stringify(original));
+
+  const payload = JSON.stringify([
+    {
+      ...original,
+      name: 'Versione aggiornata',
+      ingredients: [{ name: 'Pane nuovo' }]
+    },
+    {
+      ...original,
+      id: 'old-content-new-id'
+    },
+    {
+      ...original,
+      id: 'duplicate-old-content'
+    }
+  ]);
+
+  const preview = await context.DB.previewImport(payload);
+  assert.deepEqual(
+    { additions: preview.additions, updates: preview.updates, duplicates: preview.duplicates },
+    { additions: 1, updates: 1, duplicates: 1 }
+  );
+
+  const summary = await context.DB.importData(payload);
+  assert.deepEqual(
+    { imported: summary.imported, updated: summary.updated, skipped: summary.skipped },
+    { imported: 1, updated: 1, skipped: 1 }
+  );
+  const recipes = await context.DB.getAllRecipes();
+  assert.equal(recipes.length, 2);
+  assert.equal(recipes.find(recipe => recipe.id === 'fixed-id').name, 'Versione aggiornata');
+  assert.ok(recipes.some(recipe => recipe.id === 'old-content-new-id'));
+});
+
 test('backup versione 2 ripristina ricette, categorie e tema', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));

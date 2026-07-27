@@ -499,6 +499,39 @@ window.DB = {
     });
   },
 
+  _createFingerprintTracker(recipes) {
+    const counts = new Map();
+    const byId = new Map();
+    const increment = fingerprint => {
+      counts.set(fingerprint, (counts.get(fingerprint) || 0) + 1);
+    };
+    const decrement = fingerprint => {
+      const next = (counts.get(fingerprint) || 0) - 1;
+      if (next > 0) counts.set(fingerprint, next);
+      else counts.delete(fingerprint);
+    };
+
+    recipes.forEach(recipe => {
+      const fingerprint = this._recipeFingerprint(recipe);
+      increment(fingerprint);
+      if (recipe.id) byId.set(recipe.id, fingerprint);
+    });
+
+    return {
+      has: fingerprint => counts.has(fingerprint),
+      add: (id, fingerprint) => {
+        increment(fingerprint);
+        if (id) byId.set(id, fingerprint);
+      },
+      replace: (id, fingerprint) => {
+        const previous = byId.get(id);
+        if (previous !== undefined) decrement(previous);
+        increment(fingerprint);
+        byId.set(id, fingerprint);
+      }
+    };
+  },
+
   _prepareImport(jsonString) {
     if (!jsonString || typeof jsonString !== 'string') {
       throw new Error('Dati di importazione non validi: stringa JSON attesa');
@@ -574,15 +607,23 @@ window.DB = {
     const prepared = this._prepareImport(jsonString);
     const existing = await this.getRecipeSummaries();
     const ids = new Set(existing.map(recipe => recipe.id));
-    const fingerprints = new Set(existing.map(recipe => this._recipeFingerprint(recipe)));
+    const fingerprints = this._createFingerprintTracker(existing);
     let additions = 0;
     let updates = 0;
     let duplicates = 0;
 
     prepared.recipes.forEach(recipe => {
-      if (recipe.id && ids.has(recipe.id)) updates++;
-      else if (fingerprints.has(this._recipeFingerprint(recipe))) duplicates++;
-      else additions++;
+      const fingerprint = this._recipeFingerprint(recipe);
+      if (recipe.id && ids.has(recipe.id)) {
+        fingerprints.replace(recipe.id, fingerprint);
+        updates++;
+      } else if (fingerprints.has(fingerprint)) {
+        duplicates++;
+      } else {
+        fingerprints.add(recipe.id, fingerprint);
+        if (recipe.id) ids.add(recipe.id);
+        additions++;
+      }
     });
 
     return {
@@ -611,7 +652,7 @@ window.DB = {
     const db = await this._ensureDB();
     const existing = mode === 'merge' ? await this.getRecipeSummaries() : [];
     const existingIds = new Set(existing.map(recipe => recipe.id));
-    const fingerprints = new Set(existing.map(recipe => this._recipeFingerprint(recipe)));
+    const fingerprints = this._createFingerprintTracker(existing);
     const importedRecipes = [];
     for (const recipe of prepared.recipes) {
       importedRecipes.push({
@@ -642,7 +683,7 @@ window.DB = {
         } else {
           imageStore.delete(recipe.id);
         }
-        fingerprints.add(fingerprint);
+        fingerprints.replace(recipe.id, fingerprint);
         summary.updated++;
         continue;
       }
@@ -660,7 +701,7 @@ window.DB = {
         imageStore.put({ recipeId: id, data: added.fullImage });
       }
       existingIds.add(id);
-      fingerprints.add(fingerprint);
+      fingerprints.add(id, fingerprint);
       summary.imported++;
     }
 
