@@ -11,6 +11,7 @@
     currentView: 'home',
     filters: { search: '', category: '', sortBy: 'recent' },
     editingRecipe: null,
+    savingRecipe: false,
     pantryIngredients: [],
     cooking: {
       recipe: null,
@@ -212,7 +213,7 @@
     if (!valEl) return;
     var baseServings = parseInt(valEl.getAttribute('data-base-servings'), 10) || 4;
     var currentVal = parseInt(valEl.textContent, 10) || baseServings;
-    var newVal = Math.max(1, currentVal + delta);
+    var newVal = Math.min(Recipes.LIMITS.servings, Math.max(1, currentVal + delta));
     valEl.textContent = newVal;
 
     var ratio = newVal / baseServings;
@@ -537,16 +538,21 @@
   /* ──────────────────── FORM: COLLECT DATA ──────────────────── */
 
   function collectFormData() {
+    function readInteger(id, fallback) {
+      var raw = document.getElementById(id).value.trim();
+      return raw === '' ? fallback : Number(raw);
+    }
+
     var idInput = document.getElementById('input-id');
     var name = document.getElementById('input-name').value.trim();
     var category = document.getElementById('input-category').value;
     var description = (document.getElementById('input-description').value || '').trim();
     var notes = (document.getElementById('input-notes').value || '').trim();
     var imageData = document.getElementById('input-image-data').value || '';
-    var prepTime = parseInt(document.getElementById('input-preptime').value, 10) || 0;
-    var cookTime = parseInt(document.getElementById('input-cooktime').value, 10) || 0;
+    var prepTime = readInteger('input-preptime', 0);
+    var cookTime = readInteger('input-cooktime', 0);
     var difficulty = document.getElementById('input-difficulty').value;
-    var servings = parseInt(document.getElementById('input-servings').value, 10) || 4;
+    var servings = readInteger('input-servings', 4);
 
     // Collect ingredients
     var ingRows = document.querySelectorAll('#ingredients-list .ingredient-row');
@@ -557,9 +563,7 @@
       var ingUnit = row.querySelector('[data-field="ing-unit"]').value;
       var ingNotesEl = row.querySelector('[data-field="ing-notes"]');
       var ingNotes = ingNotesEl ? ingNotesEl.value.trim() : '';
-      if (ingName) {
-        ingredients.push({ name: ingName, quantity: ingQty, unit: ingUnit, notes: ingNotes });
-      }
+      ingredients.push({ name: ingName, quantity: ingQty, unit: ingUnit, notes: ingNotes });
     });
 
     // Collect steps
@@ -569,9 +573,7 @@
       var text = row.querySelector('[data-field="step-text"]').value.trim();
       var stepNotesEl = row.querySelector('[data-field="step-notes"]');
       var notes = stepNotesEl ? stepNotesEl.value.trim() : '';
-      if (text) {
-        steps.push({ text: text, notes: notes });
-      }
+      steps.push({ text: text, notes: notes });
     });
 
     var now = Date.now();
@@ -709,6 +711,8 @@
   var FIELD_ERROR_MAP = {
     name: { spanId: 'error-name', tab: 'tab-info' },
     category: { spanId: 'error-category', tab: 'tab-info' },
+    description: { spanId: 'error-description', tab: 'tab-info' },
+    notes: { spanId: 'error-notes', tab: 'tab-info' },
     prepTime: { spanId: 'error-preptime', tab: 'tab-cook' },
     cookTime: { spanId: 'error-cooktime', tab: 'tab-cook' },
     servings: { spanId: 'error-servings', tab: 'tab-cook' },
@@ -762,6 +766,7 @@
   /* ──────────────────── FORM: SAVE ──────────────────── */
 
   async function saveRecipe() {
+    if (state.savingRecipe) return;
     clearFormErrors();
     var recipe = collectFormData();
     var validation = Recipes.validate(recipe);
@@ -770,6 +775,13 @@
       showFormErrors(validation.errors);
       Utils.showToast('Correggi gli errori nel modulo', 'error');
       return;
+    }
+
+    var submitButton = document.querySelector('#recipe-form button[type="submit"]');
+    state.savingRecipe = true;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.setAttribute('aria-busy', 'true');
     }
 
     try {
@@ -783,6 +795,12 @@
       navigateTo('#home');
     } catch (e) {
       Utils.showToast('Errore nel salvataggio: ' + e.message, 'error');
+    } finally {
+      state.savingRecipe = false;
+      if (submitButton && submitButton.isConnected) {
+        submitButton.disabled = false;
+        submitButton.removeAttribute('aria-busy');
+      }
     }
   }
 
@@ -792,6 +810,10 @@
     var list = document.getElementById('ingredients-list');
     if (!list) return;
     var rows = list.querySelectorAll('.ingredient-row');
+    if (rows.length >= Recipes.LIMITS.ingredients) {
+      Utils.showToast('Hai raggiunto il limite di ingredienti.', 'warning');
+      return;
+    }
     var newIndex = rows.length;
 
     // Re-render all rows with correct indices and remove buttons
@@ -863,6 +885,10 @@
 
   function addStepRow() {
     var steps = collectCurrentSteps();
+    if (steps.length >= Recipes.LIMITS.steps) {
+      Utils.showToast('Hai raggiunto il limite di passaggi.', 'warning');
+      return;
+    }
     steps.push({ text: '', notes: '' });
     rerenderSteps(steps);
   }
@@ -1271,11 +1297,16 @@
         e.preventDefault();
         var input = document.getElementById('pantry-input');
         if (input && input.value.trim().length > 0) {
-          var val = input.value.trim();
-          if (!state.pantryIngredients.some(function(u){ return u.toLowerCase() === val.toLowerCase(); })) {
-            state.pantryIngredients.push(val);
-            Views.renderPantry(appContent, state.pantryIngredients);
-          }
+          input.value.split(',').map(function (value) {
+            return value.trim();
+          }).filter(Boolean).forEach(function (value) {
+            if (!state.pantryIngredients.some(function(u) {
+              return u.toLocaleLowerCase('it-IT') === value.toLocaleLowerCase('it-IT');
+            })) {
+              state.pantryIngredients.push(value);
+            }
+          });
+          Views.renderPantry(appContent, state.pantryIngredients);
           input.value = '';
         }
       }

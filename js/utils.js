@@ -256,12 +256,20 @@ window.Utils = {
     const trimmed = qtyStr.trim();
     if (!trimmed) return '';
 
-    return trimmed.replace(/(\d+(?:[\.,]\d+)?)/g, (match) => {
-      const num = parseFloat(match.replace(',', '.'));
-      if (isNaN(num)) return match;
+    return trimmed.replace(/(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[\.,]\d+)?)/g, (match) => {
+      let num;
+      if (match.includes('/')) {
+        const mixedParts = match.trim().split(/\s+/);
+        const fraction = mixedParts.pop().split('/').map(Number);
+        if (fraction.length !== 2 || !fraction[1]) return match;
+        num = (mixedParts.length ? Number(mixedParts[0]) : 0) + fraction[0] / fraction[1];
+      } else {
+        num = parseFloat(match.replace(',', '.'));
+      }
+      if (!Number.isFinite(num)) return match;
       const scaled = num * ratio;
       const rounded = Math.round(scaled * 100) / 100;
-      return String(rounded);
+      return match.includes(',') ? String(rounded).replace('.', ',') : String(rounded);
     });
   },
 

@@ -4,6 +4,21 @@
  */
 window.Recipes = {
 
+  LIMITS: {
+    name: 120,
+    description: 2000,
+    notes: 4000,
+    ingredients: 100,
+    ingredientName: 160,
+    ingredientQuantity: 50,
+    ingredientNotes: 500,
+    steps: 100,
+    stepText: 2000,
+    stepNotes: 1000,
+    minutes: 10080,
+    servings: 1000
+  },
+
   /**
    * Recipe categories with labels, icons, and colors.
    */
@@ -44,9 +59,26 @@ window.Recipes = {
       return { valid: false, errors: { _general: 'Dati ricetta non validi' } };
     }
 
-    // Name: required, min 2 characters
+    const limits = this.LIMITS;
+
+    // Name: required, bounded string
     if (!recipe.name || typeof recipe.name !== 'string' || recipe.name.trim().length < 2) {
       errors.name = 'Il nome deve contenere almeno 2 caratteri';
+    } else if (recipe.name.trim().length > limits.name) {
+      errors.name = `Il nome non può superare ${limits.name} caratteri`;
+    }
+
+    if (recipe.description !== undefined && recipe.description !== null &&
+        typeof recipe.description !== 'string') {
+      errors.description = 'La descrizione deve essere testo';
+    } else if (recipe.description && recipe.description.length > limits.description) {
+      errors.description = `La descrizione non può superare ${limits.description} caratteri`;
+    }
+
+    if (recipe.notes !== undefined && recipe.notes !== null && typeof recipe.notes !== 'string') {
+      errors.notes = 'Le note devono essere testo';
+    } else if (recipe.notes && recipe.notes.length > limits.notes) {
+      errors.notes = `Le note non possono superare ${limits.notes} caratteri`;
     }
 
     // Category: must be one of CATEGORIES
@@ -58,24 +90,25 @@ window.Recipes = {
     // Prep time: if provided, must be >= 0
     if (recipe.prepTime !== undefined && recipe.prepTime !== null && recipe.prepTime !== '') {
       const prep = Number(recipe.prepTime);
-      if (isNaN(prep) || prep < 0) {
-        errors.prepTime = 'Il tempo di preparazione deve essere un numero positivo';
+      if (!Number.isFinite(prep) || !Number.isInteger(prep) || prep < 0 || prep > limits.minutes) {
+        errors.prepTime = `Inserisci minuti interi fra 0 e ${limits.minutes}`;
       }
     }
 
     // Cook time: if provided, must be >= 0
     if (recipe.cookTime !== undefined && recipe.cookTime !== null && recipe.cookTime !== '') {
       const cook = Number(recipe.cookTime);
-      if (isNaN(cook) || cook < 0) {
-        errors.cookTime = 'Il tempo di cottura deve essere un numero positivo';
+      if (!Number.isFinite(cook) || !Number.isInteger(cook) || cook < 0 || cook > limits.minutes) {
+        errors.cookTime = `Inserisci minuti interi fra 0 e ${limits.minutes}`;
       }
     }
 
     // Servings: if provided, must be > 0
     if (recipe.servings !== undefined && recipe.servings !== null && recipe.servings !== '') {
       const servings = Number(recipe.servings);
-      if (isNaN(servings) || servings <= 0) {
-        errors.servings = 'Il numero di porzioni deve essere maggiore di zero';
+      if (!Number.isFinite(servings) || !Number.isInteger(servings) ||
+          servings <= 0 || servings > limits.servings) {
+        errors.servings = `Inserisci un numero intero di porzioni fra 1 e ${limits.servings}`;
       }
     }
 
@@ -87,50 +120,59 @@ window.Recipes = {
       }
     }
 
-    // Ingredients: if present, each must have a name
-    if (recipe.ingredients !== undefined && recipe.ingredients !== null) {
-      if (!Array.isArray(recipe.ingredients)) {
-        errors.ingredients = 'Gli ingredienti devono essere una lista';
-      } else {
-        // Filter out completely empty ingredient rows (where all properties are empty/undefined)
-        const nonEmptyIngredients = recipe.ingredients.filter(ing => {
-          if (!ing) return false;
-          const hasNameProp = ing.name !== undefined && ing.name !== null;
-          const qty = ing.quantity !== undefined && ing.quantity !== null ? String(ing.quantity).trim() : '';
-          const unit = ing.unit && typeof ing.unit === 'string' ? ing.unit.trim() : '';
-          const notes = ing.notes && typeof ing.notes === 'string' ? ing.notes.trim() : '';
-          return (hasNameProp && String(ing.name).length > 0) || qty.length > 0 || unit.length > 0 || notes.length > 0;
-        });
-
-        for (let i = 0; i < nonEmptyIngredients.length; i++) {
-          const ing = nonEmptyIngredients[i];
-          if (!ing || typeof ing !== 'object') {
-            errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: formato non valido`;
-          } else if (!ing.name || typeof ing.name !== 'string' || !ing.name.trim()) {
-            errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: il nome è obbligatorio`;
-          }
+    // Ingredients: at least one complete row, keeping original row indices.
+    if (!Array.isArray(recipe.ingredients)) {
+      errors.ingredients = 'Gli ingredienti devono essere una lista';
+    } else if (recipe.ingredients.length === 0) {
+      errors.ingredients = 'Inserisci almeno un ingrediente';
+    } else if (recipe.ingredients.length > limits.ingredients) {
+      errors.ingredients = `Puoi inserire al massimo ${limits.ingredients} ingredienti`;
+    } else {
+      for (let i = 0; i < recipe.ingredients.length; i++) {
+        const ing = recipe.ingredients[i];
+        if (!ing || typeof ing !== 'object' || Array.isArray(ing)) {
+          errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: formato non valido`;
+          continue;
+        }
+        if (!ing.name || typeof ing.name !== 'string' || !ing.name.trim()) {
+          errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: il nome è obbligatorio`;
+        } else if (ing.name.trim().length > limits.ingredientName) {
+          errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: massimo ${limits.ingredientName} caratteri`;
+        }
+        if (ing.quantity !== undefined && ing.quantity !== null &&
+            String(ing.quantity).length > limits.ingredientQuantity) {
+          errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: quantità troppo lunga`;
+        }
+        if (ing.notes !== undefined && ing.notes !== null &&
+            typeof ing.notes !== 'string') {
+          errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: note non valide`;
+        } else if (ing.notes && ing.notes.length > limits.ingredientNotes) {
+          errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: note troppo lunghe`;
         }
       }
     }
 
-    // Steps: if present, each must be a non-empty string or object with non-empty text
-    if (recipe.steps !== undefined && recipe.steps !== null) {
-      if (!Array.isArray(recipe.steps)) {
-        errors.steps = 'I passaggi devono essere una lista';
-      } else {
-        const nonEmptySteps = recipe.steps.filter(s => {
-          if (!s) return false;
-          if (typeof s === 'string') return s.trim().length > 0;
-          if (typeof s === 'object' && s.text) return String(s.text).trim().length > 0;
-          return false;
-        });
-
-        for (let i = 0; i < nonEmptySteps.length; i++) {
-          const stepVal = nonEmptySteps[i];
-          const text = typeof stepVal === 'object' ? stepVal.text : stepVal;
-          if (typeof text !== 'string' || !text.trim()) {
-            errors[`step_${i}`] = `Passaggio ${i + 1}: il testo è obbligatorio`;
-          }
+    // Steps: at least one complete row, keeping original row indices.
+    if (!Array.isArray(recipe.steps)) {
+      errors.steps = 'I passaggi devono essere una lista';
+    } else if (recipe.steps.length === 0) {
+      errors.steps = 'Inserisci almeno un passaggio';
+    } else if (recipe.steps.length > limits.steps) {
+      errors.steps = `Puoi inserire al massimo ${limits.steps} passaggi`;
+    } else {
+      for (let i = 0; i < recipe.steps.length; i++) {
+        const stepVal = recipe.steps[i];
+        const text = typeof stepVal === 'object' && stepVal !== null ? stepVal.text : stepVal;
+        const stepNotes = typeof stepVal === 'object' && stepVal !== null ? stepVal.notes : '';
+        if (typeof text !== 'string' || !text.trim()) {
+          errors[`step_${i}`] = `Passaggio ${i + 1}: il testo è obbligatorio`;
+        } else if (text.trim().length > limits.stepText) {
+          errors[`step_${i}`] = `Passaggio ${i + 1}: massimo ${limits.stepText} caratteri`;
+        }
+        if (stepNotes !== undefined && stepNotes !== null && typeof stepNotes !== 'string') {
+          errors[`step_${i}`] = `Passaggio ${i + 1}: note non valide`;
+        } else if (stepNotes && stepNotes.length > limits.stepNotes) {
+          errors[`step_${i}`] = `Passaggio ${i + 1}: note troppo lunghe`;
         }
       }
     }
@@ -164,21 +206,36 @@ window.Recipes = {
 
     // Filter by search text
     if (search && typeof search === 'string') {
-      const query = search.toLowerCase().trim();
+      const normalizeSearchText = value => String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('it-IT');
+      const query = normalizeSearchText(search).trim();
       if (query) {
         result = result.filter(r => {
           // Match name
-          if (r.name && r.name.toLowerCase().includes(query)) return true;
+          if (normalizeSearchText(r.name).includes(query)) return true;
 
           // Match description
-          if (r.description && r.description.toLowerCase().includes(query)) return true;
+          if (normalizeSearchText(r.description).includes(query)) return true;
+          if (normalizeSearchText(r.notes).includes(query)) return true;
 
           // Match ingredient names
           if (Array.isArray(r.ingredients)) {
             for (const ing of r.ingredients) {
-              if (ing && ing.name && ing.name.toLowerCase().includes(query)) {
+              if (ing && (normalizeSearchText(ing.name).includes(query) ||
+                          normalizeSearchText(ing.notes).includes(query))) {
                 return true;
               }
+            }
+          }
+
+          if (Array.isArray(r.steps)) {
+            for (const step of r.steps) {
+              const text = step && typeof step === 'object' ? step.text : step;
+              const notes = step && typeof step === 'object' ? step.notes : '';
+              if (normalizeSearchText(text).includes(query) ||
+                  normalizeSearchText(notes).includes(query)) return true;
             }
           }
 
@@ -189,9 +246,19 @@ window.Recipes = {
 
     // Sort
     const getTotalTime = (r) => {
-      const prep = (typeof r.prepTime === 'number' && !isNaN(r.prepTime)) ? r.prepTime : 0;
-      const cook = (typeof r.cookTime === 'number' && !isNaN(r.cookTime)) ? r.cookTime : 0;
-      return prep + cook;
+      const prep = Number(r.prepTime);
+      const cook = Number(r.cookTime);
+      const hasPrep = Number.isFinite(prep) && prep > 0;
+      const hasCook = Number.isFinite(cook) && cook > 0;
+      return hasPrep || hasCook ? (hasPrep ? prep : 0) + (hasCook ? cook : 0) : null;
+    };
+    const compareTime = (a, b, direction) => {
+      const timeA = getTotalTime(a);
+      const timeB = getTotalTime(b);
+      if (timeA === null && timeB === null) return String(a.name || '').localeCompare(String(b.name || ''), 'it-IT');
+      if (timeA === null) return 1;
+      if (timeB === null) return -1;
+      return direction * (timeA - timeB);
     };
 
     switch (sortBy) {
@@ -220,11 +287,11 @@ window.Recipes = {
         break;
 
       case 'time_asc':
-        result.sort((a, b) => getTotalTime(a) - getTotalTime(b));
+        result.sort((a, b) => compareTime(a, b, 1));
         break;
 
       case 'time_desc':
-        result.sort((a, b) => getTotalTime(b) - getTotalTime(a));
+        result.sort((a, b) => compareTime(a, b, -1));
         break;
 
       default:
@@ -369,7 +436,14 @@ window.Recipes = {
 
       totalIngs.forEach(ing => {
         const slugName = window.Utils ? window.Utils.slugify(ing.name) : String(ing.name).toLowerCase().trim();
-        const isMatched = normUser.some(u => slugName.includes(u) || u.includes(slugName));
+        const ingredientTokens = slugName.split('-').filter(token => token.length > 1);
+        const isMatched = normUser.some(u => {
+          const userTokens = u.split('-').filter(token => token.length > 1);
+          if (u === slugName) return true;
+          if (userTokens.length === 0 || ingredientTokens.length === 0) return false;
+          return ingredientTokens.every(token => userTokens.includes(token)) ||
+                 userTokens.every(token => ingredientTokens.includes(token));
+        });
         if (isMatched) {
           matchedCount++;
           matchedNames.push(ing.name);

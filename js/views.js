@@ -192,7 +192,7 @@ window.Views = (function () {
     html +=
       '<div class="form-group">' +
         '<label class="form-label" for="input-name">Nome ricetta *</label>' +
-        '<input type="text" class="form-input" id="input-name" placeholder="Es. Carbonara" value="' + esc(r.name) + '" required>' +
+        '<input type="text" class="form-input" id="input-name" maxlength="' + Recipes.LIMITS.name + '" placeholder="Es. Carbonara" value="' + esc(r.name) + '" required>' +
         '<span class="form-error" id="error-name"></span>' +
       '</div>';
 
@@ -216,14 +216,16 @@ window.Views = (function () {
     html +=
       '<div class="form-group">' +
         '<label class="form-label" for="input-description">Descrizione</label>' +
-        '<textarea class="form-textarea" id="input-description" rows="3" placeholder="Una breve descrizione della ricetta...">' + esc(r.description || '') + '</textarea>' +
+        '<textarea class="form-textarea" id="input-description" maxlength="' + Recipes.LIMITS.description + '" rows="3" placeholder="Una breve descrizione della ricetta...">' + esc(r.description || '') + '</textarea>' +
+        '<span class="form-error" id="error-description"></span>' +
       '</div>';
 
     // Note
     html +=
       '<div class="form-group">' +
         '<label class="form-label" for="input-notes">Note</label>' +
-        '<textarea class="form-textarea" id="input-notes" rows="3" placeholder="Annotazioni personali, consigli di conservazione, varianti...">' + esc(r.notes || '') + '</textarea>' +
+        '<textarea class="form-textarea" id="input-notes" maxlength="' + Recipes.LIMITS.notes + '" rows="3" placeholder="Annotazioni personali, consigli di conservazione, varianti...">' + esc(r.notes || '') + '</textarea>' +
+        '<span class="form-error" id="error-notes"></span>' +
       '</div>';
 
     // Immagine
@@ -301,7 +303,7 @@ window.Views = (function () {
     html +=
       '<div class="form-group">' +
         '<label class="form-label" for="input-preptime">Tempo preparazione (minuti)</label>' +
-        '<input type="number" class="form-input" id="input-preptime" min="0" placeholder="0" value="' + (r.prepTime || '') + '">' +
+        '<input type="number" class="form-input" id="input-preptime" min="0" max="' + Recipes.LIMITS.minutes + '" step="1" inputmode="numeric" placeholder="0" value="' + (r.prepTime || '') + '">' +
         '<span class="form-error" id="error-preptime"></span>' +
       '</div>';
 
@@ -309,7 +311,7 @@ window.Views = (function () {
     html +=
       '<div class="form-group">' +
         '<label class="form-label" for="input-cooktime">Tempo cottura (minuti)</label>' +
-        '<input type="number" class="form-input" id="input-cooktime" min="0" placeholder="0" value="' + (r.cookTime || '') + '">' +
+        '<input type="number" class="form-input" id="input-cooktime" min="0" max="' + Recipes.LIMITS.minutes + '" step="1" inputmode="numeric" placeholder="0" value="' + (r.cookTime || '') + '">' +
         '<span class="form-error" id="error-cooktime"></span>' +
       '</div>';
 
@@ -328,7 +330,7 @@ window.Views = (function () {
     html +=
       '<div class="form-group">' +
         '<label class="form-label" for="input-servings">Porzioni</label>' +
-        '<input type="number" class="form-input" id="input-servings" min="1" placeholder="4" value="' + (r.servings || '') + '">' +
+        '<input type="number" class="form-input" id="input-servings" min="1" max="' + Recipes.LIMITS.servings + '" step="1" inputmode="numeric" placeholder="4" value="' + (r.servings || '') + '">' +
         '<span class="form-error" id="error-servings"></span>' +
       '</div>';
 
@@ -352,8 +354,8 @@ window.Views = (function () {
       '<div class="dynamic-list__item ingredient-row" data-index="' + index + '">' +
         '<div class="ingredient-row-container" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
           '<div class="ingredient-inputs">' +
-            '<input type="text" class="form-input" placeholder="Ingrediente *" data-field="ing-name" value="' + esc(ing.name || '') + '" required>' +
-            '<input type="text" class="form-input" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
+            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientName + '" placeholder="Ingrediente *" data-field="ing-name" value="' + esc(ing.name || '') + '" required>' +
+            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientQuantity + '" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
             '<select class="form-select" data-field="ing-unit" style="max-width:6rem">' +
               '<option value="">—</option>';
     Recipes.UNITS.forEach(function (u) {
@@ -365,7 +367,7 @@ window.Views = (function () {
     }
     html += '</div>';
     html += '<div class="ingredient-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
-              '<input type="text" class="form-input" placeholder="Note per questo ingrediente (es. tiepido, setacciato)" data-field="ing-notes" value="' + esc(ing.notes || '') + '">' +
+              '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientNotes + '" placeholder="Note per questo ingrediente (es. tiepido, setacciato)" data-field="ing-notes" value="' + esc(ing.notes || '') + '">' +
             '</div>' +
         '</div>' +
       '</div>';
@@ -380,9 +382,9 @@ window.Views = (function () {
       '<div class="dynamic-list__item step-item" data-index="' + index + '">' +
         '<span class="step-number">' + (index + 1) + '</span>' +
         '<div class="step-inputs" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
-          '<textarea class="form-textarea" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" required>' + esc(stepText || '') + '</textarea>' +
+          '<textarea class="form-textarea" maxlength="' + Recipes.LIMITS.stepText + '" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" required>' + esc(stepText || '') + '</textarea>' +
           '<div class="step-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
-            '<input type="text" class="form-input" placeholder="Suggerimento / nota per questo passaggio (opzionale)" data-field="step-notes" value="' + esc(stepNotes || '') + '">' +
+            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.stepNotes + '" placeholder="Suggerimento / nota per questo passaggio (opzionale)" data-field="step-notes" value="' + esc(stepNotes || '') + '">' +
           '</div>' +
         '</div>';
     if (total > 1) {
