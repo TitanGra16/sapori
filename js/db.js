@@ -499,8 +499,15 @@ window.DB = {
     return JSON.stringify({
       name: String(recipe.name || '').toLocaleLowerCase('it-IT'),
       category: recipe.category || 'altro',
+      description: recipe.description || '',
+      notes: recipe.notes || '',
+      storage: recipe.storage || '',
       ingredients: recipe.ingredients || [],
-      steps: recipe.steps || []
+      steps: recipe.steps || [],
+      prepTime: Number(recipe.prepTime) || 0,
+      cookTime: Number(recipe.cookTime) || 0,
+      difficulty: recipe.difficulty || 'media',
+      servings: Number(recipe.servings) || 4
     });
   },
 

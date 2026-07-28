@@ -147,6 +147,30 @@ test('backup versione 2 ripristina ricette, categorie e tema', async t => {
   assert.match(backup.settings.customCategories, /Veloci/);
 });
 
+test('non confonde varianti con note e conservazione diverse', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const base = {
+    name: 'Pane di casa',
+    category: 'altro',
+    ingredients: [{ name: 'Farina' }],
+    steps: [{ text: 'Impasta' }]
+  };
+  await context.DB.importData(JSON.stringify({ ...base, id: 'pane-frigo', notes: 'Prima versione', storage: 'Frigorifero' }));
+  const summary = await context.DB.importData(JSON.stringify({
+    ...base,
+    id: 'pane-freezer',
+    notes: 'Seconda versione',
+    storage: 'Congelatore'
+  }));
+
+  assert.equal(summary.imported, 1);
+  assert.equal(summary.skipped, 0);
+  assert.equal((await context.DB.getAllRecipes()).length, 2);
+});
+
 test('ignora categorie personalizzate con ID riservati', () => {
   const context = createContext();
   const categories = context.DB._parseCustomCategories([
