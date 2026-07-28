@@ -218,6 +218,28 @@ test('ignora categorie personalizzate con ID riservati', () => {
   );
 });
 
+test('elimina una categoria e riassegna le ricette nella stessa operazione', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  await context.DB.setSetting('customCategories', JSON.stringify([
+    { id: 'veloci', label: 'Veloci', icon: '⚡', color: '#0EA5E9', isCustom: true }
+  ]));
+  const recipeId = await context.DB.addRecipe({
+    name: 'Toast veloce',
+    category: 'veloci',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Tosta' }]
+  });
+
+  const result = await context.DB.deleteCustomCategory('veloci');
+  assert.equal(result.movedRecipes, 1);
+  assert.deepEqual(JSON.parse(await context.DB.getSetting('customCategories')), []);
+  assert.equal((await context.DB.getRecipe(recipeId)).category, 'altro');
+  await assert.rejects(context.DB.deleteCustomCategory('primi'), /non valida/);
+});
+
 test('sostituisce gli ID importati non sicuri con un nuovo ID valido', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));

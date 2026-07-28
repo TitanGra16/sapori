@@ -321,21 +321,36 @@ window.DB = {
     await this._txComplete(tx);
   },
 
-  async reassignCategory(fromCategory, toCategory = 'altro') {
-    if (!fromCategory || fromCategory === toCategory) return 0;
+  async deleteCustomCategory(categoryId, toCategory = 'altro') {
+    if (!categoryId || this.BUILTIN_CATEGORY_IDS.includes(categoryId)) {
+      throw new Error('Categoria personalizzata non valida');
+    }
+    if (!this.BUILTIN_CATEGORY_IDS.includes(toCategory)) {
+      throw new Error('Categoria di destinazione non valida');
+    }
+
     const db = await this._ensureDB();
-    const tx = db.transaction('recipes', 'readwrite');
-    const store = tx.objectStore('recipes');
-    const recipes = await this._promisify(store.getAll());
-    let changed = 0;
+    const tx = db.transaction(['recipes', 'settings'], 'readwrite');
+    const recipeStore = tx.objectStore('recipes');
+    const settingsStore = tx.objectStore('settings');
+    const [recipes, settingsRecord] = await Promise.all([
+      this._promisify(recipeStore.getAll()),
+      this._promisify(settingsStore.get('customCategories'))
+    ]);
+    const customCategories = this._parseCustomCategories(settingsRecord ? settingsRecord.value : [])
+      .filter(category => category.id !== categoryId);
+    let movedRecipes = 0;
+
     recipes.forEach(recipe => {
-      if (recipe.category === fromCategory) {
-        store.put({ ...recipe, category: toCategory, updatedAt: Date.now() });
-        changed++;
+      if (recipe.category === categoryId) {
+        recipeStore.put({ ...recipe, category: toCategory, updatedAt: Date.now() });
+        movedRecipes++;
       }
     });
+    settingsStore.put({ key: 'customCategories', value: JSON.stringify(customCategories) });
     await this._txComplete(tx);
-    return changed;
+
+    return { movedRecipes, customCategories };
   },
 
   /**

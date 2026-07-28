@@ -451,32 +451,24 @@
 
   async function deleteCustomCategory(catId) {
     try {
-      var movedRecipes = await DB.reassignCategory(catId, 'altro');
-      var categoriesSetting = await DB.getSetting('customCategories');
-      if (categoriesSetting) {
-        var custom = JSON.parse(categoriesSetting);
-        custom = custom.filter(function (cat) {
-          return cat.id !== catId;
-        });
-        
-        await DB.setSetting('customCategories', JSON.stringify(custom));
-        
-        // Aggiorna array in esecuzione
-        Recipes.CATEGORIES = Recipes.CATEGORIES.filter(function (cat) {
-          return cat.id !== catId;
-        });
-        
-        Utils.showToast(
-          movedRecipes > 0
-            ? 'Categoria eliminata: ' + movedRecipes + ' ricett' + (movedRecipes === 1 ? 'a spostata' : 'e spostate') + ' in Altro.'
-            : 'Categoria eliminata',
-          'success'
-        );
-        
-        // Re-render delle impostazioni
-        if (state.currentView === 'settings') {
-          Views.renderSettings(appContent);
-        }
+      var result = await DB.deleteCustomCategory(catId, 'altro');
+      var movedRecipes = result.movedRecipes;
+
+      // Aggiorna l'array in esecuzione soltanto dopo il completamento
+      // della transazione che modifica ricette e impostazioni insieme.
+      Recipes.CATEGORIES = Recipes.CATEGORIES.filter(function (cat) {
+        return cat.id !== catId;
+      });
+
+      Utils.showToast(
+        movedRecipes > 0
+          ? 'Categoria eliminata: ' + movedRecipes + ' ricett' + (movedRecipes === 1 ? 'a spostata' : 'e spostate') + ' in Altro.'
+          : 'Categoria eliminata',
+        'success'
+      );
+
+      if (state.currentView === 'settings') {
+        Views.renderSettings(appContent);
       }
     } catch (e) {
       Utils.showToast('Errore durante l\'eliminazione della categoria', 'error');
