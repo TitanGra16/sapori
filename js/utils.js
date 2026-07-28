@@ -547,11 +547,12 @@ window.Utils = {
       document.body.appendChild(link);
       link.click();
 
-      // Cleanup
+      // Safari può iniziare il download in modo differito: non revocare il
+      // Blob nello stesso giro dell'evento click.
       setTimeout(() => {
-        document.body.removeChild(link);
+        if (link.parentNode) link.parentNode.removeChild(link);
         URL.revokeObjectURL(url);
-      }, 100);
+      }, 1000);
     } catch (e) {
       throw new Error('Errore durante il download: ' + e.message);
     }

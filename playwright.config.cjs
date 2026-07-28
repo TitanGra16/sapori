@@ -16,10 +16,12 @@ module.exports = defineConfig({
   projects: [
     {
       name: 'chromium-desktop',
+      testIgnore: '**/pwa.spec.cjs',
       use: { ...devices['Desktop Chrome'] }
     },
     {
       name: 'chromium-tablet',
+      testIgnore: '**/pwa.spec.cjs',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 820, height: 1180 },
@@ -28,6 +30,7 @@ module.exports = defineConfig({
     },
     {
       name: 'chromium-small-phone',
+      testIgnore: '**/pwa.spec.cjs',
       use: {
         ...devices['Pixel 7'],
         viewport: { width: 320, height: 700 }
@@ -35,7 +38,16 @@ module.exports = defineConfig({
     },
     {
       name: 'chromium-mobile',
+      testIgnore: '**/pwa.spec.cjs',
       use: { ...devices['Pixel 7'] }
+    },
+    {
+      name: 'chromium-pwa',
+      testMatch: '**/pwa.spec.cjs',
+      use: {
+        ...devices['Desktop Chrome'],
+        serviceWorkers: 'allow'
+      }
     }
   ],
   webServer: {

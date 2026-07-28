@@ -2002,7 +2002,11 @@
     });
 
     // Gestione installazione su iOS Safari (Aggiungi alla Home manuale)
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    var isModernIPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    var isIOS = (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      isModernIPad
+    ) && !window.MSStream;
 
     if (isIOS) {
       var dismissedTime = safeStorageGet('sapori-install-dismissed');
