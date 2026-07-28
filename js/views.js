@@ -368,23 +368,32 @@ window.Views = (function () {
     var esc = Utils.escapeHtml;
     var html =
       '<div class="dynamic-list__item ingredient-row" data-index="' + index + '">' +
-        '<div class="ingredient-row-container" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
+        '<div class="ingredient-row-container">' +
           '<div class="ingredient-inputs">' +
-            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientName + '" placeholder="Ingrediente *" data-field="ing-name" value="' + esc(ing.name || '') + '" aria-label="Nome ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients" required>' +
-            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientQuantity + '" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" aria-label="Quantità ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients" style="max-width:5rem">' +
-            '<select class="form-select" data-field="ing-unit" aria-label="Unità ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients" style="max-width:6rem">' +
+            '<label class="dynamic-field ingredient-field ingredient-field--name">' +
+              '<span class="dynamic-field__label">Ingrediente *</span>' +
+              '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientName + '" placeholder="Es. Farina" data-field="ing-name" value="' + esc(ing.name || '') + '" aria-label="Nome ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients" required>' +
+            '</label>' +
+            '<label class="dynamic-field ingredient-field ingredient-field--quantity">' +
+              '<span class="dynamic-field__label">Quantità</span>' +
+              '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientQuantity + '" placeholder="Es. 100" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" aria-label="Quantità ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients">' +
+            '</label>' +
+            '<label class="dynamic-field ingredient-field ingredient-field--unit">' +
+              '<span class="dynamic-field__label">Unità</span>' +
+              '<select class="form-select" data-field="ing-unit" aria-label="Unità ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients">' +
               '<option value="">—</option>';
     Recipes.UNITS.forEach(function (u) {
       html += '<option value="' + esc(u) + '"' + (ing.unit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
     });
-    html += '</select>';
+    html += '</select></label>';
     if (total > 1) {
       html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi ingrediente ' + (index + 1) + '">' + Icons.x + '</button>';
     }
     html += '</div>';
-    html += '<div class="ingredient-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
-              '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientNotes + '" placeholder="Note ingrediente" data-field="ing-notes" value="' + esc(ing.notes || '') + '" aria-label="Note ingrediente ' + (index + 1) + '">' +
-            '</div>' +
+    html += '<label class="dynamic-field ingredient-notes-container">' +
+              '<span class="dynamic-field__label">Note ingrediente</span>' +
+              '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientNotes + '" placeholder="Es. tiepido o setacciato" data-field="ing-notes" value="' + esc(ing.notes || '') + '" aria-label="Note ingrediente ' + (index + 1) + '">' +
+            '</label>' +
         '</div>' +
       '</div>';
     return html;
@@ -397,11 +406,15 @@ window.Views = (function () {
     var html =
       '<div class="dynamic-list__item step-item" data-index="' + index + '">' +
         '<span class="step-number">' + (index + 1) + '</span>' +
-        '<div class="step-inputs" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
-          '<textarea class="form-textarea" maxlength="' + Recipes.LIMITS.stepText + '" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" aria-label="Descrizione passaggio ' + (index + 1) + '" aria-describedby="error-steps" required>' + esc(stepText || '') + '</textarea>' +
-          '<div class="step-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
-            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.stepNotes + '" placeholder="Suggerimento opzionale" data-field="step-notes" value="' + esc(stepNotes || '') + '" aria-label="Suggerimento passaggio ' + (index + 1) + '">' +
-          '</div>' +
+        '<div class="step-inputs">' +
+          '<label class="dynamic-field">' +
+            '<span class="dynamic-field__label">Descrizione passaggio *</span>' +
+            '<textarea class="form-textarea" maxlength="' + Recipes.LIMITS.stepText + '" data-field="step-text" rows="2" placeholder="Descrivi cosa fare" aria-label="Descrizione passaggio ' + (index + 1) + '" aria-describedby="error-steps" required>' + esc(stepText || '') + '</textarea>' +
+          '</label>' +
+          '<label class="dynamic-field step-notes-container">' +
+            '<span class="dynamic-field__label">Suggerimento opzionale</span>' +
+            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.stepNotes + '" placeholder="Es. mescola delicatamente" data-field="step-notes" value="' + esc(stepNotes || '') + '" aria-label="Suggerimento passaggio ' + (index + 1) + '">' +
+          '</label>' +
         '</div>';
     if (total > 1) {
       html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-step" data-index="' + index + '" aria-label="Rimuovi passaggio ' + (index + 1) + '">' + Icons.x + '</button>';

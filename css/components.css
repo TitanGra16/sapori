@@ -3102,12 +3102,90 @@ body.search-open #app-content {
 }
 
 /* Ingredient Inputs Grid Layout */
+.ingredient-row-container,
+.step-inputs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.dynamic-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.dynamic-field:focus-within {
+  border-color: var(--primary);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 3px var(--shadow);
+}
+
+.dynamic-field__label {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.dynamic-field .form-input,
+.dynamic-field .form-textarea,
+.dynamic-field .form-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.dynamic-field .form-select {
+  padding-right: 28px;
+  background-position: right 6px center;
+}
+
+.dynamic-field .form-textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
 .ingredient-inputs {
   display: grid;
   grid-template-columns: 2.2fr 0.8fr 1fr auto;
   gap: var(--space-xs);
   width: 100%;
-  align-items: center;
+  align-items: end;
+}
+
+.ingredient-notes-container {
+  width: 100%;
+}
+
+.dynamic-list__item.step-item {
+  align-items: flex-start;
+}
+
+.dynamic-list__item.step-item > .step-number {
+  margin-top: 24px;
+}
+
+.dynamic-list__item.step-item > [data-action="remove-step"] {
+  margin-top: 22px;
 }
 
 @media (max-width: 480px) {
@@ -3119,23 +3197,22 @@ body.search-open #app-content {
     gap: var(--space-sm) var(--space-xs);
   }
   
-  .ingredient-inputs [data-field="ing-name"] {
+  .ingredient-field--name {
     grid-area: name;
   }
   
-  .ingredient-inputs [data-field="ing-qty"] {
+  .ingredient-field--quantity {
     grid-area: qty;
-    max-width: none !important;
   }
   
-  .ingredient-inputs [data-field="ing-unit"] {
+  .ingredient-field--unit {
     grid-area: unit;
-    max-width: none !important;
   }
   
   .ingredient-inputs [data-action="remove-ingredient"] {
     grid-area: remove;
     justify-self: end;
+    margin-bottom: 9px;
   }
 }
 
@@ -4652,6 +4729,12 @@ body.app-chrome-hidden #app-content {
   .nav-label {
     font-size: 0.6rem;
     letter-spacing: 0;
+  }
+
+  .form-steps-btn .step-lbl {
+    max-width: 74px;
+    font-size: 0.67rem;
+    letter-spacing: -0.015em;
   }
 
   .form-steps-nav {
