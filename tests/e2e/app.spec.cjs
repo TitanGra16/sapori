@@ -268,6 +268,38 @@ test('crea e conserva una categoria personalizzata dalle impostazioni', async ({
   })).toBe(true);
 });
 
+test('mantiene modificabili le unità personalizzate provenienti dai backup', async ({ page }) => {
+  const recipeId = await page.evaluate(() => DB.addRecipe({
+    name: 'Unità dal backup',
+    category: 'altro',
+    description: '',
+    ingredients: [{ name: 'Yogurt', quantity: '2', unit: 'vasetti', notes: '' }],
+    steps: [{ text: 'Mescolare.', notes: '' }],
+    prepTime: 5,
+    cookTime: 0,
+    servings: 2,
+    difficulty: 'facile',
+    notes: '',
+    storage: '',
+    image: null,
+    imageThumbnail: null,
+    isFavorite: false
+  }));
+
+  await page.goto('/index.html?e2e=1#edit/' + encodeURIComponent(recipeId));
+  const warningButton = page.getByRole('button', { name: 'Ho capito' });
+  if (await warningButton.isVisible().catch(() => false)) await warningButton.click();
+  await page.getByRole('tab', { name: 'Ingredienti e preparazione' }).click();
+  const unitSelect = page.getByRole('combobox', { name: 'Unità ingrediente 1' });
+  await expect(unitSelect).toHaveValue('vasetti');
+  await expect(unitSelect.locator('option:checked')).toHaveText('vasetti (dal backup)');
+  await page.getByRole('tab', { name: 'Dettagli di cottura' }).click();
+  await page.getByRole('button', { name: /Salva modifiche/ }).click();
+
+  await expect.poll(() => page.evaluate(id => DB.getRecipe(id).then(recipe => recipe.ingredients[0].unit), recipeId))
+    .toBe('vasetti');
+});
+
 test('salva la foto completa separata dalla miniatura delle card', async ({ page }) => {
   await fillMinimumRecipeForm(page, 'Ricetta con foto');
   await page.locator('#input-image').setInputFiles({

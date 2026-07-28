@@ -39,6 +39,16 @@ test('la validazione rifiuta righe vuote e numeri fuori limite', () => {
   assert.ok(result.errors.step_0);
 });
 
+test('la validazione limita anche le unità degli ingredienti', () => {
+  const { Recipes } = loadAppScripts(['js/recipes.js']);
+  const result = Recipes.validate(makeRecipe({
+    ingredients: [{ name: 'Farina', quantity: '1', unit: 'x'.repeat(31), notes: '' }]
+  }));
+
+  assert.equal(result.valid, false);
+  assert.match(result.errors.ingredient_0, /unità troppo lunga/);
+});
+
 test('la ricerca ignora gli accenti e combina tutti i campi descrittivi', () => {
   const { Recipes } = loadAppScripts(['js/recipes.js']);
   const recipes = [

@@ -504,7 +504,7 @@ window.DB = {
     };
     const limits = window.Recipes ? window.Recipes.LIMITS : {
       name: 120, description: 2000, notes: 4000, storage: 1000, ingredients: 100,
-      ingredientName: 160, ingredientQuantity: 50, ingredientNotes: 500,
+      ingredientName: 160, ingredientQuantity: 50, ingredientUnit: 30, ingredientNotes: 500,
       steps: 100, stepText: 2000, stepNotes: 1000
     };
 
@@ -513,7 +513,7 @@ window.DB = {
       return {
         name: asString(ingredient.name, limits.ingredientName),
         quantity: asString(ingredient.quantity, limits.ingredientQuantity),
-        unit: asString(ingredient.unit, 30),
+        unit: asString(ingredient.unit, limits.ingredientUnit),
         notes: asString(ingredient.notes, limits.ingredientNotes)
       };
     }).filter(Boolean) : [];

@@ -12,6 +12,7 @@ window.Recipes = {
     ingredients: 100,
     ingredientName: 160,
     ingredientQuantity: 50,
+    ingredientUnit: 30,
     ingredientNotes: 500,
     steps: 100,
     stepText: 2000,
@@ -149,6 +150,12 @@ window.Recipes = {
         if (ing.quantity !== undefined && ing.quantity !== null &&
             String(ing.quantity).length > limits.ingredientQuantity) {
           errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: quantità troppo lunga`;
+        }
+        if (ing.unit !== undefined && ing.unit !== null &&
+            typeof ing.unit !== 'string') {
+          errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: unità non valida`;
+        } else if (ing.unit && ing.unit.length > limits.ingredientUnit) {
+          errors[`ingredient_${i}`] = `Ingrediente ${i + 1}: unità troppo lunga`;
         }
         if (ing.notes !== undefined && ing.notes !== null &&
             typeof ing.notes !== 'string') {

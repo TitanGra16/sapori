@@ -385,6 +385,9 @@ window.Views = (function () {
     Recipes.UNITS.forEach(function (u) {
       html += '<option value="' + esc(u) + '"' + (ing.unit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
     });
+    if (ing.unit && !Recipes.UNITS.includes(ing.unit)) {
+      html += '<option value="' + esc(ing.unit) + '" selected>' + esc(ing.unit) + ' (dal backup)</option>';
+    }
     html += '</select></label>';
     if (total > 1) {
       html += '<button type="button" class="btn btn--icon btn--small" data-action="remove-ingredient" data-index="' + index + '" aria-label="Rimuovi ingrediente ' + (index + 1) + '">' + Icons.x + '</button>';
