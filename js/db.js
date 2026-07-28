@@ -8,6 +8,7 @@ window.DB = {
   initPromise: null,
   MAX_IMPORT_BYTES: 50 * 1024 * 1024,
   MAX_IMPORT_RECIPES: 5000,
+  BUILTIN_CATEGORY_IDS: ['antipasti', 'primi', 'secondi', 'contorni', 'dolci', 'bevande', 'altro'],
 
   /**
    * Initialize the IndexedDB database.
@@ -417,6 +418,7 @@ window.DB = {
     if (!Array.isArray(categories)) return [];
 
     const seen = new Set();
+    const reserved = new Set(this.BUILTIN_CATEGORY_IDS);
     return categories.slice(0, 100).map(category => {
       if (!category || typeof category !== 'object') return null;
       const label = String(category.label || '').trim().slice(0, 60);
@@ -424,7 +426,7 @@ window.DB = {
       const id = baseId.slice(0, 80);
       const icon = String(category.icon || '🍴').trim().slice(0, 16) || '🍴';
       const color = /^#[0-9a-f]{6}$/i.test(String(category.color || '')) ? category.color : '#E85D3A';
-      if (!id || !label || seen.has(id)) return null;
+      if (!id || !label || reserved.has(id) || seen.has(id)) return null;
       seen.add(id);
       return { id, label, icon, color, isCustom: true };
     }).filter(Boolean);
@@ -576,7 +578,7 @@ window.DB = {
     const customCategories = this._parseCustomCategories(
       settings.customCategories !== undefined ? settings.customCategories : data.customCategories
     );
-    const allowedCategories = new Set(['antipasti', 'primi', 'secondi', 'contorni', 'dolci', 'bevande', 'altro']);
+    const allowedCategories = new Set(this.BUILTIN_CATEGORY_IDS);
     customCategories.forEach(category => allowedCategories.add(category.id));
 
     const importedCategoryIds = new Set(customCategories.map(category => category.id));

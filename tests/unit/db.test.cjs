@@ -147,6 +147,19 @@ test('backup versione 2 ripristina ricette, categorie e tema', async t => {
   assert.match(backup.settings.customCategories, /Veloci/);
 });
 
+test('ignora categorie personalizzate con ID riservati', () => {
+  const context = createContext();
+  const categories = context.DB._parseCustomCategories([
+    { id: 'primi', label: 'Primi duplicati', icon: '🍝', color: '#E85D3A' },
+    { id: 'veloci', label: 'Ricette veloci', icon: '⚡', color: '#0EA5E9' }
+  ]);
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(categories)),
+    [{ id: 'veloci', label: 'Ricette veloci', icon: '⚡', color: '#0EA5E9', isCustom: true }]
+  );
+});
+
 test('separa foto complete e miniature senza perdere backup o dettaglio', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));

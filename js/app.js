@@ -381,18 +381,16 @@
     try {
       var categoriesSetting = await DB.getSetting('customCategories');
       if (categoriesSetting) {
-        var custom = JSON.parse(categoriesSetting);
-        if (Array.isArray(custom)) {
-          // Rimuovi eventuali custom categories caricate in precedenza (evita duplicati)
-          Recipes.CATEGORIES = Recipes.CATEGORIES.filter(function (cat) {
-            return !cat.isCustom;
-          });
-          // Unisci le categorie personalizzate caricate
-          custom.forEach(function (cat) {
-            cat.isCustom = true;
-            Recipes.CATEGORIES.push(cat);
-          });
-        }
+        var custom = DB._parseCustomCategories(categoriesSetting);
+        // Rimuovi eventuali custom categories caricate in precedenza (evita duplicati)
+        Recipes.CATEGORIES = Recipes.CATEGORIES.filter(function (cat) {
+          return !cat.isCustom;
+        });
+        // Unisci soltanto categorie normalizzate e con ID non riservati.
+        custom.forEach(function (cat) {
+          Recipes.CATEGORIES.push(cat);
+        });
+        await DB.setSetting('customCategories', JSON.stringify(custom));
       }
     } catch (e) {
       console.warn('Errore nel caricamento delle categorie personalizzate:', e);
