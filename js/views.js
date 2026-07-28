@@ -46,7 +46,7 @@ window.Views = (function () {
             '</span>' +
           '</div>' +
         '</a>' +
-        '<button type="button" class="recipe-card__favorite ' + favClass + '" data-action="toggle-fav" data-id="' + esc(recipe.id) + '" aria-label="' + (recipe.isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti') + '">' +
+        '<button type="button" class="recipe-card__favorite ' + favClass + '" data-action="toggle-fav" data-id="' + esc(recipe.id) + '" aria-label="' + (recipe.isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti') + '" aria-pressed="' + recipe.isFavorite + '">' +
           (recipe.isFavorite ? Icons.heartFilled : Icons.heartOutline) +
         '</button>' +
       '</article>'
@@ -370,9 +370,9 @@ window.Views = (function () {
       '<div class="dynamic-list__item ingredient-row" data-index="' + index + '">' +
         '<div class="ingredient-row-container" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
           '<div class="ingredient-inputs">' +
-            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientName + '" placeholder="Ingrediente *" data-field="ing-name" value="' + esc(ing.name || '') + '" required>' +
-            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientQuantity + '" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" style="max-width:5rem">' +
-            '<select class="form-select" data-field="ing-unit" style="max-width:6rem">' +
+            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientName + '" placeholder="Ingrediente *" data-field="ing-name" value="' + esc(ing.name || '') + '" aria-label="Nome ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients" required>' +
+            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientQuantity + '" placeholder="Qtà" data-field="ing-qty" value="' + esc(ing.quantity || '') + '" aria-label="Quantità ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients" style="max-width:5rem">' +
+            '<select class="form-select" data-field="ing-unit" aria-label="Unità ingrediente ' + (index + 1) + '" aria-describedby="error-ingredients" style="max-width:6rem">' +
               '<option value="">—</option>';
     Recipes.UNITS.forEach(function (u) {
       html += '<option value="' + esc(u) + '"' + (ing.unit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
@@ -383,7 +383,7 @@ window.Views = (function () {
     }
     html += '</div>';
     html += '<div class="ingredient-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
-              '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientNotes + '" placeholder="Note per questo ingrediente (es. tiepido, setacciato)" data-field="ing-notes" value="' + esc(ing.notes || '') + '">' +
+              '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.ingredientNotes + '" placeholder="Note ingrediente" data-field="ing-notes" value="' + esc(ing.notes || '') + '" aria-label="Note ingrediente ' + (index + 1) + '">' +
             '</div>' +
         '</div>' +
       '</div>';
@@ -398,9 +398,9 @@ window.Views = (function () {
       '<div class="dynamic-list__item step-item" data-index="' + index + '">' +
         '<span class="step-number">' + (index + 1) + '</span>' +
         '<div class="step-inputs" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">' +
-          '<textarea class="form-textarea" maxlength="' + Recipes.LIMITS.stepText + '" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" required>' + esc(stepText || '') + '</textarea>' +
+          '<textarea class="form-textarea" maxlength="' + Recipes.LIMITS.stepText + '" data-field="step-text" rows="2" placeholder="Descrivi il passaggio *" aria-label="Descrizione passaggio ' + (index + 1) + '" aria-describedby="error-steps" required>' + esc(stepText || '') + '</textarea>' +
           '<div class="step-notes-container" style="' + (total > 1 ? 'padding-right: 42px;' : '') + '">' +
-            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.stepNotes + '" placeholder="Suggerimento / nota per questo passaggio (opzionale)" data-field="step-notes" value="' + esc(stepNotes || '') + '">' +
+            '<input type="text" class="form-input" maxlength="' + Recipes.LIMITS.stepNotes + '" placeholder="Suggerimento opzionale" data-field="step-notes" value="' + esc(stepNotes || '') + '" aria-label="Suggerimento passaggio ' + (index + 1) + '">' +
           '</div>' +
         '</div>';
     if (total > 1) {
@@ -460,7 +460,7 @@ window.Views = (function () {
     // Overlay buttons
     html +=
       '<button type="button" class="recipe-detail__back" data-action="go-back" aria-label="Indietro">' + Icons.arrowLeft + '</button>' +
-      '<button type="button" class="recipe-detail__actions recipe-card__favorite' + favClass + '" data-action="toggle-fav-detail" data-id="' + esc(recipe.id) + '" aria-label="Preferito">' +
+      '<button type="button" class="recipe-detail__actions recipe-card__favorite' + favClass + '" data-action="toggle-fav-detail" data-id="' + esc(recipe.id) + '" aria-label="' + (recipe.isFavorite ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti') + '" aria-pressed="' + recipe.isFavorite + '">' +
         (recipe.isFavorite ? Icons.heartFilled : Icons.heartOutline) +
       '</button>';
     html += '</div>';
@@ -795,6 +795,7 @@ window.Views = (function () {
     // Input form for ingredients
     html += '<div class="pantry-card">';
     html += '<form id="pantry-form" class="pantry-input-row">';
+    html += '<label class="sr-only" for="pantry-input">Ingredienti disponibili</label>';
     html += '<input type="text" id="pantry-input" class="form-input" placeholder="Es. uova" autocomplete="off">';
     html += '<button type="submit" class="btn btn--primary" data-action="add-pantry-ingredient">' + Icons.plus + ' Aggiungi</button>';
     html += '</form>';

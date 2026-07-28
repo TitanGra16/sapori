@@ -16,9 +16,9 @@ async function fillMinimumRecipeForm(page, name = 'Ricetta automatica') {
   await page.getByRole('textbox', { name: 'Conservazione' }).fill('In frigorifero per 2 giorni.');
 
   await page.getByRole('tab', { name: 'Ingredienti e preparazione' }).click();
-  await page.getByRole('textbox', { name: 'Ingrediente *', exact: true }).fill('Farina');
-  await page.getByRole('textbox', { name: 'Qtà' }).fill('100');
-  await page.getByRole('textbox', { name: 'Descrivi il passaggio' }).fill('Mescolare tutti gli ingredienti.');
+  await page.getByRole('textbox', { name: 'Nome ingrediente 1' }).fill('Farina');
+  await page.getByRole('textbox', { name: 'Quantità ingrediente 1' }).fill('100');
+  await page.getByRole('textbox', { name: 'Descrizione passaggio 1' }).fill('Mescolare tutti gli ingredienti.');
 
   await page.getByRole('tab', { name: 'Dettagli di cottura' }).click();
   await page.getByRole('spinbutton', { name: 'Tempo preparazione' }).fill('10');
@@ -56,6 +56,10 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
   await expect(page.getByText('Farina')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Condividi' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Esporta PDF' })).toBeVisible();
+  const favoriteButton = page.getByRole('button', { name: 'Aggiungi ai preferiti' });
+  await expect(favoriteButton).toHaveAttribute('aria-pressed', 'false');
+  await favoriteButton.click();
+  await expect(page.getByRole('button', { name: 'Rimuovi dai preferiti' })).toHaveAttribute('aria-pressed', 'true');
 
   await page.evaluate(() => {
     window.__printSnapshot = null;
@@ -188,8 +192,31 @@ test('le righe dinamiche mantengono limiti e nomi accessibili', async ({ page })
   await expect(steps).toHaveCount(2);
   await expect(ingredients.nth(1)).toHaveAttribute('maxlength', '160');
   await expect(steps.nth(1)).toHaveAttribute('maxlength', '2000');
+  await expect(page.getByRole('combobox', { name: 'Unità ingrediente 1' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Descrizione passaggio 1' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Rimuovi ingrediente 2' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Rimuovi passaggio 2' })).toBeVisible();
+});
+
+test('collega gli errori ai campi e porta il focus sul primo errore', async ({ page }) => {
+  await page.getByRole('button', { name: 'Nuova ricetta' }).click();
+  await page.getByRole('tab', { name: 'Dettagli di cottura' }).click();
+  await page.getByRole('button', { name: 'Salva Ricetta' }).click();
+
+  const nameInput = page.getByRole('textbox', { name: 'Nome ricetta' });
+  await expect(nameInput).toBeFocused();
+  await expect(nameInput).toHaveAttribute('aria-invalid', 'true');
+  await expect(nameInput).toHaveAttribute('aria-describedby', 'error-name');
+  await expect(page.locator('#error-name')).toContainText('almeno 2 caratteri');
+});
+
+test('mantiene il focus durante l’inserimento in Svuotafrigo', async ({ page }) => {
+  await page.getByRole('button', { name: /Svuotafrigo/ }).click();
+  const pantryInput = page.getByRole('textbox', { name: 'Ingredienti disponibili' });
+  await pantryInput.fill('uova');
+  await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Ingredienti disponibili' })).toBeFocused();
+  await expect(page.getByRole('textbox', { name: 'Ingredienti disponibili' })).toHaveValue('');
 });
 
 test('protegge una bozza e intrappola il focus nella conferma', async ({ page }) => {

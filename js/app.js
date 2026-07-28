@@ -834,6 +834,9 @@
     errors.forEach(function (el) { el.textContent = ''; });
     var groups = document.querySelectorAll('.form-group.has-error');
     groups.forEach(function (el) { el.classList.remove('has-error'); });
+    document.querySelectorAll('[aria-invalid="true"]').forEach(function (el) {
+      el.removeAttribute('aria-invalid');
+    });
   }
 
   function switchFormTab(targetId) {
@@ -944,17 +947,17 @@
   // collisioni tipo "Ingrediente 1: il nome è obbligatorio" (contiene "nome") che finiva
   // nello slot del nome ricetta invece che in quello degli ingredienti.
   var FIELD_ERROR_MAP = {
-    name: { spanId: 'error-name', tab: 'tab-info' },
-    category: { spanId: 'error-category', tab: 'tab-info' },
-    description: { spanId: 'error-description', tab: 'tab-info' },
-    notes: { spanId: 'error-notes', tab: 'tab-info' },
-    storage: { spanId: 'error-storage', tab: 'tab-info' },
-    prepTime: { spanId: 'error-preptime', tab: 'tab-cook' },
-    cookTime: { spanId: 'error-cooktime', tab: 'tab-cook' },
-    servings: { spanId: 'error-servings', tab: 'tab-cook' },
-    difficulty: { spanId: 'error-difficulty', tab: 'tab-cook' },
-    ingredients: { spanId: 'error-ingredients', tab: 'tab-prep' },
-    steps: { spanId: 'error-steps', tab: 'tab-prep' }
+    name: { spanId: 'error-name', tab: 'tab-info', selector: '#input-name' },
+    category: { spanId: 'error-category', tab: 'tab-info', selector: '.category-selector-grid' },
+    description: { spanId: 'error-description', tab: 'tab-info', selector: '#input-description' },
+    notes: { spanId: 'error-notes', tab: 'tab-info', selector: '#input-notes' },
+    storage: { spanId: 'error-storage', tab: 'tab-info', selector: '#input-storage' },
+    prepTime: { spanId: 'error-preptime', tab: 'tab-cook', selector: '#input-preptime' },
+    cookTime: { spanId: 'error-cooktime', tab: 'tab-cook', selector: '#input-cooktime' },
+    servings: { spanId: 'error-servings', tab: 'tab-cook', selector: '#input-servings' },
+    difficulty: { spanId: 'error-difficulty', tab: 'tab-cook', selector: '#input-difficulty' },
+    ingredients: { spanId: 'error-ingredients', tab: 'tab-prep', selector: '#ingredients-list [data-field="ing-name"]' },
+    steps: { spanId: 'error-steps', tab: 'tab-prep', selector: '#steps-list [data-field="step-text"]' }
   };
   // Priorità di apertura tab quando ci sono errori su più tab insieme:
   // Info > Preparazione > Cottura (si apre sempre la tab più "a monte").
@@ -962,6 +965,7 @@
 
   function showFormErrors(errors) {
     var switchTarget = null;
+    var firstInvalidControl = null;
 
     // errors è un oggetto { fieldName: "messaggio" }; fieldName può essere un nome
     // fisso (name, category, prepTime...) oppure "ingredient_0", "step_2", ecc.
@@ -972,14 +976,23 @@
       var mapping = FIELD_ERROR_MAP[key];
       if (!mapping) {
         if (key.indexOf('ingredient_') === 0) {
-          mapping = FIELD_ERROR_MAP.ingredients;
+          mapping = {
+            spanId: FIELD_ERROR_MAP.ingredients.spanId,
+            tab: FIELD_ERROR_MAP.ingredients.tab,
+            selector: '#ingredients-list .ingredient-row[data-index="' + key.slice('ingredient_'.length) + '"] [data-field="ing-name"]'
+          };
         } else if (key.indexOf('step_') === 0) {
-          mapping = FIELD_ERROR_MAP.steps;
+          mapping = {
+            spanId: FIELD_ERROR_MAP.steps.spanId,
+            tab: FIELD_ERROR_MAP.steps.tab,
+            selector: '#steps-list .step-item[data-index="' + key.slice('step_'.length) + '"] [data-field="step-text"]'
+          };
         }
       }
       if (!mapping) return; // chiave senza slot dedicato (es. _general): nessun posto dove mostrarla
 
-      setFieldError(mapping.spanId, message);
+      var invalidControl = setFieldError(mapping.spanId, message, mapping.selector);
+      if (!firstInvalidControl && invalidControl) firstInvalidControl = invalidControl;
 
       if (switchTarget === null || TAB_OPEN_PRIORITY[mapping.tab] < TAB_OPEN_PRIORITY[switchTarget]) {
         switchTarget = mapping.tab;
@@ -989,14 +1002,26 @@
     if (switchTarget) {
       switchFormTab(switchTarget);
     }
+    if (firstInvalidControl) {
+      window.requestAnimationFrame(function () {
+        firstInvalidControl.focus();
+      });
+    }
   }
 
-  function setFieldError(errorId, message) {
+  function setFieldError(errorId, message, selector) {
     var el = document.getElementById(errorId);
-    if (!el) return;
-    el.textContent = message;
+    if (!el) return null;
+    el.textContent = el.textContent ? el.textContent + ' • ' + message : message;
+    el.setAttribute('role', 'alert');
     var group = el.closest('.form-group');
     if (group) group.classList.add('has-error');
+    var control = selector ? document.querySelector(selector) : null;
+    if (control) {
+      control.setAttribute('aria-invalid', 'true');
+      control.setAttribute('aria-describedby', errorId);
+    }
+    return control;
   }
 
   /* ──────────────────── FORM: SAVE ──────────────────── */
@@ -1487,8 +1512,11 @@
           });
           renderActiveView('pantry', function (container) {
             return Views.renderPantry(container, state.pantryIngredients);
+          }).then(function (rendered) {
+            if (!rendered) return;
+            var nextInput = document.getElementById('pantry-input');
+            if (nextInput) nextInput.focus();
           });
-          input.value = '';
         }
       }
     });
@@ -1692,6 +1720,8 @@
               // Update the button in place
               actionEl.classList.toggle('is-favorite', isFav);
               actionEl.innerHTML = isFav ? Icons.heartFilled : Icons.heartOutline;
+              actionEl.setAttribute('aria-pressed', String(isFav));
+              actionEl.setAttribute('aria-label', isFav ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti');
             }
           });
           break;
