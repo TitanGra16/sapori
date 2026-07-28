@@ -499,7 +499,30 @@ window.Utils = {
     try {
       await Promise.all([fontPromise, Promise.all(imagePromises)]);
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      window.print();
+      await new Promise(resolve => {
+        let completed = false;
+        let fallbackTimer = null;
+        const finish = () => {
+          if (completed) return;
+          completed = true;
+          window.removeEventListener('afterprint', finish);
+          if (fallbackTimer !== null) clearTimeout(fallbackTimer);
+          resolve();
+        };
+        window.addEventListener('afterprint', finish, { once: true });
+
+        const printSource = Function.prototype.toString.call(window.print);
+        window.print();
+
+        // I test e gli eventuali wrapper non nativi non aprono un vero dialogo.
+        // Nei browser reali afterprint governa la pulizia, con un fallback per
+        // le implementazioni che non emettono l'evento.
+        if (!printSource.includes('[native code]')) {
+          finish();
+        } else {
+          fallbackTimer = setTimeout(finish, 2000);
+        }
+      });
     } finally {
       document.body.classList.remove(bodyClass);
       if (printRoot.parentNode) printRoot.parentNode.removeChild(printRoot);

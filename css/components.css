@@ -3007,9 +3007,6 @@ body.search-open #app-content {
     break-before: page !important;
   }
 
-  .print-cookbook-recipe:first-child {
-    page-break-before: avoid !important;
-  }
 }
 
 
@@ -4292,7 +4289,7 @@ body.search-open #app-content {
   overflow-wrap: anywhere;
 }
 
-/* Print preview paper content */
+/* Regole finali per la stampa su carta */
 @media print {
   @page sapori-cover {
     size: A4 portrait;
@@ -4348,10 +4345,17 @@ body.search-open #app-content {
     page: sapori-recipe;
     break-before: page !important;
     page-break-before: always !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-cookbook-recipe .print-recipe-sheet {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   .print-cookbook-recipe .print-recipe-sheet__accent {
-    margin-top: -14mm !important;
+    margin-top: 0 !important;
   }
 
   .print-cover-page {

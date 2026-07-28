@@ -1244,7 +1244,9 @@
 
   async function exportAllRecipesPDF() {
     try {
-      var recipes = await DB.getAllRecipes();
+      // Le miniature sono più che sufficienti nel riquadro di stampa e
+      // impediscono di caricare contemporaneamente tutte le foto originali.
+      var recipes = await DB.getRecipeSummaries();
       if (!recipes || recipes.length === 0) {
         Utils.showToast('Nessuna ricetta da esportare! 🍳', 'error');
         return;
@@ -1907,7 +1909,12 @@
           break;
         }
         case 'export-pdf-all': {
-          exportAllRecipesPDF();
+          actionEl.disabled = true;
+          actionEl.setAttribute('aria-busy', 'true');
+          exportAllRecipesPDF().finally(function () {
+            actionEl.disabled = false;
+            actionEl.removeAttribute('aria-busy');
+          });
           break;
         }
         case 'export-data': {

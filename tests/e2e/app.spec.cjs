@@ -101,9 +101,13 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
     };
     await DB.addRecipe({ ...base, name: 'Zuppa' });
     await DB.addRecipe({ ...base, name: 'Arrosto' });
+    DB.getAllRecipes = async () => {
+      throw new Error('Il ricettario PDF non deve caricare le foto originali');
+    };
   });
 
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.emulateMedia({ media: 'print' });
   await page.evaluate(() => {
     window.__cookbookSnapshot = null;
     window.print = () => {
@@ -118,7 +122,10 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
           ? Array.from(root.querySelectorAll('.print-recipe-sheet__title')).map(item => item.textContent)
           : [],
         storageBlocks: root ? root.querySelectorAll('.print-recipe-sheet__storage').length : -1,
-        singleColumnAftercare: root ? root.querySelectorAll('.print-recipe-sheet__aftercare--single').length : -1
+        singleColumnAftercare: root ? root.querySelectorAll('.print-recipe-sheet__aftercare--single').length : -1,
+        firstAccentMarginTop: root
+          ? getComputedStyle(root.querySelector('.print-recipe-sheet__accent')).marginTop
+          : null
       };
     };
   });
@@ -130,7 +137,51 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
     index: ['01ArrostoPrimi Piatti', '02ZuppaPrimi Piatti'],
     titles: ['Arrosto', 'Zuppa'],
     storageBlocks: 0,
-    singleColumnAftercare: 2
+    singleColumnAftercare: 2,
+    firstAccentMarginTop: '0px'
+  });
+});
+
+test('renderizza una scheda PDF reale con gli stili di stampa', async ({ page }) => {
+  await page.evaluate(() => {
+    const recipe = {
+      name: 'Pane rustico',
+      category: 'altro',
+      description: 'Una descrizione abbastanza lunga per verificare la composizione della pagina stampata.',
+      ingredients: [
+        { name: 'Farina', quantity: '500', unit: 'g', notes: 'setacciata' },
+        { name: 'Acqua', quantity: '350', unit: 'ml', notes: '' }
+      ],
+      steps: [
+        { text: 'Impastare con cura fino a ottenere un composto omogeneo.', notes: 'Non aggiungere altra farina.' },
+        { text: 'Lasciare lievitare e cuocere fino a doratura.', notes: '' }
+      ],
+      prepTime: 20,
+      cookTime: 45,
+      servings: 6,
+      difficulty: 'media',
+      notes: 'Controllare la cottura negli ultimi minuti.',
+      storage: 'Conservare in un sacchetto di carta per due giorni.',
+      image: null
+    };
+    const root = document.createElement('div');
+    root.className = 'print-document-root print-document-root--recipe';
+    root.innerHTML = Views.buildPrintableRecipeHTML(recipe);
+    document.body.appendChild(root);
+    document.body.classList.add('printing-recipe');
+  });
+
+  await page.emulateMedia({ media: 'print' });
+  const pdf = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    preferCSSPageSize: true
+  });
+  expect(Buffer.from(pdf).subarray(0, 5).toString()).toBe('%PDF-');
+  expect(pdf.length).toBeGreaterThan(15000);
+  await page.evaluate(() => {
+    document.body.classList.remove('printing-recipe');
+    document.querySelector('.print-document-root--recipe')?.remove();
   });
 });
 

@@ -1158,8 +1158,8 @@ window.Views = (function () {
   }
 
   /**
-   * Build the canonical printable layout used by both the A4 preview and the
-   * complete cookbook. Keeping one template prevents preview/print drift.
+   * Build the canonical printable layout used by individual recipes and the
+   * complete cookbook. Keeping one template prevents print layout drift.
    * @param {Object} recipe
    * @param {Object} [options]
    * @returns {string}
@@ -1257,7 +1257,7 @@ window.Views = (function () {
           '<div><dt>Cottura</dt><dd>' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</dd></div>' +
           '<div><dt>Tempo totale</dt><dd>' + esc(Utils.formatTime(totalMinutes)) + '</dd></div>' +
           '<div><dt>Porzioni</dt><dd>' + esc(String(recipe.servings || 4)) + '</dd></div>' +
-          '<div><dt>Difficoltà</dt><dd>' + esc(diffEmoji) + ' ' + esc(diffMap[recipe.difficulty] || 'Facile') + '</dd></div>' +
+          '<div><dt>Difficoltà</dt><dd>' + esc(diffEmoji) + ' ' + esc(diffMap[recipe.difficulty] || 'Media') + '</dd></div>' +
         '</dl>' +
         '<section class="print-recipe-sheet__section">' +
           '<h2>Ingredienti</h2>' +
