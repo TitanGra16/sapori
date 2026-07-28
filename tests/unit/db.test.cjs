@@ -28,6 +28,29 @@ async function getStoredRecords(context, id) {
   return { recipe, image };
 }
 
+test('il preferito non altera data di modifica o foto della ricetta', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const fullImage = 'data:image/jpeg;base64,Rk9UT19QUkVGRVJJVE8=';
+  const id = await context.DB.addRecipe({
+    name: 'Ricetta preferita',
+    category: 'altro',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Servi' }],
+    image: fullImage,
+    isFavorite: false
+  });
+  const before = await getStoredRecords(context, id);
+
+  assert.equal(await context.DB.toggleFavorite(id), true);
+  const after = await getStoredRecords(context, id);
+  assert.equal(after.recipe.isFavorite, true);
+  assert.equal(after.recipe.updatedAt, before.recipe.updatedAt);
+  assert.equal(after.image.data, fullImage);
+});
+
 test('importa il fixture completo senza perdere note', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));

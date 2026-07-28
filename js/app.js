@@ -884,16 +884,13 @@
 
   async function toggleFavorite(id) {
     try {
-      var recipe = await DB.getRecipe(id);
-      if (!recipe) return;
-      recipe.isFavorite = !recipe.isFavorite;
-      recipe.updatedAt = Date.now();
-      await DB.updateRecipe(recipe);
+      var isFavorite = await DB.toggleFavorite(id);
+      if (isFavorite === null) return null;
       Utils.showToast(
-        recipe.isFavorite ? 'Aggiunta ai preferiti ❤️' : 'Rimossa dai preferiti',
+        isFavorite ? 'Aggiunta ai preferiti ❤️' : 'Rimossa dai preferiti',
         'success'
       );
-      return recipe.isFavorite;
+      return isFavorite;
     } catch (e) {
       Utils.showToast('Errore nel salvataggio', 'error');
       return null;

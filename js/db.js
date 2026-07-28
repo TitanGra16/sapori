@@ -305,6 +305,29 @@ window.DB = {
   },
 
   /**
+   * Toggle the favorite flag without changing the recipe content timestamp.
+   * @param {string} id
+   * @returns {Promise<boolean|null>} New state, or null when the recipe is missing.
+   */
+  async toggleFavorite(id) {
+    if (!id) return null;
+
+    const db = await this._ensureDB();
+    const tx = db.transaction('recipes', 'readwrite');
+    const store = tx.objectStore('recipes');
+    const recipe = await this._promisify(store.get(id));
+    if (!recipe) {
+      await this._txComplete(tx);
+      return null;
+    }
+
+    recipe.isFavorite = !recipe.isFavorite;
+    store.put(recipe);
+    await this._txComplete(tx);
+    return recipe.isFavorite;
+  },
+
+  /**
    * Delete a recipe by its ID.
    * @param {string} id
    * @returns {Promise<void>}
