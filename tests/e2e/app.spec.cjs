@@ -242,6 +242,19 @@ test('renderizza una scheda PDF reale con gli stili di stampa', async ({ page })
   });
 });
 
+test('scarica il backup JSON e mostra la data dell’ultima esportazione', async ({ page }) => {
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await expect(page.getByText('Mai eseguito')).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Backup JSON' }).click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename()).toMatch(/^sapori-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  await expect(page.locator('#last-backup-status')).not.toHaveText('Mai eseguito');
+  await expect.poll(() => page.evaluate(async () => Number(await DB.getSetting('lastBackupAt')) > 0)).toBe(true);
+});
+
 test('salva la foto completa separata dalla miniatura delle card', async ({ page }) => {
   await fillMinimumRecipeForm(page, 'Ricetta con foto');
   await page.locator('#input-image').setInputFiles({

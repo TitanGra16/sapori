@@ -637,7 +637,21 @@ window.Views = (function () {
     var theme = Theme.getCurrentTheme();
     var isDark = theme.mode === 'dark';
     var currentPalette = theme.palette || 'classico';
-    var count = await DB.countRecipes();
+    var settingsData = await Promise.all([
+      DB.countRecipes(),
+      DB.getSetting('lastBackupAt')
+    ]);
+    var count = settingsData[0];
+    var lastBackupAt = Number(settingsData[1]);
+    var lastBackupText = Number.isFinite(lastBackupAt) && lastBackupAt > 0
+      ? new Date(lastBackupAt).toLocaleString('it-IT', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : 'Mai eseguito';
 
     var palettes = Theme.PALETTES;
 
@@ -741,6 +755,13 @@ window.Views = (function () {
         '<div class="settings-item__info">' +
           '<div class="settings-item__label">Ricette salvate</div>' +
           '<div class="settings-item__description"><strong>' + count + '</strong> ricett' + (count === 1 ? 'a' : 'e') + ' nel tuo ricettario</div>' +
+        '</div>' +
+      '</div>';
+    html +=
+      '<div class="settings-item">' +
+        '<div class="settings-item__info">' +
+          '<div class="settings-item__label">Ultimo backup JSON</div>' +
+          '<div class="settings-item__description" id="last-backup-status" aria-live="polite">' + esc(lastBackupText) + '</div>' +
         '</div>' +
       '</div>';
     html +=

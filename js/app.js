@@ -1373,6 +1373,22 @@
       var json = await DB.exportData();
       var date = new Date().toISOString().slice(0, 10);
       Utils.triggerDownload(json, 'sapori-backup-' + date + '.json', 'application/json');
+      var backupAt = Date.now();
+      try {
+        await DB.setSetting('lastBackupAt', backupAt);
+        var status = document.getElementById('last-backup-status');
+        if (status) {
+          status.textContent = new Date(backupAt).toLocaleString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+      } catch (settingError) {
+        console.warn('Impossibile registrare la data del backup:', settingError);
+      }
       Utils.showToast('Esportazione completata! 📥', 'success');
     } catch (e) {
       Utils.showToast('Errore nell\'esportazione', 'error');
@@ -2055,7 +2071,12 @@
           break;
         }
         case 'export-data': {
-          exportData();
+          actionEl.disabled = true;
+          actionEl.setAttribute('aria-busy', 'true');
+          exportData().finally(function () {
+            actionEl.disabled = false;
+            actionEl.removeAttribute('aria-busy');
+          });
           break;
         }
         case 'import-data': {
