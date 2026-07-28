@@ -33,7 +33,7 @@ window.Views = (function () {
 
     return (
       '<article class="recipe-card animate-scale-in stagger-' + stagger + '" data-id="' + esc(recipe.id) + '">' +
-        '<a class="recipe-card__link" href="#detail/' + esc(recipe.id) + '" data-action="open-recipe" data-id="' + esc(recipe.id) + '" aria-label="Apri la ricetta ' + esc(recipe.name) + '">' +
+        '<a class="recipe-card__link" href="#detail/' + esc(encodeURIComponent(recipe.id)) + '" data-action="open-recipe" data-id="' + esc(recipe.id) + '" aria-label="Apri la ricetta ' + esc(recipe.name) + '">' +
           imageBlock +
           '<div class="recipe-card__content">' +
             '<h3 class="recipe-card__title">' + esc(recipe.name) + '</h3>' +

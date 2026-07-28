@@ -160,6 +160,26 @@ test('ignora categorie personalizzate con ID riservati', () => {
   );
 });
 
+test('sostituisce gli ID importati non sicuri con un nuovo ID valido', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const summary = await context.DB.importData(JSON.stringify({
+    id: 'ricetta/con-slash',
+    name: 'Ricetta importata',
+    category: 'altro',
+    ingredients: [{ name: 'Farina' }],
+    steps: [{ text: 'Impasta' }]
+  }));
+
+  assert.equal(summary.imported, 1);
+  const recipes = await context.DB.getAllRecipes();
+  assert.equal(recipes.length, 1);
+  assert.notEqual(recipes[0].id, 'ricetta/con-slash');
+  assert.match(recipes[0].id, /^[a-z0-9][a-z0-9_-]{0,127}$/i);
+});
+
 test('separa foto complete e miniature senza perdere backup o dettaglio', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));

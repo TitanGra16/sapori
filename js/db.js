@@ -470,10 +470,12 @@ window.DB = {
       /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(rawImage) ? rawImage : null;
     const category = allowedCategories.has(recipe.category) ? recipe.category : 'altro';
     const difficulty = ['facile', 'media', 'difficile'].includes(recipe.difficulty) ? recipe.difficulty : 'media';
+    const importedId = typeof recipe.id === 'string' ? recipe.id.trim() : '';
+    const id = /^[a-z0-9][a-z0-9_-]{0,127}$/i.test(importedId) ? importedId : null;
     const now = Date.now();
 
     return {
-      id: typeof recipe.id === 'string' && recipe.id.length <= 128 ? recipe.id : null,
+      id,
       name: asString(recipe.name, limits.name),
       category,
       description: asString(recipe.description, limits.description),

@@ -512,7 +512,14 @@
     // Parse the hash
     var parts = hash.replace('#', '').split('/');
     var view = parts[0] || 'home';
-    var param = parts[1] || null;
+    var param = null;
+    if (parts.length > 1) {
+      try {
+        param = decodeURIComponent(parts.slice(1).join('/'));
+      } catch (error) {
+        param = parts.slice(1).join('/');
+      }
+    }
 
     state.currentView = view;
     closeSearch(false);
@@ -1459,7 +1466,7 @@
         /* ── Navigation actions ── */
         case 'open-recipe': {
           var id = actionEl.getAttribute('data-id');
-          if (id) navigateTo('#detail/' + id);
+          if (id) navigateTo('#detail/' + encodeURIComponent(id));
           break;
         }
         case 'go-home': {
@@ -1588,7 +1595,7 @@
         }
         case 'edit-recipe': {
           var editId = actionEl.getAttribute('data-id');
-          if (editId) navigateTo('#edit/' + editId);
+          if (editId) navigateTo('#edit/' + encodeURIComponent(editId));
           break;
         }
         case 'export-pdf': {
@@ -1726,7 +1733,7 @@
         case 'cancel-form': {
           var performNavigate = function () {
             if (state.editingRecipe) {
-              navigateTo('#detail/' + state.editingRecipe.id);
+              navigateTo('#detail/' + encodeURIComponent(state.editingRecipe.id));
             } else {
               navigateTo('#home');
             }
@@ -1739,7 +1746,7 @@
               function () {
                 Views.hideModal();
                 if (state.editingRecipe) {
-                  navigateTo('#detail/' + state.editingRecipe.id, true);
+                  navigateTo('#detail/' + encodeURIComponent(state.editingRecipe.id), true);
                 } else {
                   navigateTo('#home', true);
                 }
