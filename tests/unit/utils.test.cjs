@@ -97,6 +97,10 @@ test('createImageThumbnail riduce le immagini e rifiuta dati arbitrari', async (
   assert.equal(canvas.width, 360);
   assert.equal(canvas.height, 270);
   assert.equal(result, 'image/jpeg;quality=0.72');
+  assert.equal(
+    await Utils.createImageThumbnail('data:image/gif;base64,AAAA', 360, 7 * 1024 * 1024),
+    'image/jpeg;quality=0.72'
+  );
 
   dimensions = [10000, 5000];
   await assert.rejects(

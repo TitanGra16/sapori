@@ -250,13 +250,21 @@ window.Utils = {
    * Create a small JPEG thumbnail from an already validated image data URL.
    * @param {string} dataUrl
    * @param {number} maxDimension
+   * @param {number} maxDataUrlLength
    * @returns {Promise<string>}
    */
-  async createImageThumbnail(dataUrl, maxDimension = 360) {
+  async createImageThumbnail(
+    dataUrl,
+    maxDimension = 360,
+    maxDataUrlLength = this.MAX_IMAGE_DATA_URL_LENGTH
+  ) {
+    const safeDataUrlLength = Number.isFinite(maxDataUrlLength)
+      ? Math.min(7 * 1024 * 1024, Math.max(1, maxDataUrlLength))
+      : this.MAX_IMAGE_DATA_URL_LENGTH;
     if (
       typeof dataUrl !== 'string' ||
-      dataUrl.length > this.MAX_IMAGE_DATA_URL_LENGTH ||
-      !/^data:image\/(?:jpe?g|png|webp);base64,/i.test(dataUrl)
+      dataUrl.length > safeDataUrlLength ||
+      !/^data:image\/(?:jpe?g|png|webp|gif);base64,/i.test(dataUrl)
     ) {
       throw new Error('Dati immagine non validi');
     }

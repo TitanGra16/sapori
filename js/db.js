@@ -9,6 +9,7 @@ window.DB = {
   MAX_IMPORT_BYTES: 50 * 1024 * 1024,
   MAX_IMPORT_RECIPES: 5000,
   MAX_CUSTOM_CATEGORIES: 100,
+  MAX_IMAGE_DATA_URL_LENGTH: 7 * 1024 * 1024,
   BUILTIN_CATEGORY_IDS: ['antipasti', 'primi', 'secondi', 'contorni', 'dolci', 'bevande', 'altro'],
 
   /**
@@ -93,7 +94,7 @@ window.DB = {
 
   _isDataImage(value) {
     return typeof value === 'string' &&
-      value.length <= 7 * 1024 * 1024 &&
+      value.length <= this.MAX_IMAGE_DATA_URL_LENGTH &&
       /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(value);
   },
 
@@ -120,7 +121,7 @@ window.DB = {
   async _createThumbnail(image) {
     if (!image || !window.Utils || typeof window.Utils.createImageThumbnail !== 'function') return null;
     try {
-      return await window.Utils.createImageThumbnail(image, 360);
+      return await window.Utils.createImageThumbnail(image, 360, this.MAX_IMAGE_DATA_URL_LENGTH);
     } catch (error) {
       return null;
     }
@@ -527,7 +528,7 @@ window.DB = {
     }).filter(Boolean) : [];
 
     const rawImage = typeof recipe.image === 'string' ? recipe.image : '';
-    const image = rawImage.length <= 7 * 1024 * 1024 &&
+    const image = rawImage.length <= this.MAX_IMAGE_DATA_URL_LENGTH &&
       /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(rawImage) ? rawImage : null;
     const category = allowedCategories.has(recipe.category) ? recipe.category : 'altro';
     const difficulty = ['facile', 'media', 'difficile'].includes(recipe.difficulty) ? recipe.difficulty : 'media';
