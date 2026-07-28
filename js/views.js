@@ -1117,6 +1117,7 @@ window.Views = (function () {
       '<strong>' + preview.additions + '</strong> nuove',
       '<strong>' + preview.updates + '</strong> aggiornabili',
       '<strong>' + preview.duplicates + '</strong> duplicate',
+      '<strong>' + preview.conflicts + '</strong> conflitti protetti',
       '<strong>' + preview.rejected + '</strong> non valide'
     ].join(' · ');
 
@@ -1127,7 +1128,7 @@ window.Views = (function () {
           '<p>Il file contiene <strong>' + preview.total + '</strong> ricett' + (preview.total === 1 ? 'a valida' : 'e valide') + '.</p>' +
           '<p style="margin-top:.75rem;color:var(--text-secondary)">' + summary + '</p>' +
           (preview.categories ? '<p style="margin-top:.5rem">' + preview.categories + ' categorie personalizzate incluse.</p>' : '') +
-          '<p style="margin-top:.75rem;font-size:.85rem;color:var(--text-muted)">Unisci aggiorna gli ID già presenti e ignora i duplicati. Sostituisci elimina prima le ricette attuali.</p>' +
+          '<p style="margin-top:.75rem;font-size:.85rem;color:var(--text-muted)">Unisci aggiorna soltanto le versioni più recenti, ignora i duplicati e conserva le modifiche locali in conflitto. Sostituisci elimina prima le ricette attuali.</p>' +
         '</div>' +
         '<div class="modal__footer">' +
           '<button type="button" class="btn btn--ghost" data-action="modal-cancel">Annulla</button>' +

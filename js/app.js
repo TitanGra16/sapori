@@ -1288,6 +1288,7 @@
           if (summary.imported) parts.push(summary.imported + ' nuove');
           if (summary.updated) parts.push(summary.updated + ' aggiornate');
           if (summary.skipped) parts.push(summary.skipped + ' duplicate ignorate');
+          if (summary.conflicts) parts.push(summary.conflicts + ' conflitti locali preservati');
           if (summary.rejected) parts.push(summary.rejected + ' non valide');
           Utils.showToast('Importazione completata: ' + (parts.join(', ') || 'nessuna modifica') + '.', 'success');
           if (state.currentView === 'settings') Views.renderSettings(appContent);

@@ -619,21 +619,37 @@ window.DB = {
     const prepared = this._prepareImport(jsonString);
     const existing = await this.getRecipeSummaries();
     const ids = new Set(existing.map(recipe => recipe.id));
+    const existingById = new Map(existing.map(recipe => [recipe.id, recipe]));
     const fingerprints = this._createFingerprintTracker(existing);
     let additions = 0;
     let updates = 0;
     let duplicates = 0;
+    let conflicts = 0;
 
     prepared.recipes.forEach(recipe => {
       const fingerprint = this._recipeFingerprint(recipe);
       if (recipe.id && ids.has(recipe.id)) {
+        const current = existingById.get(recipe.id);
+        const currentFingerprint = this._recipeFingerprint(current);
+        if (currentFingerprint === fingerprint) {
+          duplicates++;
+          return;
+        }
+        if (Number(recipe.updatedAt) < Number(current.updatedAt)) {
+          conflicts++;
+          return;
+        }
         fingerprints.replace(recipe.id, fingerprint);
+        existingById.set(recipe.id, recipe);
         updates++;
       } else if (fingerprints.has(fingerprint)) {
         duplicates++;
       } else {
         fingerprints.add(recipe.id, fingerprint);
-        if (recipe.id) ids.add(recipe.id);
+        if (recipe.id) {
+          ids.add(recipe.id);
+          existingById.set(recipe.id, recipe);
+        }
         additions++;
       }
     });
@@ -643,6 +659,7 @@ window.DB = {
       additions,
       updates,
       duplicates,
+      conflicts,
       rejected: prepared.rejected,
       categories: prepared.customCategories.length,
       isBackup: prepared.isBackup
@@ -664,6 +681,7 @@ window.DB = {
     const db = await this._ensureDB();
     const existing = mode === 'merge' ? await this.getRecipeSummaries() : [];
     const existingIds = new Set(existing.map(recipe => recipe.id));
+    const existingById = new Map(existing.map(recipe => [recipe.id, recipe]));
     const fingerprints = this._createFingerprintTracker(existing);
     const importedRecipes = [];
     for (const recipe of prepared.recipes) {
@@ -676,8 +694,14 @@ window.DB = {
     const store = tx.objectStore('recipes');
     const imageStore = tx.objectStore('images');
     const settingsStore = tx.objectStore('settings');
-    const now = Date.now();
-    const summary = { imported: 0, updated: 0, skipped: 0, rejected: prepared.rejected, categories: prepared.customCategories.length };
+    const summary = {
+      imported: 0,
+      updated: 0,
+      skipped: 0,
+      conflicts: 0,
+      rejected: prepared.rejected,
+      categories: prepared.customCategories.length
+    };
 
     if (mode === 'replace') {
       store.clear();
@@ -688,7 +712,17 @@ window.DB = {
       const recipe = item.recipe;
       const fingerprint = this._recipeFingerprint(recipe);
       if (mode === 'merge' && recipe.id && existingIds.has(recipe.id)) {
-        const updated = this._toStoredRecipe({ ...recipe, updatedAt: now }, item.thumbnail);
+        const current = existingById.get(recipe.id);
+        const currentFingerprint = this._recipeFingerprint(current);
+        if (currentFingerprint === fingerprint) {
+          summary.skipped++;
+          continue;
+        }
+        if (Number(recipe.updatedAt) < Number(current.updatedAt)) {
+          summary.conflicts++;
+          continue;
+        }
+        const updated = this._toStoredRecipe(recipe, item.thumbnail);
         store.put(updated.stored);
         if (updated.fullImage) {
           imageStore.put({ recipeId: recipe.id, data: updated.fullImage });
@@ -696,6 +730,7 @@ window.DB = {
           imageStore.delete(recipe.id);
         }
         fingerprints.replace(recipe.id, fingerprint);
+        existingById.set(recipe.id, recipe);
         summary.updated++;
         continue;
       }
@@ -707,12 +742,14 @@ window.DB = {
       const id = recipe.id && !existingIds.has(recipe.id)
         ? recipe.id
         : (window.Utils ? window.Utils.generateId() : (crypto.randomUUID ? crypto.randomUUID() : this._fallbackId()));
-      const added = this._toStoredRecipe({ ...recipe, id, updatedAt: now }, item.thumbnail);
+      const addedRecipe = { ...recipe, id };
+      const added = this._toStoredRecipe(addedRecipe, item.thumbnail);
       store.put(added.stored);
       if (added.fullImage) {
         imageStore.put({ recipeId: id, data: added.fullImage });
       }
       existingIds.add(id);
+      existingById.set(id, addedRecipe);
       fingerprints.add(id, fingerprint);
       summary.imported++;
     }

@@ -171,6 +171,40 @@ test('non confonde varianti con note e conservazione diverse', async t => {
   assert.equal((await context.DB.getAllRecipes()).length, 2);
 });
 
+test('in unione preserva la versione locale più recente', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  await context.DB.importData(JSON.stringify({
+    id: 'ricetta-conflitto',
+    name: 'Versione locale',
+    category: 'altro',
+    notes: 'Da conservare',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Tosta' }],
+    updatedAt: 2000
+  }));
+
+  const olderBackup = JSON.stringify({
+    id: 'ricetta-conflitto',
+    name: 'Versione vecchia',
+    category: 'altro',
+    notes: 'Da non ripristinare',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Tosta' }],
+    updatedAt: 1000
+  });
+  const preview = await context.DB.previewImport(olderBackup);
+  assert.equal(preview.conflicts, 1);
+  assert.equal(preview.updates, 0);
+
+  const summary = await context.DB.importData(olderBackup);
+  assert.equal(summary.conflicts, 1);
+  assert.equal(summary.updated, 0);
+  assert.equal((await context.DB.getRecipe('ricetta-conflitto')).name, 'Versione locale');
+});
+
 test('ignora categorie personalizzate con ID riservati', () => {
   const context = createContext();
   const categories = context.DB._parseCustomCategories([
