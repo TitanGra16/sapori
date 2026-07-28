@@ -21,7 +21,9 @@ test('installa la PWA e riapre la shell senza connessione', async ({ page, conte
 
   await page.reload({ waitUntil: 'networkidle' });
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
-  await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes('sapori-v49'))).toBe(true);
+  await expect.poll(() => page.evaluate(async () => {
+    return (await caches.keys()).filter(name => /^sapori-v\d+$/.test(name)).length;
+  })).toBe(1);
 
   await context.setOffline(true);
   await page.goto('/verifica-offline', { waitUntil: 'domcontentloaded' });

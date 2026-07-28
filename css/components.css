@@ -3683,7 +3683,8 @@ body.search-open #app-content {
 }
 
 .cooking-modal__timer-input {
-  width: 52px;
+  width: 68px;
+  max-width: 24vw;
   text-align: center;
   font-size: 0.9rem;
   font-weight: 700;

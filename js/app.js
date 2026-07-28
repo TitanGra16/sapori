@@ -67,6 +67,131 @@
   /* ── Timer helpers ── */
 
   var timerAudioContext = null;
+  var COOKING_SESSION_KEY = 'sapori-cooking-session';
+  var COOKING_SESSION_MAX_AGE = 8 * 24 * 60 * 60 * 1000;
+
+  function persistCookingSession() {
+    if (!state.cooking || !state.cooking.recipe || !state.cooking.recipe.id) return;
+    var timer = state.cooking.timer;
+    safeStorageSet(COOKING_SESSION_KEY, JSON.stringify({
+      recipeId: state.cooking.recipe.id,
+      stepIndex: state.cooking.stepIndex,
+      checkedIngredients: state.cooking.checkedIngredients,
+      ingExpanded: state.cooking.ingExpanded,
+      timer: {
+        minutes: timer.minutes,
+        seconds: timer.seconds,
+        running: timer.running,
+        endAt: timer.endAt
+      },
+      savedAt: Date.now()
+    }));
+  }
+
+  async function restoreCookingSession() {
+    var stored = safeStorageGet(COOKING_SESSION_KEY);
+    if (!stored) return;
+
+    try {
+      var saved = JSON.parse(stored);
+      if (
+        !saved ||
+        typeof saved.recipeId !== 'string' ||
+        !Number.isFinite(saved.savedAt) ||
+        Date.now() - saved.savedAt > COOKING_SESSION_MAX_AGE
+      ) {
+        safeStorageRemove(COOKING_SESSION_KEY);
+        return;
+      }
+
+      var recipe = await DB.getRecipe(saved.recipeId);
+      if (!recipe) {
+        safeStorageRemove(COOKING_SESSION_KEY);
+        return;
+      }
+
+      var totalSteps = Array.isArray(recipe.steps) ? recipe.steps.length : 0;
+      var stepIndex = Math.min(totalSteps, Math.max(0, parseInt(saved.stepIndex, 10) || 0));
+      var checkedIngredients = {};
+      var ingredientCount = Array.isArray(recipe.ingredients) ? recipe.ingredients.length : 0;
+      if (saved.checkedIngredients && typeof saved.checkedIngredients === 'object') {
+        Object.keys(saved.checkedIngredients).forEach(function (key) {
+          var index = parseInt(key, 10);
+          if (
+            Number.isInteger(index) &&
+            index >= 0 &&
+            index < ingredientCount &&
+            saved.checkedIngredients[key] === true
+          ) {
+            checkedIngredients[index] = true;
+          }
+        });
+      }
+
+      var savedTimer = saved.timer && typeof saved.timer === 'object' ? saved.timer : {};
+      var minutes = Math.min(
+        Recipes.LIMITS.minutes,
+        Math.max(0, parseInt(savedTimer.minutes, 10) || 0)
+      );
+      var seconds = Math.min(59, Math.max(0, parseInt(savedTimer.seconds, 10) || 0));
+      var endAt = Number(savedTimer.endAt);
+      var running = savedTimer.running === true && Number.isFinite(endAt) && endAt > Date.now();
+      var timerExpired = savedTimer.running === true && !running;
+
+      if (running) {
+        var remainingSeconds = Math.max(1, Math.ceil((endAt - Date.now()) / 1000));
+        minutes = Math.floor(remainingSeconds / 60);
+        seconds = remainingSeconds % 60;
+      } else if (timerExpired) {
+        minutes = 0;
+        seconds = 0;
+        endAt = null;
+      }
+
+      var restoredState = {
+        recipe: recipe,
+        stepIndex: stepIndex,
+        checkedIngredients: checkedIngredients,
+        wakeLockSentinel: null,
+        ingExpanded: saved.ingExpanded !== false,
+        timer: {
+          minutes: minutes,
+          seconds: seconds,
+          running: running,
+          intervalId: null,
+          endAt: running ? endAt : null
+        }
+      };
+
+      var reopen = function () {
+        if (state.cooking.recipe) return;
+        state.cooking = restoredState;
+        if (state.cooking.timer.running) {
+          state.cooking.timer.intervalId = setInterval(syncTimerFromDeadline, 250);
+        }
+        requestWakeLock().then(function () {
+          rerenderCookingModal();
+          if (timerExpired) {
+            Utils.showToast('⏱ Il timer è terminato mentre l’app era chiusa.', 'success');
+          }
+        });
+      };
+
+      if (modalOverlay.classList.contains('hidden')) {
+        reopen();
+      } else {
+        var observer = new MutationObserver(function () {
+          if (modalOverlay.classList.contains('hidden')) {
+            observer.disconnect();
+            reopen();
+          }
+        });
+        observer.observe(modalOverlay, { attributes: true, attributeFilter: ['class'] });
+      }
+    } catch (error) {
+      safeStorageRemove(COOKING_SESSION_KEY);
+    }
+  }
 
   function prepareTimerAudio() {
     var AudioContextCtor = window.AudioContext || window.webkitAudioContext;
@@ -166,7 +291,10 @@
     var minEl = document.getElementById('cooking-timer-min');
     var secEl = document.getElementById('cooking-timer-sec');
     if (minEl && secEl) {
-      timer.minutes = Math.min(99, Math.max(0, parseInt(minEl.value, 10) || 0));
+      timer.minutes = Math.min(
+        Recipes.LIMITS.minutes,
+        Math.max(0, parseInt(minEl.value, 10) || 0)
+      );
       timer.seconds = Math.min(59, Math.max(0, parseInt(secEl.value, 10) || 0));
     }
     var totalSeconds = timer.minutes * 60 + timer.seconds;
@@ -196,11 +324,13 @@
     stopTimer();
     releaseWakeLock();
     state.cooking.recipe = null;
+    safeStorageRemove(COOKING_SESSION_KEY);
     Views.hideModal();
   }
 
   function rerenderCookingModal() {
     if (state.cooking && state.cooking.recipe) {
+      persistCookingSession();
       var focusedAction = document.activeElement && document.activeElement.getAttribute
         ? document.activeElement.getAttribute('data-action')
         : null;
@@ -262,6 +392,15 @@
   function safeStorageSet(key, value) {
     try {
       window.localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function safeStorageRemove(key) {
+    try {
+      window.localStorage.removeItem(key);
       return true;
     } catch (e) {
       return false;
@@ -374,6 +513,7 @@
     setupModalAccessibility();
     setupDataWarning();
     navigateTo(window.location.hash || '#home');
+    restoreCookingSession();
     registerServiceWorker();
   }
 

@@ -83,6 +83,63 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
   await expect(page.getByRole('dialog', { name: 'Ricetta automatica' })).toHaveCount(0);
 });
 
+test('ripristina passaggio, ingredienti e timer della modalità cucina', async ({ page }) => {
+  const recipeId = await page.evaluate(async () => {
+    localStorage.setItem('sapori-warning-dismissed', 'true');
+    return DB.addRecipe({
+      name: 'Sessione cucina',
+      category: 'primi',
+      description: 'Ricetta usata per verificare la ripresa della sessione.',
+      ingredients: [
+        { name: 'Farina', quantity: '100', unit: 'g', notes: '' },
+        { name: 'Acqua', quantity: '60', unit: 'ml', notes: '' }
+      ],
+      steps: [
+        { text: 'Preparare gli ingredienti.', notes: '' },
+        { text: 'Cuocere con attenzione.', notes: '' }
+      ],
+      prepTime: 10,
+      cookTime: 20,
+      servings: 2,
+      difficulty: 'media',
+      notes: '',
+      storage: '',
+      image: null,
+      imageThumbnail: null,
+      isFavorite: false
+    });
+  });
+
+  await page.goto('/index.html?e2e=1#detail/' + encodeURIComponent(recipeId));
+  await page.getByRole('button', { name: /Inizia la Cottura/ }).click();
+
+  const firstIngredient = page.locator('[data-action="toggle-cooking-ing"][data-index="0"]');
+  await firstIngredient.click();
+  await page.getByRole('button', { name: /Avanti/ }).click();
+
+  const minuteInput = page.getByRole('spinbutton', { name: 'Minuti' });
+  await expect(minuteInput).toHaveAttribute('max', String(10080));
+  await minuteInput.fill('120');
+  await page.getByRole('spinbutton', { name: 'Secondi' }).fill('10');
+  await page.getByRole('button', { name: 'Avvia timer' }).click();
+
+  await expect.poll(() => page.evaluate(() => {
+    const value = localStorage.getItem('sapori-cooking-session');
+    return value ? JSON.parse(value).stepIndex : null;
+  })).toBe(1);
+
+  await page.reload();
+
+  await expect(page.getByRole('dialog', { name: 'Sessione cucina' })).toBeVisible();
+  await expect(page.getByText('Passaggio 2 di 2')).toBeVisible();
+  await expect(page.locator('[data-action="toggle-cooking-ing"][data-index="0"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('spinbutton', { name: 'Minuti' })).toBeDisabled();
+  await expect(page.getByRole('spinbutton', { name: 'Minuti' })).toHaveValue(/^(119|120)$/);
+
+  await page.getByRole('button', { name: 'Chiudi Modalità Cucina' }).click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('sapori-cooking-session'))).toBeNull();
+});
+
 test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', async ({ page }) => {
   await page.evaluate(async () => {
     const base = {
