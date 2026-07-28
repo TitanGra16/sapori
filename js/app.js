@@ -440,7 +440,9 @@
       
       // Re-render delle impostazioni
       if (state.currentView === 'settings') {
-        Views.renderSettings(appContent);
+        renderActiveView('settings', function (container) {
+          return Views.renderSettings(container);
+        });
       }
     } catch (e) {
       Utils.showToast('Errore durante il salvataggio della categoria', 'error');
@@ -468,7 +470,9 @@
       );
 
       if (state.currentView === 'settings') {
-        Views.renderSettings(appContent);
+        renderActiveView('settings', function (container) {
+          return Views.renderSettings(container);
+        });
       }
     } catch (e) {
       Utils.showToast('Errore durante l\'eliminazione della categoria', 'error');
@@ -499,8 +503,31 @@
     return true;
   }
 
+  function showViewLoadError() {
+    appContent.innerHTML =
+      '<div class="view empty-state" role="alert">' +
+        '<h1>Impossibile caricare questa sezione</h1>' +
+        '<p>I dati locali non sono disponibili in questo momento. Riprova senza chiudere l’app.</p>' +
+        '<button type="button" class="btn btn--primary" data-action="retry-route">Riprova</button>' +
+      '</div>';
+  }
+
+  async function renderActiveView(view, renderer) {
+    if (state.currentView !== view) return false;
+    var token = ++state.routeToken;
+    try {
+      return await renderRouteView(token, renderer);
+    } catch (error) {
+      if (token !== state.routeToken || state.currentView !== view) return false;
+      console.error('Errore durante l’aggiornamento della vista:', error);
+      showViewLoadError();
+      return false;
+    }
+  }
+
   async function handleRoute(hash) {
     var token = ++state.routeToken;
+    try {
     // Parse the hash
     var parts = hash.replace('#', '').split('/');
     var view = parts[0] || 'home';
@@ -611,6 +638,13 @@
 
     // Scroll to top on view change
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      if (token !== state.routeToken) return;
+      console.error('Errore durante il caricamento della rotta:', error);
+      showViewLoadError();
+      state.lastStableHash = hash;
+      state.navigationConfirmed = false;
+    }
   }
 
   function hasUnsavedForm() {
@@ -690,7 +724,9 @@
     if (state.filters.search !== '') {
       state.filters.search = '';
       if (shouldRender && state.currentView === 'home') {
-        Views.renderHome(appContent, state.filters);
+        renderActiveView('home', function (container) {
+          return Views.renderHome(container, state.filters);
+        });
       }
     }
   }
@@ -698,7 +734,9 @@
   var debouncedSearch = Utils.debounce(function (value) {
     state.filters.search = value;
     if (state.currentView === 'home') {
-      Views.renderHome(appContent, state.filters);
+      renderActiveView('home', function (container) {
+        return Views.renderHome(container, state.filters);
+      });
     }
   }, 300);
 
@@ -1283,7 +1321,11 @@
           if (summary.conflicts) parts.push(summary.conflicts + ' conflitti locali preservati');
           if (summary.rejected) parts.push(summary.rejected + ' non valide');
           Utils.showToast('Importazione completata: ' + (parts.join(', ') || 'nessuna modifica') + '.', 'success');
-          if (state.currentView === 'settings') Views.renderSettings(appContent);
+          if (state.currentView === 'settings') {
+            renderActiveView('settings', function (container) {
+              return Views.renderSettings(container);
+            });
+          }
         } catch (importError) {
           Utils.showToast('Errore nell\'importazione: ' + importError.message, 'error');
         }
@@ -1422,7 +1464,9 @@
       if (e.target.id === 'sort-select') {
         state.filters.sortBy = e.target.value;
         if (state.currentView === 'home') {
-          Views.renderHome(appContent, state.filters);
+          renderActiveView('home', function (container) {
+            return Views.renderHome(container, state.filters);
+          });
         }
       }
     });
@@ -1441,7 +1485,9 @@
               state.pantryIngredients.push(value);
             }
           });
-          Views.renderPantry(appContent, state.pantryIngredients);
+          renderActiveView('pantry', function (container) {
+            return Views.renderPantry(container, state.pantryIngredients);
+          });
           input.value = '';
         }
       }
@@ -1488,6 +1534,8 @@
                 await requestWakeLock();
                 rerenderCookingModal();
               }
+            }).catch(function () {
+              Utils.showToast('Impossibile avviare la modalità cucina', 'error');
             });
           }
           break;
@@ -1565,7 +1613,9 @@
           var quickIng = actionEl.getAttribute('data-ingredient');
           if (quickIng && !state.pantryIngredients.some(function(u){ return u.toLowerCase() === quickIng.toLowerCase(); })) {
             state.pantryIngredients.push(quickIng);
-            Views.renderPantry(appContent, state.pantryIngredients);
+            renderActiveView('pantry', function (container) {
+              return Views.renderPantry(container, state.pantryIngredients);
+            });
           }
           break;
         }
@@ -1573,13 +1623,17 @@
           var pIdx = parseInt(actionEl.getAttribute('data-index'), 10);
           if (!isNaN(pIdx) && pIdx >= 0 && pIdx < state.pantryIngredients.length) {
             state.pantryIngredients.splice(pIdx, 1);
-            Views.renderPantry(appContent, state.pantryIngredients);
+            renderActiveView('pantry', function (container) {
+              return Views.renderPantry(container, state.pantryIngredients);
+            });
           }
           break;
         }
         case 'clear-pantry': {
           state.pantryIngredients = [];
-          Views.renderPantry(appContent, state.pantryIngredients);
+          renderActiveView('pantry', function (container) {
+            return Views.renderPantry(container, state.pantryIngredients);
+          });
           break;
         }
         case 'go-back': {
@@ -1618,9 +1672,13 @@
             if (isFav !== null) {
               // Re-render current view
               if (state.currentView === 'home') {
-                Views.renderHome(appContent, state.filters);
+                renderActiveView('home', function (container) {
+                  return Views.renderHome(container, state.filters);
+                });
               } else if (state.currentView === 'favorites') {
-                Views.renderFavorites(appContent);
+                renderActiveView('favorites', function (container) {
+                  return Views.renderFavorites(container);
+                });
               }
             }
           });
@@ -1650,7 +1708,13 @@
         case 'filter-category': {
           var cat = actionEl.getAttribute('data-category');
           state.filters.category = cat || '';
-          Views.renderHome(appContent, state.filters);
+          renderActiveView('home', function (container) {
+            return Views.renderHome(container, state.filters);
+          });
+          break;
+        }
+        case 'retry-route': {
+          navigateTo(window.location.hash || '#home', true);
           break;
         }
 
@@ -1761,7 +1825,9 @@
           if (palette) {
             Theme.setPalette(palette).then(function () {
               // Re-render settings to update active state
-              Views.renderSettings(appContent);
+              renderActiveView('settings', function (container) {
+                return Views.renderSettings(container);
+              });
             });
           }
           break;

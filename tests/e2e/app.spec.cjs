@@ -209,6 +209,35 @@ test('protegge una bozza e intrappola il focus nella conferma', async ({ page })
   await expect(page.getByRole('heading', { name: 'Il tuo ricettario è vuoto' })).toBeVisible();
 });
 
+test('ignora i render obsoleti e consente di riprovare dopo un errore', async ({ page }) => {
+  await page.evaluate(() => {
+    window.__originalGetRecipeSummaries = DB.getRecipeSummaries.bind(DB);
+    DB.getRecipeSummaries = () => new Promise(resolve => {
+      window.__resolveDelayedHome = async () => resolve(await window.__originalGetRecipeSummaries());
+    });
+  });
+
+  await page.getByRole('button', { name: /Antipasti/ }).click();
+  await page.getByRole('button', { name: 'Impostazioni', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Impostazioni' })).toBeVisible();
+  await page.evaluate(() => window.__resolveDelayedHome());
+  await expect(page.getByRole('heading', { name: 'Impostazioni' })).toBeVisible();
+
+  await page.evaluate(() => {
+    DB.getRecipeSummaries = async () => {
+      throw new Error('Errore simulato');
+    };
+  });
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Impossibile caricare questa sezione' })).toBeVisible();
+
+  await page.evaluate(() => {
+    DB.getRecipeSummaries = window.__originalGetRecipeSummaries;
+  });
+  await page.getByRole('button', { name: 'Riprova', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Il tuo ricettario è vuoto' })).toBeVisible();
+});
+
 test('applica tema e palette dalle impostazioni', async ({ page }) => {
   await page.getByRole('button', { name: 'Impostazioni' }).click();
   const toggle = page.getByRole('checkbox', { name: 'Tema scuro' });
