@@ -2,7 +2,7 @@
   "name": "sapori",
   "version": "1.0.0",
   "private": true,
-  "description": "PWA locale per creare, organizzare e condividere ricette.",
+  "description": "PWA locale per creare, organizzare e stampare ricette.",
   "scripts": {
     "check": "node scripts/check-project.cjs",
     "test": "node --test tests/unit/*.test.cjs",

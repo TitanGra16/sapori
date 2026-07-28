@@ -1,7 +1,7 @@
 # 🍴 Sapori — Il tuo ricettario personale
 
-Sapori è una Progressive Web App in italiano per creare, organizzare, cucinare,
-stampare e condividere ricette. Funziona offline e conserva ricette e
+Sapori è una Progressive Web App in italiano per creare, organizzare, cucinare
+e stampare ricette. Funziona offline e conserva ricette e
 preferenze esclusivamente nel browser tramite IndexedDB.
 
 Provala online: [titangra16.github.io/sapori](https://titangra16.github.io/sapori/)
@@ -14,8 +14,7 @@ Provala online: [titangra16.github.io/sapori](https://titangra16.github.io/sapor
 - Modalità Svuotafrigo con confronto per ingredienti.
 - Modalità cottura con timer, avanzamento, wake lock e controlli da tastiera.
 - Tema chiaro/scuro e sette palette con contrasti accessibili.
-- Cartolina di condivisione, testo completo e file JSON portabile.
-- Anteprima A4, stampa della singola ricetta e ricettario completo.
+- Esportazione diretta in PDF/stampa della singola ricetta e ricettario completo.
 - Backup versione 2 con ricette, note, categorie personalizzate e tema.
 - Installazione PWA, uso offline e aggiornamenti senza versioni miste in cache.
 
@@ -79,7 +78,6 @@ sapori/
 │   ├── recipes.js
 │   ├── icons.js
 │   ├── views.js
-│   ├── share.js
 │   └── app.js
 ├── icons/
 ├── scripts/

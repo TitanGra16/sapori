@@ -581,7 +581,6 @@ window.Views = (function () {
     html +=
       '<div class="recipe-detail__section recipe-detail__actions-row" style="display:flex;gap:.75rem;flex-wrap:wrap">' +
         '<button type="button" class="btn btn--secondary" data-action="edit-recipe" data-id="' + esc(recipe.id) + '">' + Icons.edit + ' Modifica</button>' +
-        '<button type="button" class="btn btn--secondary" data-action="share-recipe" data-id="' + esc(recipe.id) + '">' + Icons.share + ' Condividi</button>' +
         '<button type="button" class="btn btn--secondary" data-action="export-pdf" data-id="' + esc(recipe.id) + '">' + Icons.download + ' Esporta PDF</button>' +
         '<button type="button" class="btn btn--danger" data-action="delete-recipe" data-id="' + esc(recipe.id) + '">' + Icons.trash + ' Elimina</button>' +
       '</div>';
