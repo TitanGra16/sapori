@@ -721,19 +721,24 @@ window.Views = (function () {
     // Form aggiungi categoria
     html += '<div class="settings-item settings-item--column">';
     html += '<div class="settings-item__label">Aggiungi nuova categoria</div>';
-    html += '<div class="add-category-form">';
-    html += '<input type="text" id="input-cat-label" class="form-input add-category-form__name" maxlength="60" placeholder="Es. Ricette veloci" aria-label="Nome nuova categoria">';
-    html += '<input type="text" id="input-cat-icon" class="form-input add-category-form__icon" maxlength="16" placeholder="Emoji" aria-label="Emoji nuova categoria">';
-    html += '<select id="input-cat-color" class="form-select add-category-form__color" aria-label="Colore nuova categoria">' +
-              '<option value="#E85D3A">Arancione</option>' +
-              '<option value="#0EA5E9">Azzurro</option>' +
-              '<option value="#16A34A">Verde</option>' +
-              '<option value="#A855F7">Viola</option>' +
-              '<option value="#EC4899">Rosa</option>' +
-              '<option value="#FBBF24">Giallo</option>' +
-            '</select>';
-    html += '<button type="button" class="btn btn--secondary add-category-form__submit" data-action="add-category">' + Icons.plus + ' Aggiungi</button>';
-    html += '</div></div>';
+    if (customCats.length >= DB.MAX_CUSTOM_CATEGORIES) {
+      html += '<p class="settings-empty-copy">Hai raggiunto il limite di ' + DB.MAX_CUSTOM_CATEGORIES + ' categorie personalizzate.</p>';
+    } else {
+      html += '<div class="add-category-form">';
+      html += '<input type="text" id="input-cat-label" class="form-input add-category-form__name" maxlength="60" placeholder="Es. Ricette veloci" aria-label="Nome nuova categoria">';
+      html += '<input type="text" id="input-cat-icon" class="form-input add-category-form__icon" maxlength="16" placeholder="Emoji" aria-label="Emoji nuova categoria">';
+      html += '<select id="input-cat-color" class="form-select add-category-form__color" aria-label="Colore nuova categoria">' +
+                '<option value="#E85D3A">Arancione</option>' +
+                '<option value="#0EA5E9">Azzurro</option>' +
+                '<option value="#16A34A">Verde</option>' +
+                '<option value="#A855F7">Viola</option>' +
+                '<option value="#EC4899">Rosa</option>' +
+                '<option value="#FBBF24">Giallo</option>' +
+              '</select>';
+      html += '<button type="button" class="btn btn--secondary add-category-form__submit" data-action="add-category">' + Icons.plus + ' Aggiungi</button>';
+      html += '</div>';
+    }
+    html += '</div>';
     
     html += '</div></div>'; // close body + card
 

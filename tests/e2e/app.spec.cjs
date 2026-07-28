@@ -255,6 +255,19 @@ test('scarica il backup JSON e mostra la data dell’ultima esportazione', async
   await expect.poll(() => page.evaluate(async () => Number(await DB.getSetting('lastBackupAt')) > 0)).toBe(true);
 });
 
+test('crea e conserva una categoria personalizzata dalle impostazioni', async ({ page }) => {
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('textbox', { name: 'Nome nuova categoria' }).fill('Ricette veloci');
+  await page.getByRole('textbox', { name: 'Emoji nuova categoria' }).fill('⚡');
+  await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
+
+  await expect(page.getByRole('button', { name: 'Elimina categoria Ricette veloci' })).toBeVisible();
+  await expect.poll(() => page.evaluate(async () => {
+    const stored = await DB.getSetting('customCategories');
+    return DB._parseCustomCategories(stored).some(category => category.label === 'Ricette veloci');
+  })).toBe(true);
+});
+
 test('salva la foto completa separata dalla miniatura delle card', async ({ page }) => {
   await fillMinimumRecipeForm(page, 'Ricetta con foto');
   await page.locator('#input-image').setInputFiles({

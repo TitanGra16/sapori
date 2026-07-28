@@ -564,17 +564,10 @@
     if (state.savingCategory) return;
     state.savingCategory = true;
     try {
-      var categoriesSetting = await DB.getSetting('customCategories');
-      var custom = [];
-      if (categoriesSetting) {
-        custom = JSON.parse(categoriesSetting);
-      }
-      
-      custom.push(newCat);
-      await DB.setSetting('customCategories', JSON.stringify(custom));
-      
+      var savedCategory = await DB.addCustomCategory(newCat);
+
       // Aggiorna array in esecuzione
-      Recipes.CATEGORIES.push(newCat);
+      Recipes.CATEGORIES.push(savedCategory);
       
       Utils.showToast('Categoria aggiunta! 🏷️', 'success');
       
@@ -585,7 +578,7 @@
         });
       }
     } catch (e) {
-      Utils.showToast('Errore durante il salvataggio della categoria', 'error');
+      Utils.showToast(e && e.message ? e.message : 'Errore durante il salvataggio della categoria', 'error');
     } finally {
       state.savingCategory = false;
     }

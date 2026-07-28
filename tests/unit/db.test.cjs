@@ -51,6 +51,32 @@ test('il preferito non altera data di modifica o foto della ricetta', async t =>
   assert.equal(after.image.data, fullImage);
 });
 
+test('impedisce di superare il limite delle categorie personalizzate', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const categories = Array.from({ length: context.DB.MAX_CUSTOM_CATEGORIES }, (_, index) => ({
+    id: 'categoria-' + index,
+    label: 'Categoria ' + index,
+    icon: '🍴',
+    color: '#E85D3A',
+    isCustom: true
+  }));
+  await context.DB.setSetting('customCategories', JSON.stringify(categories));
+
+  await assert.rejects(
+    () => context.DB.addCustomCategory({
+      id: 'categoria-extra',
+      label: 'Categoria extra',
+      icon: '🍴',
+      color: '#E85D3A',
+      isCustom: true
+    }),
+    /al massimo 100 categorie/
+  );
+});
+
 test('importa il fixture completo senza perdere note', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));

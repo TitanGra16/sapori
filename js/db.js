@@ -8,6 +8,7 @@ window.DB = {
   initPromise: null,
   MAX_IMPORT_BYTES: 50 * 1024 * 1024,
   MAX_IMPORT_RECIPES: 5000,
+  MAX_CUSTOM_CATEGORIES: 100,
   BUILTIN_CATEGORY_IDS: ['antipasti', 'primi', 'secondi', 'contorni', 'dolci', 'bevande', 'altro'],
 
   /**
@@ -376,6 +377,28 @@ window.DB = {
     return { movedRecipes, customCategories };
   },
 
+  async addCustomCategory(category) {
+    const normalized = this._parseCustomCategories([category])[0];
+    if (!normalized) throw new Error('Categoria personalizzata non valida');
+
+    const db = await this._ensureDB();
+    const tx = db.transaction('settings', 'readwrite');
+    const store = tx.objectStore('settings');
+    const record = await this._promisify(store.get('customCategories'));
+    const categories = this._parseCustomCategories(record ? record.value : []);
+    if (categories.length >= this.MAX_CUSTOM_CATEGORIES) {
+      throw new Error('Puoi creare al massimo ' + this.MAX_CUSTOM_CATEGORIES + ' categorie');
+    }
+    if (categories.some(item => item.id === normalized.id)) {
+      throw new Error('Categoria già esistente');
+    }
+
+    categories.push(normalized);
+    store.put({ key: 'customCategories', value: JSON.stringify(categories) });
+    await this._txComplete(tx);
+    return normalized;
+  },
+
   /**
    * Get a setting value by key.
    * @param {string} key
@@ -457,7 +480,7 @@ window.DB = {
 
     const seen = new Set();
     const reserved = new Set(this.BUILTIN_CATEGORY_IDS);
-    return categories.slice(0, 100).map(category => {
+    return categories.slice(0, this.MAX_CUSTOM_CATEGORIES).map(category => {
       if (!category || typeof category !== 'object') return null;
       const label = String(category.label || '').trim().slice(0, 60);
       const baseId = window.Utils ? window.Utils.slugify(category.id || label) : label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
