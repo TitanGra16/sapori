@@ -39,11 +39,16 @@ test('la validazione rifiuta righe vuote e numeri fuori limite', () => {
   assert.ok(result.errors.step_0);
 });
 
-test('la ricerca ignora gli accenti e include note e passaggi', () => {
+test('la ricerca ignora gli accenti e combina tutti i campi descrittivi', () => {
   const { Recipes } = loadAppScripts(['js/recipes.js']);
   const recipes = [
     makeRecipe({ id: 'a', name: 'Crème brûlée', notes: 'Ricetta della nonna' }),
-    makeRecipe({ id: 'b', name: 'Risotto', steps: [{ text: 'Mantecare lentamente', notes: 'Usa il burro freddo' }] })
+    makeRecipe({
+      id: 'b',
+      name: 'Risotto',
+      storage: 'In congelatore per tre mesi',
+      steps: [{ text: 'Mantecare lentamente', notes: 'Usa il burro freddo' }]
+    })
   ];
 
   assert.deepEqual(
@@ -52,6 +57,14 @@ test('la ricerca ignora gli accenti e include note e passaggi', () => {
   );
   assert.deepEqual(
     Array.from(Recipes.filterRecipes(recipes, { search: 'burro freddo' }), recipe => recipe.id),
+    ['b']
+  );
+  assert.deepEqual(
+    Array.from(Recipes.filterRecipes(recipes, { search: 'mesi congelatore' }), recipe => recipe.id),
+    ['b']
+  );
+  assert.deepEqual(
+    Array.from(Recipes.filterRecipes(recipes, { search: 'risotto freddo' }), recipe => recipe.id),
     ['b']
   );
 });

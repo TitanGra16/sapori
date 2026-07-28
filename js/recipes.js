@@ -196,7 +196,7 @@ window.Recipes = {
    *
    * @param {Array} recipes - Array of recipe objects
    * @param {Object} options
-   * @param {string} options.search - Search text (matches name, description, ingredient names)
+   * @param {string} options.search - Search text across all descriptive recipe fields
    * @param {string} options.category - Category ID filter (empty = all)
    * @param {string} options.sortBy - Sort key: 'recent', 'oldest', 'name_asc', 'name_desc', 'time_asc', 'time_desc'
    * @returns {Array} Filtered and sorted recipes (new array)
@@ -217,36 +217,31 @@ window.Recipes = {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLocaleLowerCase('it-IT');
-      const query = normalizeSearchText(search).trim();
-      if (query) {
+      const tokens = normalizeSearchText(search).trim().split(/\s+/).filter(Boolean);
+      if (tokens.length) {
         result = result.filter(r => {
-          // Match name
-          if (normalizeSearchText(r.name).includes(query)) return true;
-
-          // Match description
-          if (normalizeSearchText(r.description).includes(query)) return true;
-          if (normalizeSearchText(r.notes).includes(query)) return true;
-
-          // Match ingredient names
+          const searchableParts = [
+            r.name,
+            r.description,
+            r.notes,
+            r.storage,
+            r.category
+          ];
           if (Array.isArray(r.ingredients)) {
-            for (const ing of r.ingredients) {
-              if (ing && (normalizeSearchText(ing.name).includes(query) ||
-                          normalizeSearchText(ing.notes).includes(query))) {
-                return true;
-              }
-            }
+            r.ingredients.forEach(ing => {
+              if (!ing) return;
+              searchableParts.push(ing.name, ing.notes, ing.quantity, ing.unit);
+            });
           }
-
           if (Array.isArray(r.steps)) {
-            for (const step of r.steps) {
+            r.steps.forEach(step => {
               const text = step && typeof step === 'object' ? step.text : step;
               const notes = step && typeof step === 'object' ? step.notes : '';
-              if (normalizeSearchText(text).includes(query) ||
-                  normalizeSearchText(notes).includes(query)) return true;
-            }
+              searchableParts.push(text, notes);
+            });
           }
-
-          return false;
+          const haystack = normalizeSearchText(searchableParts.join(' '));
+          return tokens.every(token => haystack.includes(token));
         });
       }
     }
