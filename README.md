@@ -9,13 +9,13 @@ Provala online: [titangra16.github.io/sapori](https://titangra16.github.io/sapor
 ## Funzionalità
 
 - Creazione e modifica con ingredienti, quantità, note, passaggi e foto.
-- Ricerca senza distinzione di accenti su nome, descrizione, note e preparazione.
+- Ricerca senza distinzione di accenti su tutti i campi, inclusa la conservazione.
 - Filtri per categoria, preferiti e ordinamento.
 - Modalità Svuotafrigo con confronto per ingredienti.
-- Modalità cottura con timer, avanzamento, wake lock e controlli da tastiera.
+- Modalità cottura con timer persistente, avanzamento, wake lock e controlli da tastiera.
 - Tema chiaro/scuro e sette palette con contrasti accessibili.
 - Esportazione diretta in PDF/stampa della singola ricetta e ricettario completo.
-- Backup versione 2 con ricette, note, categorie personalizzate e tema.
+- Backup versione 2 con data dell’ultima esportazione, ricette, categorie e tema.
 - Installazione PWA, uso offline e aggiornamenti senza versioni miste in cache.
 
 ## Dati e backup
@@ -56,7 +56,9 @@ npm run test:e2e
 
 `npm run test:all` esegue controlli statici, test unitari e test browser.
 Playwright prova i flussi principali su telefono compatto, smartphone moderno,
-tablet e desktop; lo stesso comando può essere usato in una pipeline CI.
+tablet e desktop. Comprende inoltre una prova PWA con service worker reale,
+navigazione offline e generazione di un PDF A4 effettivo. Lo stesso comando può
+essere usato in una pipeline CI.
 
 ## Struttura
 
