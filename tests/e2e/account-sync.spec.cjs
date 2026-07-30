@@ -131,3 +131,42 @@ test('la schermata account non crea scorrimento orizzontale', async ({ page }) =
   await expect(page.getByText('Questo dispositivo è pronto')).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
+
+test('due schede condividono profilo e coda senza perdere modifiche', async ({ page, context }) => {
+  const secondPage = await context.newPage();
+  await secondPage.goto('/index.html?account-sync-tab=2');
+  await Promise.all([
+    page.evaluate(() => DB._ensureDB()),
+    secondPage.evaluate(() => DB._ensureDB())
+  ]);
+
+  const [firstStatus, secondStatus] = await Promise.all([
+    page.evaluate(() => SyncPreparation.prepareDevice()),
+    secondPage.evaluate(() => SyncPreparation.prepareDevice())
+  ]);
+  expect(secondStatus.ownerScope).toBe(firstStatus.ownerScope);
+
+  const recipeId = await secondPage.evaluate(() => DB.addRecipe({
+    name: 'Ricetta dalla seconda scheda',
+    category: 'altro',
+    description: '',
+    ingredients: [{ name: 'Farina', quantity: '100', unit: 'g', notes: '' }],
+    steps: [{ text: 'Impasta', notes: '' }],
+    prepTime: 0,
+    cookTime: 0,
+    servings: 4,
+    difficulty: 'media',
+    notes: '',
+    storage: '',
+    image: null,
+    imageThumbnail: null,
+    isFavorite: false
+  }));
+
+  await expect.poll(() => page.evaluate(async id => {
+    const changes = await SyncPreparation.getPendingChanges();
+    return changes.filter(change => change.entityId === id).map(change => change.channel).sort();
+  }, recipeId)).toEqual(['content', 'favorite']);
+
+  await secondPage.close();
+});

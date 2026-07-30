@@ -269,3 +269,156 @@ test('stato e coda sopravvivono alla riapertura dell’app', async t => {
   assert.equal(after.pendingCount, before.pendingCount);
   assert.equal(after.pendingRecipeCount, 1);
 });
+
+test('una scheda già aperta accoda le modifiche dopo la preparazione fatta altrove', async t => {
+  const testIndexedDB = new IDBFactory();
+  const firstContext = createContext(testIndexedDB);
+  const secondContext = createContext(testIndexedDB);
+  t.after(() => {
+    closeContext(firstContext);
+    closeContext(secondContext);
+  });
+  await Promise.all([firstContext.DB.init(), secondContext.DB.init()]);
+
+  const prepared = await firstContext.SyncPreparation.prepareDevice();
+  const id = await secondContext.DB.addRecipe(sampleRecipe({
+    name: 'Creata dalla seconda scheda'
+  }));
+  const changes = await firstContext.SyncPreparation.getPendingChanges();
+
+  assert.equal(changes.some(change => change.entityId === id), true);
+  assert.equal(changes.every(change => change.ownerScope === prepared.ownerScope), true);
+});
+
+test('due preparazioni concorrenti convergono sullo stesso profilo locale', async t => {
+  const testIndexedDB = new IDBFactory();
+  const firstContext = createContext(testIndexedDB);
+  const secondContext = createContext(testIndexedDB);
+  t.after(() => {
+    closeContext(firstContext);
+    closeContext(secondContext);
+  });
+  await Promise.all([firstContext.DB.init(), secondContext.DB.init()]);
+  await firstContext.DB.addRecipe(sampleRecipe());
+
+  const statuses = await Promise.all([
+    firstContext.SyncPreparation.prepareDevice(),
+    secondContext.SyncPreparation.prepareDevice()
+  ]);
+  const changes = await firstContext.SyncPreparation.getPendingChanges();
+
+  assert.equal(statuses[0].localProfileId, statuses[1].localProfileId);
+  assert.equal(statuses[0].ownerScope, statuses[1].ownerScope);
+  assert.equal(changes.every(change => change.ownerScope === statuses[0].ownerScope), true);
+  assert.equal(changes.every(change => change.entityKey.startsWith(statuses[0].ownerScope + '|')), true);
+  assert.equal(new Set(changes.map(change => change.entityKey)).size, changes.length);
+});
+
+test('una scrittura identica delle categorie non ricrea la modifica in coda', async t => {
+  const context = createContext();
+  t.after(() => closeContext(context));
+  await context.DB.init();
+  await context.SyncPreparation.prepareDevice();
+
+  await context.DB.setSetting('customCategories', '[]');
+  const before = (await context.SyncPreparation.getPendingChanges())
+    .find(change => change.channel === 'categories');
+  await context.DB.setSetting('customCategories', '[]');
+  const after = (await context.SyncPreparation.getPendingChanges())
+    .find(change => change.channel === 'categories');
+
+  assert.ok(before);
+  assert.equal(after.operationId, before.operationId);
+});
+
+test('impedisce sovrascritture obsolete e non fa risorgere ricette eliminate', async t => {
+  const testIndexedDB = new IDBFactory();
+  const firstContext = createContext(testIndexedDB);
+  const secondContext = createContext(testIndexedDB);
+  t.after(() => {
+    closeContext(firstContext);
+    closeContext(secondContext);
+  });
+  await Promise.all([firstContext.DB.init(), secondContext.DB.init()]);
+  const id = await firstContext.DB.addRecipe(sampleRecipe());
+  const firstCopy = await firstContext.DB.getRecipe(id);
+  const staleCopy = await secondContext.DB.getRecipe(id);
+
+  await firstContext.DB.updateRecipe({ ...firstCopy, name: 'Versione aggiornata' });
+  await assert.rejects(
+    secondContext.DB.updateRecipe({ ...staleCopy, name: 'Versione obsoleta' }),
+    error => error && error.code === 'RECIPE_CONFLICT'
+  );
+  assert.equal((await firstContext.DB.getRecipe(id)).name, 'Versione aggiornata');
+
+  const beforeDelete = await secondContext.DB.getRecipe(id);
+  await firstContext.DB.deleteRecipe(id);
+  await assert.rejects(
+    secondContext.DB.updateRecipe({ ...beforeDelete, name: 'Ricetta risorta' }),
+    error => error && error.code === 'RECIPE_NOT_FOUND'
+  );
+  assert.equal(await firstContext.DB.getRecipe(id), undefined);
+});
+
+test('un aggiornamento del contenuto conserva il preferito cambiato in un’altra scheda', async t => {
+  const testIndexedDB = new IDBFactory();
+  const firstContext = createContext(testIndexedDB);
+  const secondContext = createContext(testIndexedDB);
+  t.after(() => {
+    closeContext(firstContext);
+    closeContext(secondContext);
+  });
+  await Promise.all([firstContext.DB.init(), secondContext.DB.init()]);
+  const id = await firstContext.DB.addRecipe(sampleRecipe());
+  const contentCopy = await firstContext.DB.getRecipe(id);
+
+  await secondContext.DB.toggleFavorite(id);
+  await firstContext.DB.updateRecipe({ ...contentCopy, name: 'Contenuto aggiornato' });
+  const updated = await firstContext.DB.getRecipe(id);
+
+  assert.equal(updated.name, 'Contenuto aggiornato');
+  assert.equal(updated.isFavorite, true);
+  assert.equal(updated.contentVersion, 2);
+  assert.equal(updated.favoriteVersion, 2);
+});
+
+test('migra le vecchie chiavi della coda includendo il profilo proprietario', async t => {
+  const context = createContext();
+  t.after(() => closeContext(context));
+  await context.DB.init();
+  const ownerScope = 'locale:profilo-precedente';
+  const tx = context.DB.db.transaction(['syncMeta', 'syncQueue'], 'readwrite');
+  tx.objectStore('syncMeta').put({
+    key: 'state',
+    intentEnabled: true,
+    localProfileId: 'profilo-precedente',
+    ownerScope,
+    accountId: null,
+    preparedAt: 100
+  });
+  tx.objectStore('syncQueue').put({
+    entityKey: 'recipe:ricetta-precedente:content',
+    operationId: 'operazione-precedente',
+    entityType: 'recipe',
+    entityId: 'ricetta-precedente',
+    channel: 'content',
+    action: 'upsert',
+    ownerScope,
+    baseServerVersion: null,
+    queuedAt: 100,
+    updatedAt: 100,
+    status: 'pending',
+    attempts: 0,
+    nextAttemptAt: 0,
+    lastError: null
+  });
+  await context.DB._txComplete(tx);
+
+  closeContext(context);
+  await context.DB.init();
+  const changes = await context.SyncPreparation.getPendingChanges();
+  const migrated = changes.find(change => change.entityId === 'ricetta-precedente');
+
+  assert.ok(migrated);
+  assert.equal(migrated.entityKey, ownerScope + '|recipe:ricetta-precedente:content');
+});

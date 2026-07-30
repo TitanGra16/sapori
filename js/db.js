@@ -117,10 +117,16 @@ window.DB = {
       /^data:image\/jpeg;base64,/i.test(candidateThumbnail)
       ? candidateThumbnail
       : null;
+    const safeVersion = value => (
+      Number.isSafeInteger(Number(value)) && Number(value) >= 0 ? Number(value) : 0
+    );
 
     return {
       stored: {
         ...recipe,
+        contentVersion: safeVersion(recipe && recipe.contentVersion),
+        favoriteVersion: safeVersion(recipe && recipe.favoriteVersion),
+        imageVersion: safeVersion(recipe && recipe.imageVersion),
         image: null,
         imageThumbnail,
         hasImage: Boolean(fullImage)
@@ -292,7 +298,10 @@ window.DB = {
       ...recipe,
       id: window.Utils ? window.Utils.generateId() : (crypto.randomUUID ? crypto.randomUUID() : this._fallbackId()),
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      contentVersion: 1,
+      favoriteVersion: 1,
+      imageVersion: this._isDataImage(recipe && recipe.image) ? 1 : 0
     };
     const prepared = this._toStoredRecipe(newRecipe);
 
@@ -326,30 +335,79 @@ window.DB = {
     }
 
     const db = await this._ensureDB();
-
-    const updatedRecipe = {
-      ...recipe,
-      updatedAt: Date.now()
-    };
-    const prepared = this._toStoredRecipe(updatedRecipe);
-
     const tx = db.transaction(
       window.SyncPreparation.withQueue(['recipes', 'images']),
       'readwrite'
     );
-    tx.objectStore('recipes').put(prepared.stored);
+    const completion = this._txComplete(tx);
+    const recipeStore = tx.objectStore('recipes');
     const imageStore = tx.objectStore('images');
-    const previousImageRecord = await this._promisify(imageStore.get(recipe.id));
+    const [currentStored, previousImageRecord] = await Promise.all([
+      this._promisify(recipeStore.get(recipe.id)),
+      this._promisify(imageStore.get(recipe.id))
+    ]);
+    if (!currentStored) {
+      await completion;
+      const error = new Error('La ricetta non esiste più. Riapri il ricettario prima di salvare.');
+      error.code = 'RECIPE_NOT_FOUND';
+      throw error;
+    }
+
+    const currentVersion = Number.isSafeInteger(Number(currentStored.contentVersion))
+      ? Number(currentStored.contentVersion)
+      : 0;
+    const expectedVersion = Number.isSafeInteger(Number(recipe.contentVersion))
+      ? Number(recipe.contentVersion)
+      : 0;
+    if (expectedVersion !== currentVersion) {
+      await completion;
+      const error = new Error('La ricetta è stata modificata in un’altra scheda o dispositivo.');
+      error.code = 'RECIPE_CONFLICT';
+      error.currentVersion = currentVersion;
+      throw error;
+    }
+
     const previousImage = previousImageRecord && previousImageRecord.data
       ? previousImageRecord.data
       : null;
-    if (prepared.fullImage) {
-      imageStore.put({ recipeId: recipe.id, data: prepared.fullImage });
-    } else {
-      imageStore.delete(recipe.id);
+    const imageWasProvided = Object.prototype.hasOwnProperty.call(recipe, 'image');
+    const nextImage = imageWasProvided
+      ? (this._isDataImage(recipe.image) ? recipe.image : null)
+      : previousImage;
+    const imageChanged = previousImage !== nextImage;
+    const now = Date.now();
+    const currentFavoriteVersion = Number.isSafeInteger(Number(currentStored.favoriteVersion))
+      ? Number(currentStored.favoriteVersion)
+      : 0;
+    const currentImageVersion = Number.isSafeInteger(Number(currentStored.imageVersion))
+      ? Number(currentStored.imageVersion)
+      : 0;
+    const updatedRecipe = {
+      ...currentStored,
+      ...recipe,
+      image: nextImage,
+      imageThumbnail: imageWasProvided
+        ? recipe.imageThumbnail
+        : currentStored.imageThumbnail,
+      isFavorite: currentStored.isFavorite === true,
+      createdAt: currentStored.createdAt,
+      updatedAt: now,
+      contentVersion: currentVersion + 1,
+      favoriteVersion: currentFavoriteVersion,
+      imageVersion: currentImageVersion + (imageChanged ? 1 : 0)
+    };
+    const prepared = this._toStoredRecipe(updatedRecipe);
+
+    recipeStore.put(prepared.stored);
+    if (imageChanged) {
+      if (prepared.fullImage) {
+        imageStore.put({ recipeId: recipe.id, data: prepared.fullImage });
+      } else {
+        imageStore.delete(recipe.id);
+      }
     }
     window.SyncPreparation.queueRecipeContent(tx, recipe.id, updatedRecipe.updatedAt);
-    if (previousImage !== prepared.fullImage) {
+    if (imageChanged) {
       window.SyncPreparation.queueRecipeImage(
         tx,
         recipe.id,
@@ -357,7 +415,7 @@ window.DB = {
         updatedRecipe.updatedAt
       );
     }
-    await this._txComplete(tx);
+    await completion;
   },
 
   /**
@@ -381,6 +439,9 @@ window.DB = {
     }
 
     recipe.isFavorite = !recipe.isFavorite;
+    recipe.favoriteVersion = (
+      Number.isSafeInteger(Number(recipe.favoriteVersion)) ? Number(recipe.favoriteVersion) : 0
+    ) + 1;
     store.put(recipe);
     window.SyncPreparation.queueRecipeFavorite(tx, id, Date.now());
     await this._txComplete(tx);
@@ -434,7 +495,15 @@ window.DB = {
     const changedAt = Date.now();
     recipes.forEach(recipe => {
       if (recipe.category === categoryId) {
-        recipeStore.put({ ...recipe, category: toCategory, updatedAt: changedAt });
+        const contentVersion = Number.isSafeInteger(Number(recipe.contentVersion))
+          ? Number(recipe.contentVersion)
+          : 0;
+        recipeStore.put({
+          ...recipe,
+          category: toCategory,
+          updatedAt: changedAt,
+          contentVersion: contentVersion + 1
+        });
         window.SyncPreparation.queueRecipeContent(tx, recipe.id, changedAt);
         movedRecipes++;
       }
@@ -504,12 +573,18 @@ window.DB = {
       ? window.SyncPreparation.withQueue(['settings'])
       : ['settings'];
     const tx = db.transaction(stores, 'readwrite');
+    const completion = this._txComplete(tx);
     const store = tx.objectStore('settings');
+    const current = await this._promisify(store.get(key));
+    if (current && Object.is(current.value, value)) {
+      await completion;
+      return;
+    }
     store.put({ key, value });
     if (key === 'customCategories') {
       window.SyncPreparation.queueCategories(tx, Date.now());
     }
-    await this._txComplete(tx);
+    await completion;
   },
 
   async getAllSettings() {
@@ -1009,7 +1084,22 @@ window.DB = {
           const thumbnail = !changes.imageChanged && !item.thumbnail
             ? current.imageThumbnail
             : item.thumbnail;
-          const updated = this._toStoredRecipe(recipe, thumbnail);
+          const currentContentVersion = Number.isSafeInteger(Number(current.contentVersion))
+            ? Number(current.contentVersion)
+            : 0;
+          const currentFavoriteVersion = Number.isSafeInteger(Number(current.favoriteVersion))
+            ? Number(current.favoriteVersion)
+            : 0;
+          const currentImageVersion = Number.isSafeInteger(Number(current.imageVersion))
+            ? Number(current.imageVersion)
+            : 0;
+          const versionedRecipe = {
+            ...recipe,
+            contentVersion: currentContentVersion + (changes.contentChanged ? 1 : 0),
+            favoriteVersion: currentFavoriteVersion + (changes.favoriteChanged ? 1 : 0),
+            imageVersion: currentImageVersion + (changes.imageChanged ? 1 : 0)
+          };
+          const updated = this._toStoredRecipe(versionedRecipe, thumbnail);
           store.put(updated.stored);
           if (changes.imageChanged) {
             if (updated.fullImage) {
@@ -1037,7 +1127,14 @@ window.DB = {
           }
           existingById.set(recipe.id, updated.stored);
         } else {
-          const favoriteOnly = { ...current, isFavorite: recipe.isFavorite };
+          const favoriteVersion = Number.isSafeInteger(Number(current.favoriteVersion))
+            ? Number(current.favoriteVersion)
+            : 0;
+          const favoriteOnly = {
+            ...current,
+            isFavorite: recipe.isFavorite,
+            favoriteVersion: favoriteVersion + 1
+          };
           store.put(favoriteOnly);
           existingById.set(recipe.id, favoriteOnly);
           window.SyncPreparation.queueRecipeFavorite(tx, recipe.id, Date.now());
@@ -1053,7 +1150,13 @@ window.DB = {
       const id = recipe.id && !existingIds.has(recipe.id)
         ? recipe.id
         : (window.Utils ? window.Utils.generateId() : (crypto.randomUUID ? crypto.randomUUID() : this._fallbackId()));
-      const addedRecipe = { ...recipe, id };
+      const addedRecipe = {
+        ...recipe,
+        id,
+        contentVersion: 1,
+        favoriteVersion: 1,
+        imageVersion: this._isDataImage(recipe.image) ? 1 : 0
+      };
       const added = this._toStoredRecipe(addedRecipe, item.thumbnail);
       store.put(added.stored);
       if (added.fullImage) {
