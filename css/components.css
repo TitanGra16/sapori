@@ -76,8 +76,8 @@ body.search-open #app-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   transition:
@@ -203,9 +203,9 @@ body.search-open #app-content {
 }
 
 .nav-label {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   line-height: 1;
 }
 
@@ -314,12 +314,17 @@ body.search-open #app-content {
 
 .filter-chip {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
   padding: 8px 18px;
+  min-height: 44px;
+  max-width: min(80vw, 320px);
   font-size: 0.8125rem;
   font-weight: 500;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1.5px solid var(--border);
@@ -601,6 +606,9 @@ body.search-open #app-content {
   background: var(--bg-tertiary);
   border-radius: var(--radius-full);
   width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* ============================================================
@@ -828,6 +836,7 @@ body.search-open #app-content {
   align-items: flex-start;
   gap: var(--space-md);
   padding: var(--space-sm) 0;
+  min-height: 44px;
   border-bottom: 1px solid var(--border);
   font-size: 0.95rem;
   color: var(--text-secondary);
@@ -1073,6 +1082,7 @@ body.search-open #app-content {
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
+  min-height: 44px;
   padding: 12px 24px;
   font-family: var(--font-body);
   font-size: 0.9rem;
@@ -1188,8 +1198,8 @@ body.search-open #app-content {
 }
 
 .btn--icon.btn--small {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   font-size: 0.95rem;
 }
 
@@ -1302,7 +1312,7 @@ body.search-open #app-content {
 /* Custom Category Selector Grid */
 .category-selector-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
   gap: var(--space-sm);
   margin-top: var(--space-xs);
 }
@@ -1314,6 +1324,8 @@ body.search-open #app-content {
   justify-content: center;
   gap: var(--space-xs);
   padding: var(--space-md) var(--space-sm);
+  min-width: 0;
+  min-height: 44px;
   background: var(--bg-secondary);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
@@ -1351,6 +1363,8 @@ body.search-open #app-content {
   font-weight: 600;
   color: var(--text-primary);
   text-align: center;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 /* Error state */
@@ -1708,8 +1722,8 @@ body.search-open #app-content {
 }
 
 .modal__header .modal-close {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1741,9 +1755,24 @@ body.search-open #app-content {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg) var(--space-lg);
   border-top: 1px solid var(--border);
+}
+
+@media (max-width: 400px) {
+  .modal__footer--import {
+    flex-direction: column;
+    align-items: stretch;
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+
+  .modal__footer--import .btn {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 /* ============================================================
@@ -1806,6 +1835,15 @@ body.search-open #app-content {
   background: var(--primary);
 }
 
+.toast--warning {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: var(--bg-secondary);
+}
+
+.toast--warning::before {
+  background: var(--warning);
+}
+
 .toast .toast-icon {
   width: 24px;
   height: 24px;
@@ -1829,6 +1867,10 @@ body.search-open #app-content {
   color: var(--primary-ink);
 }
 
+.toast--warning .toast-icon {
+  color: var(--warning);
+}
+
 .toast .toast-message {
   flex: 1;
   font-size: 0.875rem;
@@ -1838,8 +1880,8 @@ body.search-open #app-content {
 }
 
 .toast .toast-dismiss {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2085,7 +2127,7 @@ body.search-open #app-content {
 }
 
 .theme-option .theme-name {
-  font-size: 0.7rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: capitalize;
@@ -2410,9 +2452,9 @@ body.search-open #app-content {
 /* Install Prompt Banner */
 .install-prompt {
   position: fixed;
-  bottom: 80px; /* Positioned just above the bottom nav */
-  left: var(--space-md);
-  right: var(--space-md);
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--space-md));
+  left: max(var(--space-md), env(safe-area-inset-left, 0px));
+  right: max(var(--space-md), env(safe-area-inset-right, 0px));
   max-width: 500px;
   margin: 0 auto;
   background: var(--glass-bg);
@@ -2426,7 +2468,7 @@ body.search-open #app-content {
   gap: var(--space-md);
   z-index: var(--z-modal);
   box-shadow: var(--shadow-lg);
-  animation: slideUp 0.4s ease both;
+  animation: installPromptIn 0.4s ease both;
   transition: opacity var(--transition-normal), transform var(--transition-normal);
 }
 
@@ -2485,9 +2527,9 @@ body.search-open #app-content {
   font-size: 0.8rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .install-prompt {
-    bottom: 24px;
+    bottom: max(24px, env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -3108,6 +3150,17 @@ body.search-open #app-content {
   gap: var(--space-sm);
 }
 
+@keyframes installPromptIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .dynamic-field {
   display: flex;
   min-width: 0;
@@ -3211,6 +3264,21 @@ body.search-open #app-content {
     justify-self: end;
     margin-bottom: 9px;
   }
+
+  .form-tab-actions--submit {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-tab-actions--submit .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .form-tab-actions--submit .btn--grow {
+    grid-column: 1 / -1;
+  }
+
 }
 
 /* ============================================================
@@ -3237,8 +3305,8 @@ body.search-open #app-content {
 }
 
 @keyframes cookingModalIn {
-  from { opacity: 0; transform: translateY(40px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Mobile: fullscreen cooking modal */
@@ -3437,8 +3505,8 @@ body.search-open #app-content {
 }
 
 .cooking-modal__dot {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   border: 2px solid var(--border);
   background: transparent;
@@ -3627,8 +3695,8 @@ body.search-open #app-content {
 }
 
 .cooking-modal__timer-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   border: 1.5px solid var(--border);
   background: var(--glass-bg);
@@ -3685,6 +3753,7 @@ body.search-open #app-content {
 .cooking-modal__timer-input {
   width: 68px;
   max-width: 24vw;
+  min-height: 44px;
   text-align: center;
   font-size: 0.9rem;
   font-weight: 700;
@@ -3712,6 +3781,7 @@ body.search-open #app-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 44px;
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -3773,6 +3843,9 @@ body.search-open #app-content {
   align-items: center;
   gap: 5px;
   padding: 6px 12px;
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
   border-radius: var(--radius-full);
   font-size: 0.82rem;
   font-weight: 500;
@@ -3788,6 +3861,7 @@ body.search-open #app-content {
     text-decoration var(--transition-fast);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  overflow-wrap: anywhere;
 }
 
 .cooking-modal__ing-chip:hover {
@@ -3820,7 +3894,7 @@ body.search-open #app-content {
 .cooking-modal__footer {
   flex-shrink: 0;
   padding: var(--space-md) var(--space-lg);
-  padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+  padding-bottom: max(var(--space-md), env(safe-area-inset-bottom, 0px));
   background: var(--bg-secondary);
   border-top: 1px solid var(--border);
   display: flex;
@@ -3963,6 +4037,24 @@ body.search-open #app-content {
 
 @media (min-width: 700px) {
   .cooking-modal__swipe-hint { display: none; }
+}
+
+@media (max-width: 480px) {
+  .cooking-modal__timer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cooking-modal__timer > div,
+  .cooking-modal__timer-input-wrap {
+    width: 100%;
+  }
+
+  .cooking-modal__timer-input {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+  }
 }
 
 /* ============================================================
@@ -4516,6 +4608,8 @@ body.app-chrome-hidden #app-content {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
+  min-width: 0;
+  max-width: 100%;
   padding: 4px 8px 4px 12px;
   border: 1px solid;
   border-radius: var(--radius-full);
@@ -4523,12 +4617,17 @@ body.app-chrome-hidden #app-content {
   font-weight: 600;
 }
 
+.custom-cat-chip > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .btn-delete-cat {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   margin-left: 2px;
   border-radius: var(--radius-full);
   color: inherit;
@@ -4543,7 +4642,7 @@ body.app-chrome-hidden #app-content {
 
 .add-category-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(96px, 0.55fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
   gap: var(--space-sm);
   width: 100%;
   margin-top: var(--space-xs);
@@ -4700,8 +4799,8 @@ body.app-chrome-hidden #app-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   color: inherit;
 }
@@ -4732,7 +4831,7 @@ body.app-chrome-hidden #app-content {
 
 @media (max-width: 359px) {
   .nav-label {
-    font-size: 0.6rem;
+    font-size: 0.75rem;
     letter-spacing: 0;
   }
 
@@ -4792,7 +4891,7 @@ body.app-chrome-hidden #app-content {
   }
 
   .add-category-form {
-    grid-template-columns: minmax(220px, 1fr) 120px 140px auto;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }
 

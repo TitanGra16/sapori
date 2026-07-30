@@ -99,9 +99,12 @@ window.Utils = {
    * Show a toast notification.
    * Creates a toast element, appends to #toast-container, auto-dismisses after 3s.
    * @param {string} message - Toast message text
-   * @param {'info'|'success'|'error'} type - Toast type
+   * @param {'info'|'success'|'warning'|'error'} type - Toast type
    */
   showToast(message, type = 'info') {
+    const supportedTypes = ['info', 'success', 'warning', 'error'];
+    const toastType = supportedTypes.includes(type) ? type : 'info';
+
     // Ensure container exists
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -111,16 +114,20 @@ window.Utils = {
     }
 
     const toast = document.createElement('div');
-    toast.className = `toast toast--${type} animate-slide-up`;
-    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.className = `toast toast--${toastType} animate-slide-up`;
+    const isUrgent = toastType === 'warning' || toastType === 'error';
+    toast.setAttribute('role', isUrgent ? 'alert' : 'status');
+    toast.setAttribute('aria-live', isUrgent ? 'assertive' : 'polite');
+    toast.setAttribute('aria-atomic', 'true');
 
     // Icon based on type
     const icons = {
       success: '✓',
+      warning: '⚠',
       error: '✗',
       info: 'ℹ'
     };
-    const icon = icons[type] || icons.info;
+    const icon = icons[toastType];
 
     toast.innerHTML =
       `<span class="toast-icon" aria-hidden="true">${icon}</span>` +
@@ -129,10 +136,10 @@ window.Utils = {
 
     container.appendChild(toast);
 
-    // Errors remain visible longer so they can be read comfortably.
+    // Warnings and errors remain visible longer so they can be read comfortably.
     const dismissTimeout = setTimeout(() => {
       this._dismissToast(toast);
-    }, type === 'error' ? 6500 : 4000);
+    }, isUrgent ? 6500 : 4000);
 
     toast.querySelector('.toast-dismiss').addEventListener('click', () => {
       clearTimeout(dismissTimeout);

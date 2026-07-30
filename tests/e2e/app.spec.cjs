@@ -1,6 +1,9 @@
 const { test, expect } = require('@playwright/test');
 
 async function openCleanApp(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('sapori-warning-dismissed', 'true');
+  });
   await page.goto('/index.html?e2e=1');
   const warningButton = page.getByRole('button', { name: 'Ho capito' });
   if (await warningButton.isVisible().catch(() => false)) {
@@ -173,7 +176,7 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
   await expect(page.getByText('In frigorifero per 2 giorni.')).toBeVisible();
   await expect(page.getByText('Farina')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Condividi' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Esporta PDF' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Stampa / salva PDF' })).toBeVisible();
   const favoriteButton = page.getByRole('button', { name: 'Aggiungi ai preferiti' });
   await expect(favoriteButton).toHaveAttribute('aria-pressed', 'false');
   await favoriteButton.click();
@@ -191,7 +194,7 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
       };
     };
   });
-  await page.getByRole('button', { name: 'Esporta PDF' }).click();
+  await page.getByRole('button', { name: 'Stampa / salva PDF' }).click();
   await expect.poll(() => page.evaluate(() => window.__printSnapshot)).toEqual({
     bodyClassActive: true,
     sheets: 1,
@@ -229,7 +232,7 @@ test('ripristina passaggio, ingredienti e timer della modalità cucina', async (
   });
 
   await page.goto('/index.html?e2e=1#detail/' + encodeURIComponent(recipeId));
-  await page.getByRole('button', { name: /Inizia la Cottura/ }).click();
+  await page.getByRole('button', { name: /Modalità cucina/ }).click();
 
   const secondIngredient = page.locator('[data-action="toggle-cooking-ing"][data-index="1"]');
   await secondIngredient.click();
@@ -258,7 +261,7 @@ test('ripristina passaggio, ingredienti e timer della modalità cucina', async (
   await expect(page.getByRole('spinbutton', { name: 'Minuti' })).toBeDisabled();
   await expect(page.getByRole('spinbutton', { name: 'Minuti' })).toHaveValue(/^(119|120)$/);
 
-  await page.getByRole('button', { name: 'Chiudi Modalità Cucina' }).click();
+  await page.getByRole('button', { name: 'Chiudi modalità cucina' }).click();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('sapori-cooking-session'))).toBeNull();
 });
 
@@ -652,4 +655,242 @@ test('adatta box e navigazione senza overflow al viewport corrente', async ({ pa
     const formHeader = await page.locator('.form-view > .view-header').boundingBox();
     return formHeader.y;
   }).toBeLessThan(100);
+});
+
+test('protegge form, importazione e categorie ai breakpoint critici', async ({ page }) => {
+  const widths = [320, 360, 600, 820];
+
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await openCleanApp(page);
+
+    await page.getByRole('button', { name: 'Nuova ricetta' }).click();
+    await page.getByRole('tab', { name: 'Dettagli di cottura' }).click();
+    await expectNoHorizontalOverflow(page);
+
+    const submitMetrics = await page.locator('.form-tab-actions--submit .btn').evaluateAll(buttons => (
+      buttons.map(button => {
+        const rect = button.getBoundingClientRect();
+        return {
+          height: rect.height,
+          left: rect.left,
+          right: rect.right
+        };
+      })
+    ));
+    expect(submitMetrics).toHaveLength(3);
+    submitMetrics.forEach(metric => {
+      expect(metric.height).toBeGreaterThanOrEqual(44);
+      expect(metric.left).toBeGreaterThanOrEqual(-1);
+      expect(metric.right).toBeLessThanOrEqual(width + 1);
+    });
+
+    await page.evaluate(() => {
+      window.location.hash = '#settings';
+    });
+    await expect(page.getByRole('heading', { name: 'Impostazioni', level: 1 })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    const textSizes = await page.evaluate(() => ({
+      navigation: parseFloat(getComputedStyle(document.querySelector('.nav-label')).fontSize),
+      palette: parseFloat(getComputedStyle(document.querySelector('.theme-name')).fontSize)
+    }));
+    expect(textSizes.navigation).toBeGreaterThanOrEqual(12);
+    expect(textSizes.palette).toBeGreaterThanOrEqual(13);
+
+    if (width <= 400) {
+      await page.evaluate(() => {
+        Views.showImportPreviewModal({
+          total: 3,
+          additions: 1,
+          updates: 1,
+          duplicates: 0,
+          conflicts: 1,
+          rejected: 0,
+          categories: 1
+        }, () => {}, () => {});
+      });
+
+      const importFooter = page.locator('.modal__footer--import');
+      await expect(importFooter).toBeVisible();
+      const importMetrics = await importFooter.evaluate(footer => {
+        const footerRect = footer.getBoundingClientRect();
+        return {
+          footerLeft: footerRect.left,
+          footerRight: footerRect.right,
+          buttons: Array.from(footer.querySelectorAll('.btn')).map(button => {
+            const rect = button.getBoundingClientRect();
+            return {
+              height: rect.height,
+              left: rect.left,
+              right: rect.right
+            };
+          })
+        };
+      });
+      expect(importMetrics.buttons).toHaveLength(3);
+      importMetrics.buttons.forEach(metric => {
+        expect(metric.height).toBeGreaterThanOrEqual(44);
+        expect(metric.left).toBeGreaterThanOrEqual(importMetrics.footerLeft - 1);
+        expect(metric.right).toBeLessThanOrEqual(importMetrics.footerRight + 1);
+      });
+      await page.evaluate(() => Views.hideModal());
+    }
+
+    if (width === 600) {
+      const categoryForm = page.locator('.add-category-form');
+      const categoryGridMetrics = await categoryForm.evaluate(form => {
+        const parent = form.getBoundingClientRect();
+        return {
+          columns: getComputedStyle(form).gridTemplateColumns.split(' ').length,
+          childrenInside: Array.from(form.children).every(child => {
+            const rect = child.getBoundingClientRect();
+            return rect.left >= parent.left - 1 && rect.right <= parent.right + 1;
+          })
+        };
+      });
+      expect(categoryGridMetrics.columns).toBeGreaterThan(1);
+      expect(categoryGridMetrics.childrenInside).toBe(true);
+
+      const longCategory = 'CategoriaSuperLunghissimaSenzaSpaziPerVerificareIlRientro';
+      await page.getByRole('textbox', { name: 'Nome nuova categoria' }).fill(longCategory);
+      await page.getByRole('textbox', { name: 'Emoji nuova categoria' }).fill('🍲');
+      await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
+      await expect(page.locator('.custom-cat-chip > span', { hasText: longCategory })).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+
+      await page.getByRole('button', { name: 'Nuova ricetta' }).click();
+      const longCategoryLabel = page.locator('.category-select-btn__label', { hasText: longCategory });
+      await expect(longCategoryLabel).toBeVisible();
+      const longCategoryFits = await longCategoryLabel.evaluate(label => {
+        const button = label.closest('.category-select-btn');
+        return button.scrollWidth <= button.clientWidth + 1;
+      });
+      expect(longCategoryFits).toBe(true);
+      await expectNoHorizontalOverflow(page);
+    }
+
+    if (width === 820) {
+      await page.evaluate(() => {
+        window.location.hash = '#settings';
+      });
+      await expect(page.getByRole('heading', { name: 'Impostazioni', level: 1 })).toBeVisible();
+      await page.locator('#install-prompt').evaluate(prompt => prompt.classList.remove('hidden'));
+
+      const chromeMetrics = await page.evaluate(() => {
+        const prompt = document.getElementById('install-prompt').getBoundingClientRect();
+        const navigation = document.getElementById('bottom-nav').getBoundingClientRect();
+        return {
+          gap: navigation.top - prompt.bottom,
+          promptLeft: prompt.left,
+          promptRight: prompt.right,
+          viewport: window.innerWidth
+        };
+      });
+      expect(chromeMetrics.gap).toBeGreaterThanOrEqual(0);
+      expect(chromeMetrics.promptLeft).toBeGreaterThanOrEqual(15);
+      expect(chromeMetrics.promptRight).toBeLessThanOrEqual(chromeMetrics.viewport - 15);
+      await expect.poll(() => page.evaluate(() => {
+        const prompt = document.getElementById('install-prompt').getBoundingClientRect();
+        const navigation = document.getElementById('bottom-nav').getBoundingClientRect();
+        return navigation.top - prompt.bottom;
+      })).toBeGreaterThanOrEqual(15);
+
+      await page.evaluate(() => {
+        window.location.hash = '#account';
+      });
+      await expect(page.getByRole('heading', { name: 'Account e sincronizzazione', level: 1 })).toBeVisible();
+      const accountTextSizes = await page.evaluate(() => ({
+        badge: parseFloat(getComputedStyle(document.querySelector('.sync-status-pill')).fontSize),
+        caption: parseFloat(getComputedStyle(document.querySelector('.account-metric span')).fontSize),
+        description: parseFloat(getComputedStyle(document.querySelector('.account-card__heading p')).fontSize)
+      }));
+      expect(accountTextSizes.badge).toBeGreaterThanOrEqual(12.8);
+      expect(accountTextSizes.caption).toBeGreaterThanOrEqual(13);
+      expect(accountTextSizes.description).toBeGreaterThanOrEqual(14);
+      await expectNoHorizontalOverflow(page);
+    }
+  }
+});
+
+test('rende progresso, touch target e toast warning coerenti', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  const recipeId = await page.evaluate(async () => {
+    localStorage.setItem('sapori-warning-dismissed', 'true');
+    return DB.addRecipe({
+      name: 'Progresso responsive',
+      category: 'primi',
+      description: '',
+      ingredients: [
+        { name: 'IngredienteConUnNomeMoltoLungoSenzaSpazi', quantity: '100', unit: 'g', notes: '' },
+        { name: 'Acqua', quantity: '50', unit: 'ml', notes: '' }
+      ],
+      steps: [
+        { text: 'Primo passaggio.', notes: '' },
+        { text: 'Secondo passaggio.', notes: '' },
+        { text: 'Terzo passaggio.', notes: '' }
+      ],
+      prepTime: 10,
+      cookTime: 20,
+      servings: 2,
+      difficulty: 'facile',
+      notes: '',
+      storage: '',
+      image: null,
+      imageThumbnail: null,
+      isFavorite: false
+    });
+  });
+
+  await page.goto('/index.html?responsive-cooking=1#detail/' + encodeURIComponent(recipeId));
+  await expect(page.getByRole('button', { name: /Modalità cucina/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Stampa / salva PDF' })).toBeVisible();
+
+  const detailActions = await page.locator('.recipe-detail__actions-row .btn').evaluateAll(buttons => (
+    buttons.map(button => button.getBoundingClientRect().height)
+  ));
+  detailActions.forEach(height => expect(height).toBeGreaterThanOrEqual(44));
+
+  await page.getByRole('button', { name: /Modalità cucina/ }).click();
+  await expect(page.getByText('👨‍🍳 Modalità cucina', { exact: true })).toBeVisible();
+
+  const progress = page.getByRole('progressbar', { name: 'Avanzamento preparazione' });
+  await expect(progress).toHaveAttribute('aria-valuenow', '33');
+  await expect(progress).toHaveAttribute('aria-valuetext', 'Passaggio 1 di 3');
+  await expect(page.locator('.cooking-modal__progress-pct')).toHaveText('33%');
+
+  const touchTargetSelectors = [
+    '.cooking-modal__dot',
+    '.cooking-modal__timer-btn',
+    '.cooking-modal__timer-input',
+    '.cooking-modal__ing-header',
+    '.cooking-modal__ing-chip',
+    '.cooking-modal__nav-btn'
+  ];
+  for (const selector of touchTargetSelectors) {
+    const heights = await page.locator(selector).evaluateAll(elements => (
+      elements.map(element => element.getBoundingClientRect().height)
+    ));
+    expect(heights.length, selector).toBeGreaterThan(0);
+    heights.forEach(height => expect(height, selector).toBeGreaterThanOrEqual(44));
+  }
+  await expectNoHorizontalOverflow(page);
+
+  await page.getByRole('button', { name: 'Vai al passaggio 3' }).click();
+  await expect(progress).toHaveAttribute('aria-valuenow', '100');
+  await expect(progress).toHaveAttribute('aria-valuetext', 'Passaggio 3 di 3');
+  await expect(page.locator('.cooking-modal__progress-pct')).toHaveText('100%');
+
+  await page.getByRole('button', { name: 'Chiudi modalità cucina' }).click();
+  await page.evaluate(() => Utils.showToast('Backup consigliato', 'warning'));
+  const warningToast = page.locator('.toast--warning');
+  await expect(warningToast).toBeVisible();
+  await expect(warningToast).toHaveAttribute('role', 'alert');
+  await expect(warningToast).toHaveAttribute('aria-live', 'assertive');
+  await expect(warningToast).toHaveAttribute('aria-atomic', 'true');
+  await expect(warningToast.locator('.toast-icon')).toHaveText('⚠');
+  const dismissHeight = await warningToast.locator('.toast-dismiss').evaluate(button => (
+    button.getBoundingClientRect().height
+  ));
+  expect(dismissHeight).toBeGreaterThanOrEqual(44);
 });

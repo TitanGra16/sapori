@@ -515,8 +515,8 @@ window.Views = (function () {
       '<div class="no-print" style="padding:0 1rem;margin-bottom:1.25rem">' +
         '<button type="button" class="btn btn--primary" data-action="start-cooking" data-id="' + esc(recipe.id) + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;font-size:1.05rem;padding:1rem 1.25rem;border-radius:var(--radius-lg);font-weight:800;letter-spacing:.02em;background:var(--gradient);box-shadow:0 6px 20px var(--shadow);transition:all .2s;position:relative;overflow:hidden">' +
           '<span style="font-size:1.3rem;line-height:1">🍳</span>' +
-          ' Inizia la Cottura' +
-          '<span style="font-size:.8rem;opacity:.75;margin-left:.25rem">(Schermo Attivo)</span>' +
+          ' Modalità cucina' +
+          '<span style="font-size:.8rem;opacity:.75;margin-left:.25rem">(schermo attivo)</span>' +
         '</button>' +
       '</div>';
 
@@ -602,7 +602,7 @@ window.Views = (function () {
     html +=
       '<div class="recipe-detail__section recipe-detail__actions-row" style="display:flex;gap:.75rem;flex-wrap:wrap">' +
         '<button type="button" class="btn btn--secondary" data-action="edit-recipe" data-id="' + esc(recipe.id) + '">' + Icons.edit + ' Modifica</button>' +
-        '<button type="button" class="btn btn--secondary" data-action="export-pdf" data-id="' + esc(recipe.id) + '">' + Icons.download + ' Esporta PDF</button>' +
+        '<button type="button" class="btn btn--secondary" data-action="export-pdf" data-id="' + esc(recipe.id) + '">' + Icons.download + ' Stampa / salva PDF</button>' +
         '<button type="button" class="btn btn--danger" data-action="delete-recipe" data-id="' + esc(recipe.id) + '">' + Icons.trash + ' Elimina</button>' +
       '</div>';
 
@@ -965,7 +965,9 @@ window.Views = (function () {
     var stepNotes = typeof stepVal === 'object' ? stepVal.notes : '';
 
     // Progress
-    var pct = totalSteps > 0 ? Math.round((stepIndex / totalSteps) * 100) : 0;
+    var pct = totalSteps > 0
+      ? Math.min(100, Math.round(((stepIndex + 1) / totalSteps) * 100))
+      : 0;
     var checkedCount = Object.values(checkedIngredients).filter(Boolean).length;
     var totalIng = (recipe.ingredients && recipe.ingredients.length) || 0;
 
@@ -991,12 +993,12 @@ window.Views = (function () {
     var wlText  = wakeLockActive ? '⚡ Schermo attivo' : '📱 Standard';
     html += '<div class="cooking-modal__header">';
     html +=   '<div class="cooking-modal__header-left">';
-    html +=     '<span class="cooking-modal__label">👨‍🍳 Modalità Cucina</span>';
+    html +=     '<span class="cooking-modal__label">👨‍🍳 Modalità cucina</span>';
     html +=     '<h2 class="cooking-modal__title" id="cooking-modal-title">' + esc(recipe.name) + '</h2>';
     html +=   '</div>';
     html +=   '<div class="cooking-modal__header-right">';
     html +=     '<span class="cooking-modal__wakelock ' + wlClass + '">' + wlText + '</span>';
-    html +=     '<button type="button" class="cooking-modal__close" data-action="close-cooking" aria-label="Chiudi Modalità Cucina">' + Icons.x + '</button>';
+    html +=     '<button type="button" class="cooking-modal__close" data-action="close-cooking" aria-label="Chiudi modalità cucina">' + Icons.x + '</button>';
     html +=   '</div>';
     html += '</div>';
 
@@ -1007,7 +1009,7 @@ window.Views = (function () {
       html +=     '<span class="cooking-modal__step-counter">Passaggio ' + (stepIndex + 1) + ' di ' + totalSteps + '</span>';
       html +=     '<span class="cooking-modal__progress-pct">' + pct + '%</span>';
       html +=   '</div>';
-      html +=   '<div class="cooking-modal__progress-bar-bg" role="progressbar" aria-label="Avanzamento preparazione" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '">';
+      html +=   '<div class="cooking-modal__progress-bar-bg" role="progressbar" aria-label="Avanzamento preparazione" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-valuetext="Passaggio ' + (stepIndex + 1) + ' di ' + totalSteps + '">';
       html +=     '<div class="cooking-modal__progress-bar-fill" style="width:' + pct + '%"></div>';
       html +=   '</div>';
       html += '</div>';
@@ -1176,7 +1178,7 @@ window.Views = (function () {
     ].join(' · ');
 
     overlay.innerHTML =
-      '<div class="modal animate-slide-up" role="dialog" aria-modal="true" aria-labelledby="import-preview-title">' +
+      '<div class="modal modal--import-preview animate-slide-up" role="dialog" aria-modal="true" aria-labelledby="import-preview-title">' +
         '<div class="modal__header"><h3 id="import-preview-title">Anteprima importazione</h3></div>' +
         '<div class="modal__body">' +
           '<p>Il file contiene <strong>' + preview.total + '</strong> ricett' + (preview.total === 1 ? 'a valida' : 'e valide') + '.</p>' +
@@ -1184,7 +1186,7 @@ window.Views = (function () {
           (preview.categories ? '<p style="margin-top:.5rem">' + preview.categories + ' categorie personalizzate incluse.</p>' : '') +
           '<p style="margin-top:.75rem;font-size:.85rem;color:var(--text-muted)">Unisci aggiorna soltanto le versioni più recenti, ignora i duplicati e conserva le modifiche locali in conflitto. Sostituisci elimina prima le ricette attuali.</p>' +
         '</div>' +
-        '<div class="modal__footer">' +
+        '<div class="modal__footer modal__footer--import">' +
           '<button type="button" class="btn btn--ghost" data-action="modal-cancel">Annulla</button>' +
           (onReplace ? '<button type="button" class="btn btn--danger" id="btn-import-replace">Sostituisci</button>' : '') +
           '<button type="button" class="btn btn--primary" id="btn-import-merge">Unisci</button>' +
