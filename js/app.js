@@ -15,6 +15,7 @@
     savingCategory: false,
     routeToken: 0,
     lastStableHash: '#home',
+    detailReturnHash: '#home',
     navigationConfirmed: false,
     pantryIngredients: [],
     cooking: {
@@ -328,12 +329,40 @@
     Views.hideModal();
   }
 
+  function describeCookingFocus(element) {
+    if (!element || !modalOverlay.contains(element)) return null;
+    var action = element.getAttribute ? element.getAttribute('data-action') : null;
+    return {
+      id: element.id || null,
+      action: action,
+      index: action === 'toggle-cooking-ing' ? element.getAttribute('data-index') : null,
+      step: action === 'cooking-goto' ? element.getAttribute('data-step') : null
+    };
+  }
+
+  function restoreCookingFocus(descriptor) {
+    if (!descriptor) return;
+    var replacement = descriptor.id ? document.getElementById(descriptor.id) : null;
+
+    if (!replacement && descriptor.action) {
+      var candidates = modalOverlay.querySelectorAll('[data-action]');
+      replacement = Array.from(candidates).find(function (candidate) {
+        if (candidate.getAttribute('data-action') !== descriptor.action) return false;
+        if (descriptor.index !== null && candidate.getAttribute('data-index') !== descriptor.index) return false;
+        if (descriptor.step !== null && candidate.getAttribute('data-step') !== descriptor.step) return false;
+        return true;
+      }) || null;
+    }
+
+    if (replacement && typeof replacement.focus === 'function') {
+      replacement.focus();
+    }
+  }
+
   function rerenderCookingModal() {
     if (state.cooking && state.cooking.recipe) {
       persistCookingSession();
-      var focusedAction = document.activeElement && document.activeElement.getAttribute
-        ? document.activeElement.getAttribute('data-action')
-        : null;
+      var focusDescriptor = describeCookingFocus(document.activeElement);
       Views.showCookingModal(
         state.cooking.recipe,
         state.cooking.stepIndex,
@@ -342,10 +371,7 @@
         state.cooking.timer,
         state.cooking.ingExpanded
       );
-      if (focusedAction) {
-        var replacement = document.querySelector('[data-action="' + focusedAction + '"]');
-        if (replacement) replacement.focus();
-      }
+      restoreCookingFocus(focusDescriptor);
     }
   }
 
@@ -380,6 +406,70 @@
   var btnSearchClose = document.getElementById('btn-search-close');
   var btnThemeToggle = document.getElementById('btn-theme-toggle');
   var modalOverlay = document.getElementById('modal-overlay');
+  var routeAnnouncer = null;
+
+  document.querySelectorAll('svg').forEach(function (icon) {
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('focusable', 'false');
+  });
+
+  function ensureRouteAnnouncer() {
+    if (routeAnnouncer && routeAnnouncer.isConnected) return routeAnnouncer;
+    routeAnnouncer = document.getElementById('route-announcer');
+    if (!routeAnnouncer) {
+      routeAnnouncer = document.createElement('div');
+      routeAnnouncer.id = 'route-announcer';
+      routeAnnouncer.className = 'sr-only';
+      routeAnnouncer.setAttribute('role', 'status');
+      routeAnnouncer.setAttribute('aria-live', 'polite');
+      routeAnnouncer.setAttribute('aria-atomic', 'true');
+      document.body.appendChild(routeAnnouncer);
+    }
+    return routeAnnouncer;
+  }
+
+  function isBlockingDialogOpen() {
+    var warningModal = document.getElementById('warning-modal');
+    var warningOpen = warningModal && !warningModal.classList.contains('hidden');
+    var appModalOpen = modalOverlay &&
+      !modalOverlay.classList.contains('hidden') &&
+      !!modalOverlay.firstElementChild;
+    return !!(warningOpen || appModalOpen);
+  }
+
+  function finalizeRouteAccessibility(token, fallbackLabel) {
+    if (token !== state.routeToken) return;
+
+    appContent.setAttribute('aria-busy', 'false');
+    var heading = appContent.querySelector('h1');
+    var label = heading && heading.textContent
+      ? heading.textContent.trim()
+      : (fallbackLabel || 'Sapori');
+
+    if (heading) {
+      if (!heading.id) {
+        heading.id = 'view-title-' + String(state.currentView || 'page').replace(/[^a-z0-9_-]/gi, '-');
+      }
+      heading.setAttribute('tabindex', '-1');
+      appContent.setAttribute('aria-labelledby', heading.id);
+    } else {
+      appContent.removeAttribute('aria-labelledby');
+    }
+
+    document.title = label === 'Sapori'
+      ? 'Sapori — Il Tuo Ricettario Personale'
+      : label + ' — Sapori';
+
+    var announcer = ensureRouteAnnouncer();
+    announcer.textContent = '';
+    window.requestAnimationFrame(function () {
+      if (token !== state.routeToken || isBlockingDialogOpen()) return;
+      announcer.textContent = 'Pagina ' + label + ' caricata';
+      if (heading && heading.isConnected) {
+        heading.focus({ preventScroll: true });
+      }
+    });
+  }
 
   function safeStorageGet(key) {
     try {
@@ -628,6 +718,11 @@
     });
   }
 
+  function isDetailReturnHash(hash) {
+    var route = String(hash || '').replace(/^#/, '').split('/')[0];
+    return route === 'home' || route === 'favorites' || route === 'pantry';
+  }
+
   async function renderRouteView(token, renderer) {
     var staging = document.createElement('div');
     await renderer(staging);
@@ -660,6 +755,7 @@
 
   async function handleRoute(hash) {
     var token = ++state.routeToken;
+    appContent.setAttribute('aria-busy', 'true');
     try {
     // Parse the hash
     var parts = hash.replace('#', '').split('/');
@@ -673,8 +769,12 @@
       }
     }
 
+    if (view === 'detail' && isDetailReturnHash(state.lastStableHash)) {
+      state.detailReturnHash = state.lastStableHash;
+    }
+
     state.currentView = view;
-    closeSearch(false);
+    closeSearch(false, false);
 
     // Transition animation
     appContent.classList.add('animate-fade-in');
@@ -683,7 +783,7 @@
     switch (view) {
       case 'home':
         updateNav('home');
-        showHeader(true);
+        showHeader(true, true);
         appContent.innerHTML = '<div class="view" role="status">Caricamento ricette…</div>';
         await renderRouteView(token, function (container) {
           return Views.renderHome(container, state.filters);
@@ -692,7 +792,7 @@
 
       case 'create':
         updateNav('create');
-        showHeader(false);
+        showHeader(false, false);
         state.editingRecipe = null;
         if (token !== state.routeToken) return;
         Views.renderCreate(appContent, null);
@@ -700,7 +800,7 @@
 
       case 'edit':
         updateNav('create');
-        showHeader(false);
+        showHeader(false, false);
         if (param) {
           appContent.innerHTML = '<div class="view" role="status">Caricamento ricetta…</div>';
           var recipe = await DB.getRecipe(param);
@@ -721,7 +821,7 @@
 
       case 'detail':
         updateNav('');
-        showHeader(false);
+        showHeader(false, false);
         if (param) {
           appContent.innerHTML = '<div class="view" role="status">Caricamento ricetta…</div>';
           await renderRouteView(token, function (container) {
@@ -735,7 +835,7 @@
 
       case 'favorites':
         updateNav('favorites');
-        showHeader(true);
+        showHeader(true, false);
         appContent.innerHTML = '<div class="view" role="status">Caricamento preferiti…</div>';
         await renderRouteView(token, function (container) {
           return Views.renderFavorites(container);
@@ -744,7 +844,7 @@
 
       case 'settings':
         updateNav('settings');
-        showHeader(true);
+        showHeader(true, false);
         appContent.innerHTML = '<div class="view" role="status">Caricamento impostazioni…</div>';
         await renderRouteView(token, function (container) {
           return Views.renderSettings(container);
@@ -753,17 +853,16 @@
 
       case 'account':
         updateNav('settings');
-        showHeader(true);
+        showHeader(true, false);
         appContent.innerHTML = '<div class="view" role="status">Caricamento account…</div>';
-        var accountRendered = await renderRouteView(token, function (container) {
+        await renderRouteView(token, function (container) {
           return AccountView.render(container);
         });
-        if (accountRendered) AccountView.focusHeading(appContent);
         break;
 
       case 'pantry':
         updateNav('');
-        showHeader(false);
+        showHeader(false, false);
         appContent.innerHTML = '<div class="view" role="status">Cerco le ricette compatibili…</div>';
         await renderRouteView(token, function (container) {
           return Views.renderPantry(container, state.pantryIngredients);
@@ -781,12 +880,14 @@
 
     // Scroll to top on view change
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    finalizeRouteAccessibility(token);
     } catch (error) {
       if (token !== state.routeToken) return;
       console.error('Errore durante il caricamento della rotta:', error);
       showViewLoadError();
       state.lastStableHash = hash;
       state.navigationConfirmed = false;
+      finalizeRouteAccessibility(token, 'Errore');
     }
   }
 
@@ -821,16 +922,28 @@
     }
   }
 
-  function showHeader(visible) {
+  function setSearchAvailability(available) {
+    var isAvailable = available === true;
+    btnSearchToggle.classList.toggle('hidden', !isAvailable);
+    btnSearchToggle.disabled = !isAvailable;
+    btnSearchToggle.setAttribute('aria-hidden', isAvailable ? 'false' : 'true');
+    if (!isAvailable && !searchBar.classList.contains('hidden')) {
+      closeSearch(false, false);
+    }
+  }
+
+  function showHeader(visible, searchAvailable) {
     var header = document.getElementById('app-header');
     if (visible) {
       header.classList.remove('hidden');
       bottomNav.classList.remove('hidden');
       document.body.classList.remove('app-chrome-hidden');
+      setSearchAvailability(searchAvailable);
     } else {
       header.classList.add('hidden');
       bottomNav.classList.add('hidden');
       document.body.classList.add('app-chrome-hidden');
+      setSearchAvailability(false);
     }
   }
 
@@ -852,14 +965,19 @@
   /* ──────────────────── SEARCH ──────────────────── */
 
   function openSearch() {
+    if (btnSearchToggle.disabled || btnSearchToggle.classList.contains('hidden')) return;
     searchBar.classList.remove('hidden');
     document.body.classList.add('search-open');
     btnSearchToggle.setAttribute('aria-expanded', 'true');
     searchInput.focus();
   }
 
-  function closeSearch(shouldRender) {
+  function closeSearch(shouldRender, restoreFocus) {
     if (shouldRender === undefined) shouldRender = true;
+    if (restoreFocus === undefined) restoreFocus = true;
+    if (debouncedSearch && typeof debouncedSearch.cancel === 'function') {
+      debouncedSearch.cancel();
+    }
     searchBar.classList.add('hidden');
     document.body.classList.remove('search-open');
     btnSearchToggle.setAttribute('aria-expanded', 'false');
@@ -871,6 +989,11 @@
           return Views.renderHome(container, state.filters);
         });
       }
+    }
+    if (restoreFocus && !btnSearchToggle.disabled && !btnSearchToggle.classList.contains('hidden')) {
+      window.requestAnimationFrame(function () {
+        btnSearchToggle.focus();
+      });
     }
   }
 
@@ -979,14 +1102,16 @@
     });
   }
 
-  function switchFormTab(targetId) {
+  function switchFormTab(targetId, focusPanel) {
     var tabs = document.querySelectorAll('.form-tab');
     var navBtns = document.querySelectorAll('.form-steps-btn');
+    var targetPanel = null;
     
     tabs.forEach(function (tab) {
       if (tab.id === targetId) {
         tab.classList.add('active');
         tab.setAttribute('aria-hidden', 'false');
+        targetPanel = tab;
       } else {
         tab.classList.remove('active');
         tab.setAttribute('aria-hidden', 'true');
@@ -997,11 +1122,23 @@
       if (btn.getAttribute('data-target') === targetId) {
         btn.classList.add('active');
         btn.setAttribute('aria-selected', 'true');
+        btn.setAttribute('tabindex', '0');
       } else {
         btn.classList.remove('active');
         btn.setAttribute('aria-selected', 'false');
+        btn.setAttribute('tabindex', '-1');
       }
     });
+
+    if (focusPanel && targetPanel) {
+      window.requestAnimationFrame(function () {
+        if (!targetPanel.isConnected || !targetPanel.classList.contains('active')) return;
+        var firstControl = targetPanel.querySelector(
+          'input:not([type="hidden"]):not([disabled]),textarea:not([disabled]),select:not([disabled]),button:not([disabled])'
+        );
+        if (firstControl) firstControl.focus();
+      });
+    }
   }
 
   function isFormDirty() {
@@ -1561,12 +1698,14 @@
       if (searchBar.classList.contains('hidden')) {
         openSearch();
       } else {
-        closeSearch();
+        closeSearch(true, true);
       }
     });
 
     // Search close
-    btnSearchClose.addEventListener('click', closeSearch);
+    btnSearchClose.addEventListener('click', function () {
+      closeSearch(true, true);
+    });
 
     // Search input
     searchInput.addEventListener('input', function (e) {
@@ -1575,7 +1714,7 @@
 
     // Escape key closes search
     searchInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeSearch();
+      if (e.key === 'Escape') closeSearch(true, true);
     });
 
     // Theme toggle
@@ -1622,14 +1761,36 @@
       }
 
       var radio = e.target.closest && e.target.closest('.category-select-btn');
-      if (radio && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      if (radio && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
         var radios = Array.from(document.querySelectorAll('.category-select-btn'));
         var radioIndex = radios.indexOf(radio);
         var direction = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
-        var nextRadio = radios[(radioIndex + direction + radios.length) % radios.length];
+        var nextRadio = e.key === 'Home'
+          ? radios[0]
+          : e.key === 'End'
+            ? radios[radios.length - 1]
+            : radios[(radioIndex + direction + radios.length) % radios.length];
         e.preventDefault();
         nextRadio.focus();
         nextRadio.click();
+      }
+
+      var paletteOption = e.target.closest && e.target.closest('.theme-option');
+      if (paletteOption && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+        var paletteOptions = Array.from(
+          paletteOption.closest('.theme-selector').querySelectorAll('.theme-option')
+        );
+        var paletteIndex = paletteOptions.indexOf(paletteOption);
+        var paletteDirection = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
+        var nextPalette = e.key === 'Home'
+          ? paletteOptions[0]
+          : e.key === 'End'
+            ? paletteOptions[paletteOptions.length - 1]
+            : paletteOptions[
+              (paletteIndex + paletteDirection + paletteOptions.length) % paletteOptions.length
+            ];
+        e.preventDefault();
+        nextPalette.click();
       }
     });
 
@@ -1690,6 +1851,7 @@
       switch (action) {
         /* ── Navigation actions ── */
         case 'open-recipe': {
+          if (actionEl.tagName === 'A') e.preventDefault();
           var id = actionEl.getAttribute('data-id');
           if (id) navigateTo('#detail/' + encodeURIComponent(id));
           break;
@@ -1854,7 +2016,7 @@
           break;
         }
         case 'go-back': {
-          navigateTo('#home');
+          navigateTo(isDetailReturnHash(state.detailReturnHash) ? state.detailReturnHash : '#home');
           break;
         }
         case 'edit-recipe': {
@@ -1950,10 +2112,12 @@
             grid.querySelectorAll('.category-select-btn').forEach(function (btn) {
               btn.classList.remove('active');
               btn.setAttribute('aria-checked', 'false');
+              btn.setAttribute('tabindex', '-1');
             });
           }
           actionEl.classList.add('active');
           actionEl.setAttribute('aria-checked', 'true');
+          actionEl.setAttribute('tabindex', '0');
           break;
         }
 
@@ -1991,12 +2155,12 @@
         /* ── Form: tabs ── */
         case 'next-tab': {
           var nextId = actionEl.getAttribute('data-next');
-          if (nextId) switchFormTab(nextId);
+          if (nextId) switchFormTab(nextId, true);
           break;
         }
         case 'prev-tab': {
           var prevId = actionEl.getAttribute('data-prev');
-          if (prevId) switchFormTab(prevId);
+          if (prevId) switchFormTab(prevId, true);
           break;
         }
         case 'switch-tab': {
@@ -2044,9 +2208,15 @@
           if (palette) {
             Theme.setPalette(palette).then(function () {
               // Re-render settings to update active state
-              renderActiveView('settings', function (container) {
+              return renderActiveView('settings', function (container) {
                 return Views.renderSettings(container);
               });
+            }).then(function (rendered) {
+              if (!rendered) return;
+              var selectedPalette = document.querySelector(
+                '.theme-option[data-palette="' + palette + '"]'
+              );
+              if (selectedPalette) selectedPalette.focus();
             });
           }
           break;

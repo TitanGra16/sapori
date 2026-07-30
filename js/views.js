@@ -128,6 +128,7 @@ window.Views = (function () {
     });
 
     var html = '<div class="view home-view animate-fade-in">';
+    html += '<h1 class="sr-only">Le mie ricette</h1>';
     html += '<div class="home-toolbar">';
     html += categoryChipsHTML(filters.category);
     html += sortBarHTML(filters.sortBy);
@@ -172,17 +173,17 @@ window.Views = (function () {
     // Step Navigation Header
     html +=
       '<div class="form-steps-nav" role="tablist" aria-label="Sezioni della ricetta">' +
-        '<button type="button" id="form-tab-info" role="tab" aria-selected="true" aria-controls="tab-info" class="form-steps-btn active" data-action="switch-tab" data-target="tab-info" aria-label="Informazioni generali">' +
+        '<button type="button" id="form-tab-info" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-info" class="form-steps-btn active" data-action="switch-tab" data-target="tab-info" aria-label="Informazioni generali">' +
           '<span class="step-num">1</span>' +
           '<span class="step-lbl">Info</span>' +
         '</button>' +
         '<div class="form-steps-line"></div>' +
-        '<button type="button" id="form-tab-prep" role="tab" aria-selected="false" aria-controls="tab-prep" class="form-steps-btn" data-action="switch-tab" data-target="tab-prep" aria-label="Ingredienti e preparazione">' +
+        '<button type="button" id="form-tab-prep" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-prep" class="form-steps-btn" data-action="switch-tab" data-target="tab-prep" aria-label="Ingredienti e preparazione">' +
           '<span class="step-num">2</span>' +
           '<span class="step-lbl">Preparazione</span>' +
         '</button>' +
         '<div class="form-steps-line"></div>' +
-        '<button type="button" id="form-tab-cook" role="tab" aria-selected="false" aria-controls="tab-cook" class="form-steps-btn" data-action="switch-tab" data-target="tab-cook" aria-label="Dettagli di cottura">' +
+        '<button type="button" id="form-tab-cook" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-cook" class="form-steps-btn" data-action="switch-tab" data-target="tab-cook" aria-label="Dettagli di cottura">' +
           '<span class="step-num">3</span>' +
           '<span class="step-lbl">Cottura</span>' +
         '</button>' +
@@ -212,10 +213,14 @@ window.Views = (function () {
         '<label class="form-label">Categoria *</label>' +
         '<input type="hidden" id="input-category" value="' + esc(r.category || '') + '" required>' +
         '<div class="category-selector-grid" role="radiogroup" aria-label="Categoria della ricetta">';
-    Recipes.CATEGORIES.forEach(function (cat) {
+    var hasSelectedCategory = Recipes.CATEGORIES.some(function (cat) {
+      return r.category === cat.id;
+    });
+    Recipes.CATEGORIES.forEach(function (cat, index) {
       var activeClass = r.category === cat.id ? ' active' : '';
+      var isTabStop = r.category === cat.id || (!hasSelectedCategory && index === 0);
       html +=
-        '<button type="button" role="radio" aria-checked="' + (r.category === cat.id) + '" class="category-select-btn' + activeClass + '" data-action="select-form-category" data-category="' + esc(cat.id) + '">' +
+        '<button type="button" role="radio" tabindex="' + (isTabStop ? '0' : '-1') + '" aria-checked="' + (r.category === cat.id) + '" class="category-select-btn' + activeClass + '" data-action="select-form-category" data-category="' + esc(cat.id) + '">' +
           '<span class="category-select-btn__icon">' + esc(cat.icon) + '</span>' +
           '<span class="category-select-btn__label">' + esc(cat.label) + '</span>' +
         '</button>';
@@ -686,10 +691,11 @@ window.Views = (function () {
     html +=
       '<div class="settings-item settings-item--column">' +
         '<div class="settings-item__label">Palette colori</div>' +
-        '<div class="theme-selector">';
+        '<div class="theme-selector" role="radiogroup" aria-label="Palette colori">';
     palettes.forEach(function (p) {
+      var isSelected = currentPalette === p.id;
       html +=
-        '<button type="button" class="theme-option' + (currentPalette === p.id ? ' active' : '') + '" data-action="set-palette" data-palette="' + esc(p.id) + '" aria-label="' + esc(p.label) + '">' +
+        '<button type="button" role="radio" aria-checked="' + isSelected + '" tabindex="' + (isSelected ? '0' : '-1') + '" class="theme-option' + (isSelected ? ' active' : '') + '" data-action="set-palette" data-palette="' + esc(p.id) + '" aria-label="' + esc(p.label) + '">' +
           '<span class="theme-circle" style="background:' + p.gradient + '"></span>' +
           '<span class="theme-name">' + esc(p.label) + '</span>' +
         '</button>';

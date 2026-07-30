@@ -44,3 +44,13 @@ window.Icons = {
   frown: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
   video: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>'
 };
+
+// Le icone sono sempre accompagnate da testo o da un nome accessibile sul
+// controllo che le contiene: nascondile alle tecnologie assistive ed evita che
+// vecchi browser le inseriscano separatamente nell'ordine di focus.
+Object.keys(window.Icons).forEach(function (name) {
+  window.Icons[name] = window.Icons[name].replace(
+    '<svg ',
+    '<svg aria-hidden="true" focusable="false" '
+  );
+});

@@ -45,6 +45,124 @@ test.beforeEach(async ({ page }) => {
   await openCleanApp(page);
 });
 
+test('gestisce ricerca, titolo e focus durante la navigazione SPA', async ({ page }) => {
+  const homeHeading = page.locator('.home-view h1');
+  await expect(homeHeading).toHaveText('Le mie ricette');
+  await expect(page).toHaveTitle('Le mie ricette — Sapori');
+
+  const searchToggle = page.locator('#btn-search-toggle');
+  await expect(searchToggle).toBeVisible();
+  await expect(searchToggle).toBeEnabled();
+  await searchToggle.click();
+
+  const searchInput = page.getByRole('searchbox', { name: 'Cerca ricette' });
+  await expect(searchInput).toBeFocused();
+  await searchInput.press('Escape');
+  await expect(searchToggle).toBeFocused();
+
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  const settingsHeading = page.getByRole('heading', { name: 'Impostazioni', level: 1 });
+  await expect(settingsHeading).toBeFocused();
+  await expect(page).toHaveTitle('Impostazioni — Sapori');
+  await expect(searchToggle).toBeHidden();
+  await expect(searchToggle).toBeDisabled();
+  await expect(page.locator('#route-announcer')).toHaveText('Pagina Impostazioni caricata');
+
+  const paletteGroup = page.getByRole('radiogroup', { name: 'Palette colori' });
+  const selectedPalette = paletteGroup.locator('.theme-option[aria-checked="true"]');
+  await expect(selectedPalette).toHaveCount(1);
+  await expect(selectedPalette).toHaveAttribute('tabindex', '0');
+  await selectedPalette.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(paletteGroup.locator('.theme-option[aria-checked="true"]')).toBeFocused();
+  await expect.poll(() => paletteGroup.locator('.theme-option[tabindex="0"]').count()).toBe(1);
+  await expect(page.locator('svg').first()).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('svg').first()).toHaveAttribute('focusable', 'false');
+
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(homeHeading).toBeFocused();
+  await expect(searchToggle).toBeVisible();
+  await expect(searchToggle).toBeEnabled();
+  await expect(page).toHaveTitle('Le mie ricette — Sapori');
+});
+
+test('mantiene un solo tab stop nei tab e nelle categorie del modulo', async ({ page }) => {
+  await page.getByRole('button', { name: 'Nuova ricetta' }).click();
+
+  const infoTab = page.getByRole('tab', { name: 'Informazioni generali' });
+  const preparationTab = page.getByRole('tab', { name: 'Ingredienti e preparazione' });
+  const cookingTab = page.getByRole('tab', { name: 'Dettagli di cottura' });
+  await expect(infoTab).toHaveAttribute('tabindex', '0');
+  await expect(preparationTab).toHaveAttribute('tabindex', '-1');
+  await expect(cookingTab).toHaveAttribute('tabindex', '-1');
+
+  await infoTab.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(preparationTab).toBeFocused();
+  await expect(preparationTab).toHaveAttribute('aria-selected', 'true');
+  await expect(preparationTab).toHaveAttribute('tabindex', '0');
+  await expect(infoTab).toHaveAttribute('tabindex', '-1');
+
+  await infoTab.click();
+  const selectedCategory = page.locator('.category-select-btn[aria-checked="true"]');
+  await expect(selectedCategory).toHaveCount(1);
+  await expect(selectedCategory).toHaveAttribute('tabindex', '0');
+  await expect.poll(() => page.locator('.category-select-btn[tabindex="0"]').count()).toBe(1);
+
+  await selectedCategory.focus();
+  await page.keyboard.press('ArrowRight');
+  const nextCategory = page.locator('.category-select-btn[aria-checked="true"]');
+  await expect(nextCategory).toBeFocused();
+  await expect(nextCategory).toHaveAttribute('tabindex', '0');
+  await expect.poll(() => page.locator('.category-select-btn[tabindex="0"]').count()).toBe(1);
+
+  await page.getByRole('button', { name: 'Avanti', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Nome ingrediente 1' })).toBeFocused();
+  await expect(preparationTab).toHaveAttribute('tabindex', '0');
+
+  await page.getByRole('button', { name: 'Avanti', exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: 'Tempo preparazione' })).toBeFocused();
+  await expect(cookingTab).toHaveAttribute('tabindex', '0');
+
+  await page.getByRole('button', { name: 'Indietro', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Nome ingrediente 1' })).toBeFocused();
+});
+
+test('torna alla vista di origine dal dettaglio di una ricetta', async ({ page }) => {
+  await page.evaluate(async () => {
+    await DB.addRecipe({
+      name: 'Ricetta preferita contestuale',
+      category: 'primi',
+      description: '',
+      ingredients: [{ name: 'Farina', quantity: '100', unit: 'g', notes: '' }],
+      steps: [{ text: 'Impasta.', notes: '' }],
+      prepTime: 10,
+      cookTime: 10,
+      servings: 2,
+      difficulty: 'facile',
+      notes: '',
+      storage: '',
+      image: null,
+      imageThumbnail: null,
+      isFavorite: true
+    });
+  });
+
+  await page.getByRole('button', { name: 'Preferiti' }).click();
+  const favoritesHeading = page.getByRole('heading', { name: 'Le mie ricette preferite', level: 1 });
+  await expect(favoritesHeading).toBeFocused();
+
+  await page.getByRole('link', { name: 'Apri la ricetta Ricetta preferita contestuale' }).click();
+  const detailHeading = page.getByRole('heading', { name: 'Ricetta preferita contestuale', level: 1 });
+  await expect(detailHeading).toBeFocused();
+  await expect(page).toHaveTitle('Ricetta preferita contestuale — Sapori');
+
+  await page.getByRole('button', { name: 'Indietro' }).click();
+  await expect(page).toHaveURL(/#favorites$/);
+  await expect(favoritesHeading).toBeFocused();
+  await expect(page).toHaveTitle('Le mie ricette preferite — Sapori');
+});
+
 test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) => {
   await fillMinimumRecipe(page);
 
@@ -113,9 +231,13 @@ test('ripristina passaggio, ingredienti e timer della modalità cucina', async (
   await page.goto('/index.html?e2e=1#detail/' + encodeURIComponent(recipeId));
   await page.getByRole('button', { name: /Inizia la Cottura/ }).click();
 
-  const firstIngredient = page.locator('[data-action="toggle-cooking-ing"][data-index="0"]');
-  await firstIngredient.click();
-  await page.getByRole('button', { name: /Avanti/ }).click();
+  const secondIngredient = page.locator('[data-action="toggle-cooking-ing"][data-index="1"]');
+  await secondIngredient.click();
+  await expect(secondIngredient).toBeFocused();
+
+  const secondStep = page.getByRole('button', { name: 'Vai al passaggio 2' });
+  await secondStep.click();
+  await expect(secondStep).toBeFocused();
 
   const minuteInput = page.getByRole('spinbutton', { name: 'Minuti' });
   await expect(minuteInput).toHaveAttribute('max', String(10080));
@@ -132,7 +254,7 @@ test('ripristina passaggio, ingredienti e timer della modalità cucina', async (
 
   await expect(page.getByRole('dialog', { name: 'Sessione cucina' })).toBeVisible();
   await expect(page.getByText('Passaggio 2 di 2')).toBeVisible();
-  await expect(page.locator('[data-action="toggle-cooking-ing"][data-index="0"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-action="toggle-cooking-ing"][data-index="1"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('spinbutton', { name: 'Minuti' })).toBeDisabled();
   await expect(page.getByRole('spinbutton', { name: 'Minuti' })).toHaveValue(/^(119|120)$/);
 
@@ -442,7 +564,7 @@ test('applica tema e palette dalle impostazioni', async ({ page }) => {
   );
   expect(await toggle.isChecked()).toBe(initialTheme !== 'dark');
 
-  await page.getByRole('button', { name: 'Oceano', exact: true }).click();
+  await page.getByRole('radio', { name: 'Oceano', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'oceano');
 });
 
@@ -515,15 +637,19 @@ test('adatta box e navigazione senza overflow al viewport corrente', async ({ pa
   await page.getByRole('button', { name: '👨‍🍳 Svuotafrigo' }).click();
   await expect(page.getByRole('heading', { name: '👨‍🍳 Svuotafrigo' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
-  const pantryHeader = await page.locator('.pantry-header').boundingBox();
-  expect(pantryHeader.y).toBeLessThan(100);
+  await expect.poll(async () => {
+    const pantryHeader = await page.locator('.pantry-header').boundingBox();
+    return pantryHeader.y;
+  }).toBeLessThan(100);
 
   await page.getByRole('button', { name: 'Torna indietro' }).click();
   await page.getByRole('button', { name: 'Nuova ricetta' }).click();
   await expect(page.getByRole('heading', { name: 'Nuova Ricetta' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   const editor = await page.locator('.recipe-editor').boundingBox();
-  const formHeader = await page.locator('.form-view > .view-header').boundingBox();
   expect(editor.width).toBeLessThanOrEqual(880);
-  expect(formHeader.y).toBeLessThan(100);
+  await expect.poll(async () => {
+    const formHeader = await page.locator('.form-view > .view-header').boundingBox();
+    return formHeader.y;
+  }).toBeLessThan(100);
 });
