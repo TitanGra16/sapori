@@ -483,68 +483,6 @@ window.Utils = {
   },
 
   /**
-   * Wait until the resources inside a printable document are ready, then
-   * invoke the browser print dialog and always restore the application UI.
-   * The supplied root must already be attached to document.body.
-   * @param {HTMLElement} printRoot
-   * @param {string} bodyClass
-   * @returns {Promise<void>}
-   */
-  async printDocument(printRoot, bodyClass) {
-    if (!printRoot || !printRoot.parentNode || !bodyClass) {
-      throw new Error('Documento di stampa non valido');
-    }
-
-    const imagePromises = Array.from(printRoot.querySelectorAll('img')).map(image => {
-      if (typeof image.decode === 'function') {
-        return image.decode().catch(() => undefined);
-      }
-      if (image.complete) return Promise.resolve();
-      return new Promise(resolve => {
-        image.addEventListener('load', resolve, { once: true });
-        image.addEventListener('error', resolve, { once: true });
-      });
-    });
-
-    const fontPromise = document.fonts && document.fonts.ready
-      ? document.fonts.ready.catch(() => undefined)
-      : Promise.resolve();
-
-    document.body.classList.add(bodyClass);
-    try {
-      await Promise.all([fontPromise, Promise.all(imagePromises)]);
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      await new Promise(resolve => {
-        let completed = false;
-        let fallbackTimer = null;
-        const finish = () => {
-          if (completed) return;
-          completed = true;
-          window.removeEventListener('afterprint', finish);
-          if (fallbackTimer !== null) clearTimeout(fallbackTimer);
-          resolve();
-        };
-        window.addEventListener('afterprint', finish, { once: true });
-
-        const printSource = Function.prototype.toString.call(window.print);
-        window.print();
-
-        // I test e gli eventuali wrapper non nativi non aprono un vero dialogo.
-        // Nei browser reali afterprint governa la pulizia, con un fallback per
-        // le implementazioni che non emettono l'evento.
-        if (!printSource.includes('[native code]')) {
-          finish();
-        } else {
-          fallbackTimer = setTimeout(finish, 2000);
-        }
-      });
-    } finally {
-      document.body.classList.remove(bodyClass);
-      if (printRoot.parentNode) printRoot.parentNode.removeChild(printRoot);
-    }
-  },
-
-  /**
    * Trigger a file download in the browser.
    * @param {string} content - File content
    * @param {string} filename - Download filename

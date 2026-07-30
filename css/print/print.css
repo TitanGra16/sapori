@@ -1,0 +1,621 @@
+/* Elementi disponibili soltanto durante la stampa. */
+.print-footer-container,
+.print-only,
+.print-cover-page,
+.print-index-page,
+.print-all-recipes-container,
+.print-document-root {
+  display: none !important;
+}
+
+/* Dialogo leggero mostrato mentre un ricettario grande viene impaginato. */
+.print-progress-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) + 2);
+  display: grid;
+  place-items: center;
+  padding: max(var(--space-md), env(safe-area-inset-top, 0px))
+    max(var(--space-md), env(safe-area-inset-right, 0px))
+    max(var(--space-md), env(safe-area-inset-bottom, 0px))
+    max(var(--space-md), env(safe-area-inset-left, 0px));
+  background: rgba(24, 14, 10, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.print-progress-dialog {
+  width: min(100%, 420px);
+  padding: clamp(24px, 6vw, 36px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-primary);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+  text-align: center;
+}
+
+.print-progress-dialog__icon {
+  margin-bottom: var(--space-sm);
+  font-size: 2.2rem;
+}
+
+.print-progress-dialog h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.35rem;
+}
+
+.print-progress-dialog p {
+  min-height: 2.8em;
+  margin: var(--space-sm) 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.print-progress-dialog__bar {
+  display: block;
+  width: 100%;
+  height: 10px;
+  margin: var(--space-md) 0;
+  accent-color: var(--primary);
+}
+
+.print-progress-dialog .btn {
+  min-width: 140px;
+  min-height: 44px;
+}
+
+/* Scheda ricetta condivisa da stampa singola e ricettario completo. */
+.print-recipe-sheet {
+  position: relative;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  color: #21150f;
+  font-size: 1em;
+  line-height: 1.5;
+}
+
+.print-recipe-sheet__accent {
+  height: 0.28em;
+  margin: calc(clamp(24px, 5.5vw, 60px) * -1)
+    calc(clamp(22px, 6vw, 68px) * -1) 2.2em;
+  background: linear-gradient(90deg, #c94127, #f2a13b);
+  flex-shrink: 0;
+}
+
+.print-recipe-sheet__brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+  margin-bottom: 1.3em;
+}
+
+.print-recipe-sheet__brand,
+.print-recipe-sheet__number {
+  color: #b6321d;
+  font-size: 0.76em;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.print-recipe-sheet__number {
+  color: #76645b;
+  letter-spacing: 0.08em;
+}
+
+.print-recipe-sheet__intro--with-photo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(9em, 31%);
+  align-items: stretch;
+  gap: 1.8em;
+}
+
+.print-recipe-sheet__intro-copy {
+  min-width: 0;
+}
+
+.print-recipe-sheet__category {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  margin-bottom: 0.55em;
+  color: #9d2c1a;
+  font-size: 0.74em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.print-recipe-sheet__title {
+  margin: 0;
+  color: #25140d;
+  font-family: var(--font-heading), Georgia, serif;
+  font-size: 2.35em;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.print-recipe-sheet__description {
+  max-width: 62ch;
+  margin-top: 0.85em;
+  color: #65534a;
+  font-size: 0.92em;
+  line-height: 1.55;
+}
+
+.print-recipe-sheet__photo {
+  min-height: 8.8em;
+  max-height: 12em;
+  overflow: hidden;
+  border-radius: 0.45em;
+  background: #f1ece8;
+}
+
+.print-recipe-sheet__photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.print-recipe-sheet__meta {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 1.35em 0 1.25em;
+  overflow: hidden;
+  border: 1px solid #ddd1ca;
+  border-radius: 0.45em;
+  background: #fbf8f6;
+}
+
+.print-recipe-sheet__meta > div {
+  min-width: 0;
+  padding: 0.8em 0.65em;
+  border-right: 1px solid #e6ddd8;
+}
+
+.print-recipe-sheet__meta > div:last-child {
+  border-right: 0;
+}
+
+.print-recipe-sheet__meta dt {
+  color: #89736a;
+  font-size: 0.62em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.print-recipe-sheet__meta dd {
+  margin-top: 0.28em;
+  color: #2d1c15;
+  font-size: 0.84em;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.print-recipe-sheet__section {
+  margin-top: 0.9em;
+}
+
+.print-recipe-sheet__section h2,
+.print-recipe-sheet__notes h2,
+.print-recipe-sheet__storage h2 {
+  margin: 0 0 0.75em;
+  padding-bottom: 0.35em;
+  border-bottom: 0.14em solid #c94127;
+  color: #a32f1d;
+  font-family: var(--font-heading), Georgia, serif;
+  font-size: 1.18em;
+  font-weight: 800;
+}
+
+.print-recipe-sheet__ingredients,
+.print-recipe-sheet__steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.print-recipe-sheet__ingredient,
+.print-recipe-sheet__step {
+  display: flex;
+  align-items: flex-start;
+  border-bottom: 1px dotted #d8cbc4;
+}
+
+.print-recipe-sheet__ingredient {
+  gap: 0.75em;
+  padding: 0.25em 0;
+}
+
+.print-recipe-sheet__step {
+  gap: 0.9em;
+  padding: 0.28em 0;
+}
+
+.print-recipe-sheet__bullet {
+  width: 0.48em;
+  height: 0.48em;
+  margin-top: 0.5em;
+  border-radius: 50%;
+  background: #d54a2f;
+  flex: 0 0 auto;
+}
+
+.print-recipe-sheet__ingredient-content,
+.print-recipe-sheet__step-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.print-recipe-sheet__ingredient-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.print-recipe-sheet__ingredient-name {
+  font-size: 0.9em;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.print-recipe-sheet__quantity {
+  color: #a32f1d;
+  font-size: 0.82em;
+  white-space: nowrap;
+}
+
+.print-recipe-sheet__ingredient-note,
+.print-recipe-sheet__step-note {
+  display: block;
+  margin-top: 0.18em;
+  color: #756159;
+  font-size: 0.76em;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.print-recipe-sheet__step-number {
+  display: inline-flex;
+  width: 1.7em;
+  height: 1.7em;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #c94127;
+  color: #fff;
+  font-size: 0.72em;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.print-recipe-sheet__step-content p {
+  margin: 0;
+  color: #2d1c15;
+  font-size: 0.9em;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.print-recipe-sheet__empty {
+  padding: 0.7em 0;
+  color: #806e65;
+  font-size: 0.84em;
+  font-style: italic;
+}
+
+.print-recipe-sheet__aftercare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 1.4em;
+  margin-top: 0.65em;
+}
+
+.print-recipe-sheet__aftercare--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.print-recipe-sheet__notes,
+.print-recipe-sheet__storage {
+  padding: 0.75em;
+  border: 1px solid #ded2cb;
+  border-radius: 0.45em;
+  background: #fbf8f6;
+}
+
+.print-recipe-sheet__notes h2,
+.print-recipe-sheet__storage h2 {
+  margin-bottom: 0.55em;
+  border-bottom-width: 1px;
+  font-size: 0.88em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-recipe-sheet__notes-text {
+  margin: 0;
+  color: #3d2a22;
+  font-size: 0.82em;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.print-recipe-sheet__writing-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1em;
+  padding-top: 0.35em;
+}
+
+.print-recipe-sheet__writing-lines span {
+  display: block;
+  border-bottom: 1px dotted #cdbeb6;
+}
+
+.print-recipe-sheet__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  margin-top: auto;
+  padding-top: 0.6em;
+  color: #89766d;
+  font-size: 0.68em;
+}
+
+.print-recipe-sheet__footer span:last-child {
+  color: #a32f1d;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+@media print {
+  :root,
+  html,
+  body {
+    background: #fff !important;
+    color: #21150f !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 14mm 17mm 17mm;
+  }
+
+  @page sapori-cover {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  @page sapori-index {
+    size: A4 portrait;
+    margin: 15mm 17mm 18mm;
+  }
+
+  @page sapori-recipe {
+    size: A4 portrait;
+    margin: 14mm 17mm 17mm;
+  }
+
+  body.printing-recipe > *:not(.print-document-root--recipe),
+  body.printing-all-recipes > *:not(.print-document-root--cookbook) {
+    display: none !important;
+  }
+
+  .print-document-root {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-document-root--recipe .print-recipe-sheet,
+  .print-cookbook-recipe {
+    page: sapori-recipe;
+  }
+
+  .print-recipe-sheet {
+    min-height: 262mm !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10pt !important;
+  }
+
+  .print-recipe-sheet__accent {
+    display: none !important;
+    margin: 0 !important;
+  }
+
+  .print-recipe-sheet__intro,
+  .print-recipe-sheet__meta,
+  .print-recipe-sheet__ingredient,
+  .print-recipe-sheet__step,
+  .print-recipe-sheet__notes,
+  .print-recipe-sheet__storage,
+  .print-recipe-sheet__footer {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-recipe-sheet__section h2,
+  .print-recipe-sheet__notes h2,
+  .print-recipe-sheet__storage h2 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  .print-recipe-sheet__ingredient-name,
+  .print-recipe-sheet__step-content p,
+  .print-recipe-sheet__notes-text {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .print-cookbook-recipe {
+    break-before: page !important;
+    page-break-before: always !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .print-cookbook-recipe .print-recipe-sheet {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .print-cover-page {
+    display: flex !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 0 !important;
+    padding: 25mm !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    page: sapori-cover;
+    break-after: page !important;
+    page-break-after: always !important;
+    text-align: center !important;
+  }
+
+  .print-cover-brand {
+    margin-bottom: 6mm !important;
+    color: #b6321d !important;
+    font-size: 12pt !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.22em !important;
+  }
+
+  .print-cover-emoji {
+    margin-bottom: 4mm !important;
+    font-size: 52pt !important;
+    line-height: 1.2 !important;
+  }
+
+  .print-cover-title {
+    color: #21150f !important;
+    font-size: 40pt !important;
+    font-weight: 800 !important;
+    line-height: 1.08 !important;
+  }
+
+  .print-cover-divider {
+    width: 50mm !important;
+    height: 1mm !important;
+    margin: 6mm auto !important;
+    background: #c94127 !important;
+  }
+
+  .print-cover-subtitle {
+    color: #6f5c53 !important;
+    font-size: 13pt !important;
+    font-style: italic !important;
+  }
+
+  .print-cover-meta {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+    margin-top: 25mm !important;
+    padding-top: 4mm !important;
+    border-top: 1px dotted #cdbeb6 !important;
+    color: #6f5c53 !important;
+    font-size: 9.5pt !important;
+  }
+
+  .print-cover-meta span {
+    max-width: 48% !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .print-cover-meta span:last-child {
+    text-align: right !important;
+  }
+
+  .print-index-page {
+    display: block !important;
+    padding: 0 !important;
+    page: sapori-index;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .print-index-kicker {
+    color: #9d2c1a !important;
+    font-size: 9pt !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+  }
+
+  .print-index-title {
+    margin-bottom: 7mm !important;
+    padding-bottom: 2.5mm !important;
+    border-bottom: 0.7mm solid #c94127 !important;
+    color: #a32f1d !important;
+    font-size: 20pt !important;
+  }
+
+  .print-index-summary {
+    margin: -3.5mm 0 8mm !important;
+    color: #6f5c53 !important;
+    font-size: 9.5pt !important;
+  }
+
+  .print-index-list {
+    margin: 0 !important;
+    padding: 0 !important;
+    columns: 2 !important;
+    column-gap: 15mm !important;
+    list-style: none !important;
+  }
+
+  .print-index-item {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 2mm !important;
+    padding: 1.8mm 0 !important;
+    border-bottom: 1px dotted #e0d8d4 !important;
+    break-inside: avoid !important;
+    color: #21150f !important;
+    font-size: 10pt !important;
+  }
+
+  .print-index-item-number {
+    width: 10mm !important;
+    color: #a32f1d !important;
+    font-size: 8pt !important;
+    font-weight: 800 !important;
+    font-variant-numeric: tabular-nums !important;
+    flex: 0 0 auto !important;
+  }
+
+  .print-index-item-name {
+    min-width: 0 !important;
+    flex: 1 !important;
+    font-weight: 600 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .print-index-item-cat {
+    max-width: 26mm !important;
+    color: #a32f1d !important;
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+    overflow-wrap: anywhere !important;
+    text-align: right !important;
+    text-transform: uppercase !important;
+    white-space: normal !important;
+  }
+}

@@ -183,24 +183,29 @@ test('crea, apre e prepara la stampa di una ricetta completa', async ({ page }) 
   await expect(page.getByRole('button', { name: 'Rimuovi dai preferiti' })).toHaveAttribute('aria-pressed', 'true');
 
   await page.evaluate(() => {
+    document.title = 'Titolo precedente';
     window.__printSnapshot = null;
     window.print = () => {
       const root = document.querySelector('.print-document-root--recipe');
       window.__printSnapshot = {
         bodyClassActive: document.body.classList.contains('printing-recipe'),
+        documentTitle: document.title,
         sheets: root ? root.querySelectorAll('.print-recipe-sheet').length : 0,
         title: root ? root.querySelector('.print-recipe-sheet__title').textContent : '',
         storage: root ? root.textContent.includes('In frigorifero per 2 giorni.') : false
       };
+      window.dispatchEvent(new Event('afterprint'));
     };
   });
   await page.getByRole('button', { name: 'Stampa / salva PDF' }).click();
   await expect.poll(() => page.evaluate(() => window.__printSnapshot)).toEqual({
     bodyClassActive: true,
+    documentTitle: 'Ricetta automatica — Sapori',
     sheets: 1,
     title: 'Ricetta automatica',
     storage: true
   });
+  await expect(page).toHaveTitle('Titolo precedente');
   await expect(page.getByRole('dialog', { name: 'Ricetta automatica' })).toHaveCount(0);
 });
 
@@ -296,6 +301,7 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
       const root = document.querySelector('.print-document-root--cookbook');
       window.__cookbookSnapshot = {
         bodyClassActive: document.body.classList.contains('printing-all-recipes'),
+        documentTitle: document.title,
         sheets: root ? root.querySelectorAll('.print-recipe-sheet').length : 0,
         index: root
           ? Array.from(root.querySelectorAll('.print-index-item')).map(item => item.textContent.trim())
@@ -309,12 +315,14 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
           ? getComputedStyle(root.querySelector('.print-recipe-sheet__accent')).marginTop
           : null
       };
+      window.dispatchEvent(new Event('afterprint'));
     };
   });
 
   await page.getByRole('button', { name: 'Ricettario PDF' }).click();
   await expect.poll(() => page.evaluate(() => window.__cookbookSnapshot)).toEqual({
     bodyClassActive: true,
+    documentTitle: 'Il mio ricettario — Sapori',
     sheets: 2,
     index: ['01ArrostoPrimi Piatti', '02ZuppaPrimi Piatti'],
     titles: ['Arrosto', 'Zuppa'],
@@ -322,6 +330,50 @@ test('prepara copertina, indice numerato e schede coerenti nel ricettario PDF', 
     singleColumnAftercare: 2,
     firstAccentMarginTop: '0px'
   });
+  await expect(page).toHaveTitle('Impostazioni — Sapori');
+});
+
+test('annulla senza residui la preparazione di un ricettario voluminoso', async ({ page }) => {
+  await page.evaluate(() => {
+    const base = {
+      category: 'primi',
+      description: 'Descrizione del ricettario.',
+      ingredients: [{ name: 'Farina', quantity: '100', unit: 'g', notes: '' }],
+      steps: [{ text: 'Impastare con cura.', notes: '' }],
+      prepTime: 10,
+      cookTime: 20,
+      servings: 4,
+      difficulty: 'facile',
+      notes: '',
+      storage: '',
+      image: null,
+      imageThumbnail: null,
+      isFavorite: false
+    };
+    const recipes = Array.from({ length: 500 }, (_, index) => ({
+      ...base,
+      id: 'ricetta-' + index,
+      name: 'Ricetta ' + String(index + 1).padStart(3, '0')
+    }));
+    DB.getRecipeSummaries = async () => recipes;
+    window.__printCalls = 0;
+    window.print = () => {
+      window.__printCalls += 1;
+      window.dispatchEvent(new Event('afterprint'));
+    };
+  });
+
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('button', { name: 'Ricettario PDF' }).click();
+  const progressDialog = page.getByRole('dialog', { name: 'Preparo il ricettario' });
+  await expect(progressDialog).toBeVisible();
+  await progressDialog.getByRole('button', { name: 'Annulla' }).click();
+
+  await expect(progressDialog).toHaveCount(0);
+  await expect(page.getByText('Preparazione del ricettario annullata.')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__printCalls)).toBe(0);
+  await expect(page.locator('.print-document-root--cookbook')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Ricettario PDF' })).toBeEnabled();
 });
 
 test('renderizza una scheda PDF reale con gli stili di stampa', async ({ page }) => {
@@ -361,6 +413,52 @@ test('renderizza una scheda PDF reale con gli stili di stampa', async ({ page })
   });
   expect(Buffer.from(pdf).subarray(0, 5).toString()).toBe('%PDF-');
   expect(pdf.length).toBeGreaterThan(15000);
+  await page.evaluate(() => {
+    document.body.classList.remove('printing-recipe');
+    document.querySelector('.print-document-root--recipe')?.remove();
+  });
+});
+
+test('divide una ricetta molto lunga su più pagine A4 senza troncarla', async ({ page }) => {
+  await page.evaluate(() => {
+    const recipe = {
+      name: 'Ricetta lunga da stampare',
+      category: 'altro',
+      description: 'Verifica della suddivisione automatica su più pagine.',
+      ingredients: Array.from({ length: 30 }, (_, index) => ({
+        name: 'Ingrediente molto descrittivo numero ' + (index + 1),
+        quantity: String(index + 1),
+        unit: 'g',
+        notes: 'Nota ingrediente conservata per la stampa.'
+      })),
+      steps: Array.from({ length: 70 }, (_, index) => ({
+        text: 'Passaggio numero ' + (index + 1) + ': lavorare con cura gli ingredienti senza saltare questa istruzione.',
+        notes: index % 3 === 0 ? 'Controllare consistenza e temperatura.' : ''
+      })),
+      prepTime: 90,
+      cookTime: 120,
+      servings: 12,
+      difficulty: 'media',
+      notes: 'Le note finali devono comparire dopo tutti i passaggi.',
+      storage: 'Conservare in frigorifero per tre giorni.',
+      image: null
+    };
+    const root = document.createElement('div');
+    root.className = 'print-document-root print-document-root--recipe';
+    root.innerHTML = Views.buildPrintableRecipeHTML(recipe);
+    document.body.appendChild(root);
+    document.body.classList.add('printing-recipe');
+  });
+
+  await page.emulateMedia({ media: 'print' });
+  const pdf = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    preferCSSPageSize: true
+  });
+  const pageObjects = Buffer.from(pdf).toString('latin1').match(/\/Type\s*\/Page\b/g) || [];
+  expect(pageObjects.length).toBeGreaterThanOrEqual(3);
+  expect(pdf.length).toBeGreaterThan(30000);
   await page.evaluate(() => {
     document.body.classList.remove('printing-recipe');
     document.querySelector('.print-document-root--recipe')?.remove();

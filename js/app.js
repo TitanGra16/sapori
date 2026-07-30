@@ -13,6 +13,7 @@
     editingRecipe: null,
     savingRecipe: false,
     savingCategory: false,
+    exportingPDF: false,
     routeToken: 0,
     lastStableHash: '#home',
     detailReturnHash: '#home',
@@ -1536,80 +1537,90 @@
   }
 
   async function exportAllRecipesPDF() {
+    if (state.exportingPDF) {
+      Utils.showToast('La preparazione del ricettario è già in corso.', 'warning');
+      return;
+    }
+
+    state.exportingPDF = true;
+    var printDiv = null;
+    var progressView = null;
+    var controller = new AbortController();
+
     try {
-      // Le miniature sono più che sufficienti nel riquadro di stampa e
-      // impediscono di caricare contemporaneamente tutte le foto originali.
+      // Le miniature sono sufficienti su carta e impediscono di caricare
+      // contemporaneamente tutte le fotografie originali.
       var recipes = await DB.getRecipeSummaries();
       if (!recipes || recipes.length === 0) {
         Utils.showToast('Nessuna ricetta da esportare! 🍳', 'error');
         return;
       }
 
-      Utils.showToast('Preparazione ricettario in corso… 📚', 'info');
-
-      // Sort A-Z
-      recipes.sort(function (a, b) { return a.name.localeCompare(b.name, 'it-IT'); });
-
-      var esc = Utils.escapeHtml;
-      var today = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-      var pwaUrl = window.location.origin + window.location.pathname;
-
-      var printDiv = document.createElement('div');
-      printDiv.className = 'print-document-root print-document-root--cookbook print-all-recipes-container';
-
-      var html = '';
-
-      // ── COVER PAGE ──
-      html +=
-        '<div class="print-cover-page">' +
-          '<div class="print-cover-brand">🍴 SAPORI</div>' +
-          '<div class="print-cover-emoji">📖</div>' +
-          '<div class="print-cover-title">Il Mio Ricettario</div>' +
-          '<div class="print-cover-divider"></div>' +
-          '<div class="print-cover-subtitle">' + recipes.length + ' ricette della tradizione di casa</div>' +
-          '<div class="print-cover-meta">' +
-            '<span>Esportato il ' + today + '</span>' +
-            '<span>' + esc(pwaUrl) + '</span>' +
-          '</div>' +
-        '</div>';
-
-      // ── INDEX ──
-      html += '<section class="print-index-page">';
-      html += '<div class="print-index-kicker">Il mio ricettario</div>';
-      html += '<h1 class="print-index-title">Indice delle ricette</h1>';
-      html += '<p class="print-index-summary">Le ricette sono numerate nello stesso ordine delle schede successive.</p>';
-      html += '<ol class="print-index-list">';
-      recipes.forEach(function (recipe, index) {
-        var cat = Utils.getCategoryInfo(recipe.category);
-        html +=
-          '<li class="print-index-item">' +
-            '<span class="print-index-item-number">' + String(index + 1).padStart(2, '0') + '</span>' +
-            '<span class="print-index-item-name">' + esc(recipe.name) + '</span>' +
-            '<span class="print-index-item-cat">' + esc(cat.label) + '</span>' +
-          '</li>';
+      progressView = PrintProgressView.open({
+        onCancel: function () {
+          controller.abort();
+        }
       });
-      html += '</ol>';
-      html += '</section>';
+      await new Promise(function (resolve) {
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(function () {
+            if (recipes.length >= 100) {
+              window.setTimeout(resolve, 750);
+            } else {
+              resolve();
+            }
+          });
+        });
+      });
+      if (controller.signal.aborted) {
+        throw new DOMException('Preparazione annullata', 'AbortError');
+      }
 
-      // ── RECIPES ──
-      recipes.forEach(function (recipe, index) {
-        html +=
-          '<div class="print-cookbook-recipe">' +
-            Views.buildPrintableRecipeHTML(recipe, {
-              recipeNumber: index + 1,
-              printedOn: today,
-              appUrl: pwaUrl
-            }) +
-          '</div>';
+      printDiv = await CookbookBuilder.build(recipes, {
+        buildRecipeHTML: Views.buildPrintableRecipeHTML,
+        getCategoryInfo: Utils.getCategoryInfo,
+        appUrl: new URL('./', window.location.href).href,
+        signal: controller.signal,
+        batchSize: 20,
+        onProgress: function (progress) {
+          progressView.update(progress);
+        }
       });
 
-      printDiv.innerHTML = html;
+      if (controller.signal.aborted) {
+        throw new DOMException('Preparazione annullata', 'AbortError');
+      }
+
       document.body.appendChild(printDiv);
-      await Utils.printDocument(printDiv, 'printing-all-recipes');
+      progressView.update({ message: 'Apro le opzioni di stampa…' });
+      progressView.close();
+      progressView = null;
 
+      var result = await PrintService.printDocument(printDiv, {
+        bodyClass: 'printing-all-recipes',
+        title: 'Il mio ricettario — Sapori',
+        signal: controller.signal,
+        imageConcurrency: 4
+      });
+      printDiv = null;
+
+      if (result.completion.source === 'safety-timeout') {
+        Utils.showToast(
+          'La stampa non ha comunicato la chiusura: l’app è stata ripristinata in sicurezza.',
+          'warning'
+        );
+      }
     } catch (err) {
-      console.error(err);
-      Utils.showToast('Errore durante la creazione del PDF', 'error');
+      if (err && err.name === 'AbortError') {
+        Utils.showToast('Preparazione del ricettario annullata.', 'info');
+      } else {
+        console.error(err);
+        Utils.showToast('Errore durante la creazione del PDF', 'error');
+      }
+    } finally {
+      if (progressView) progressView.close();
+      if (printDiv && printDiv.parentNode) printDiv.parentNode.removeChild(printDiv);
+      state.exportingPDF = false;
     }
   }
 

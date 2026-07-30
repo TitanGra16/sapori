@@ -1335,7 +1335,17 @@ window.Views = (function () {
     document.body.appendChild(printRoot);
 
     try {
-      await Utils.printDocument(printRoot, 'printing-recipe');
+      var result = await PrintService.printDocument(printRoot, {
+        bodyClass: 'printing-recipe',
+        title: String(recipe.name || 'Ricetta') + ' — Sapori',
+        imageConcurrency: 2
+      });
+      if (result.completion.source === 'safety-timeout') {
+        Utils.showToast(
+          'La stampa non ha comunicato la chiusura: l’app è stata ripristinata in sicurezza.',
+          'warning'
+        );
+      }
     } catch (error) {
       console.error('Errore durante la stampa della ricetta:', error);
       Utils.showToast('Impossibile preparare la stampa', 'error');
