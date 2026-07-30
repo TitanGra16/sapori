@@ -33,6 +33,28 @@ async function getStoredRecords(context, id) {
   return { recipe, image };
 }
 
+function importableRecipe(overrides = {}) {
+  return {
+    id: 'ricetta-importata',
+    name: 'Ricetta importata',
+    category: 'altro',
+    description: '',
+    notes: '',
+    storage: '',
+    ingredients: [{ name: 'Farina', quantity: '100', unit: 'g', notes: '' }],
+    steps: [{ text: 'Prepara', notes: '' }],
+    prepTime: 5,
+    cookTime: 10,
+    difficulty: 'facile',
+    servings: 4,
+    image: null,
+    isFavorite: false,
+    createdAt: 1000,
+    updatedAt: 1000,
+    ...overrides
+  };
+}
+
 test('il preferito non altera data di modifica o foto della ricetta', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));
@@ -129,6 +151,101 @@ test('merge aggiorna gli ID esistenti e ignora duplicati di contenuto', async t 
   assert.equal((await context.DB.getAllRecipes()).length, 1);
 });
 
+test('merge rileva e applica un cambiamento limitato al preferito', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const original = importableRecipe({
+    id: 'solo-preferito',
+    image: 'data:image/jpeg;base64,Rk9UT19JTlRBVFRB'
+  });
+  await context.DB.importData(JSON.stringify(original));
+  const favoriteBackup = {
+    ...original,
+    isFavorite: true
+  };
+
+  const preview = await context.DB.previewImport(JSON.stringify(favoriteBackup));
+  assert.equal(preview.updates, 1);
+  assert.equal(preview.duplicates, 0);
+
+  const summary = await context.DB.importData(JSON.stringify(favoriteBackup), { mode: 'merge' });
+  const recipe = await context.DB.getRecipe(original.id);
+  assert.equal(summary.updated, 1);
+  assert.equal(summary.skipped, 0);
+  assert.equal(recipe.isFavorite, true);
+  assert.equal(recipe.image, original.image);
+  assert.equal(recipe.updatedAt, original.updatedAt);
+});
+
+test('merge rileva la sostituzione e la rimozione della sola foto', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const firstImage = 'data:image/jpeg;base64,UFJJTUFfRk9UTw==';
+  const secondImage = 'data:image/jpeg;base64,U0VDT05EQV9GT1RP';
+  const original = importableRecipe({
+    id: 'solo-foto',
+    image: firstImage,
+    updatedAt: 1000
+  });
+  await context.DB.importData(JSON.stringify(original));
+
+  const changedPhoto = {
+    ...original,
+    image: secondImage,
+    updatedAt: 2000
+  };
+  const changePreview = await context.DB.previewImport(JSON.stringify(changedPhoto));
+  assert.equal(changePreview.updates, 1);
+  assert.equal(changePreview.duplicates, 0);
+  assert.equal((await context.DB.importData(JSON.stringify(changedPhoto))).updated, 1);
+  assert.equal((await context.DB.getRecipe(original.id)).image, secondImage);
+
+  const removedPhoto = {
+    ...changedPhoto,
+    image: null,
+    updatedAt: 3000
+  };
+  const removalPreview = await context.DB.previewImport(JSON.stringify(removedPhoto));
+  assert.equal(removalPreview.updates, 1);
+  assert.equal(removalPreview.duplicates, 0);
+  assert.equal((await context.DB.importData(JSON.stringify(removedPhoto))).updated, 1);
+
+  const stored = await getStoredRecords(context, original.id);
+  assert.equal(stored.recipe.hasImage, false);
+  assert.equal(stored.image, undefined);
+  assert.equal((await context.DB.getRecipe(original.id)).image, null);
+});
+
+test('merge mantiene la foto locale quando un backup fotografico è più vecchio', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const recent = importableRecipe({
+    id: 'foto-conflitto',
+    image: 'data:image/jpeg;base64,Rk9UT19SRUNFTlRF',
+    updatedAt: 3000
+  });
+  await context.DB.importData(JSON.stringify(recent));
+  const older = {
+    ...recent,
+    image: 'data:image/jpeg;base64,Rk9UT19WRUNDSUlB',
+    updatedAt: 2000
+  };
+
+  const preview = await context.DB.previewImport(JSON.stringify(older));
+  const summary = await context.DB.importData(JSON.stringify(older));
+  assert.equal(preview.conflicts, 1);
+  assert.equal(preview.updates, 0);
+  assert.equal(summary.conflicts, 1);
+  assert.equal(summary.updated, 0);
+  assert.equal((await context.DB.getRecipe(recent.id)).image, recent.image);
+});
+
 test('anteprima e merge deduplicano rispetto allo stato finale in ordine', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));
@@ -201,6 +318,123 @@ test('backup versione 2 ripristina ricette, categorie e tema', async t => {
   assert.match(backup.settings.customCategories, /Veloci/);
 });
 
+test('merge unisce le categorie e preserva la definizione locale nei conflitti ID', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const localCategory = {
+    id: 'di-casa',
+    label: 'Di casa',
+    icon: 'C',
+    color: '#123456',
+    isCustom: true
+  };
+  await context.DB.setSetting('customCategories', JSON.stringify([localCategory]));
+  const localRecipeId = await context.DB.addRecipe({
+    name: 'Ricetta locale',
+    category: localCategory.id,
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Servi' }]
+  });
+
+  const backup = JSON.stringify({
+    version: 2,
+    recipes: [importableRecipe({
+      id: 'ricetta-remota',
+      name: 'Ricetta remota',
+      category: 'dal-mondo'
+    })],
+    settings: {
+      customCategories: JSON.stringify([
+        {
+          id: localCategory.id,
+          label: 'Nome dal backup',
+          icon: 'B',
+          color: '#ABCDEF',
+          isCustom: true
+        },
+        {
+          id: 'dal-mondo',
+          label: 'Dal mondo',
+          icon: 'M',
+          color: '#654321',
+          isCustom: true
+        }
+      ])
+    }
+  });
+
+  const preview = await context.DB.previewImport(backup);
+  const summary = await context.DB.importData(backup, { mode: 'merge' });
+  const categories = JSON.parse(await context.DB.getSetting('customCategories'));
+
+  assert.equal(preview.categories, 2);
+  assert.equal(summary.categories, 2);
+  assert.deepEqual(
+    categories.map(category => ({ id: category.id, label: category.label })),
+    [
+      { id: localCategory.id, label: localCategory.label },
+      { id: 'dal-mondo', label: 'Dal mondo' }
+    ]
+  );
+  assert.equal((await context.DB.getRecipe(localRecipeId)).category, localCategory.id);
+  assert.equal((await context.DB.getRecipe('ricetta-remota')).category, 'dal-mondo');
+});
+
+test('merge conserva una categoria locale usata da una ricetta singola importata', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  await context.DB.setSetting('customCategories', JSON.stringify([
+    {
+      id: 'famiglia',
+      label: 'Famiglia',
+      icon: 'F',
+      color: '#224466',
+      isCustom: true
+    }
+  ]));
+  const recipe = importableRecipe({
+    id: 'ricetta-famiglia',
+    category: 'famiglia'
+  });
+
+  const preview = await context.DB.previewImport(JSON.stringify(recipe));
+  const summary = await context.DB.importData(JSON.stringify(recipe), { mode: 'merge' });
+  assert.equal(preview.additions, 1);
+  assert.equal(summary.imported, 1);
+  assert.equal((await context.DB.getRecipe(recipe.id)).category, 'famiglia');
+});
+
+test('replace continua a sostituire le categorie personalizzate', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  await context.DB.setSetting('customCategories', JSON.stringify([
+    { id: 'locale', label: 'Locale', icon: 'L', color: '#123456', isCustom: true }
+  ]));
+  const backup = JSON.stringify({
+    version: 2,
+    recipes: [importableRecipe({
+      id: 'ricetta-backup',
+      category: 'backup'
+    })],
+    settings: {
+      customCategories: JSON.stringify([
+        { id: 'backup', label: 'Backup', icon: 'B', color: '#654321', isCustom: true }
+      ])
+    }
+  });
+
+  await context.DB.importData(backup, { mode: 'replace' });
+  const categories = JSON.parse(await context.DB.getSetting('customCategories'));
+  assert.deepEqual(categories.map(category => category.id), ['backup']);
+  assert.equal((await context.DB.getRecipe('ricetta-backup')).category, 'backup');
+});
+
 test('non confonde varianti con note e conservazione diverse', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));
@@ -257,6 +491,44 @@ test('in unione preserva la versione locale più recente', async t => {
   assert.equal(summary.conflicts, 1);
   assert.equal(summary.updated, 0);
   assert.equal((await context.DB.getRecipe('ricetta-conflitto')).name, 'Versione locale');
+});
+
+test('normalizza timestamp importati non validi e mantiene una cronologia coerente', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+  const startedAt = Date.now();
+
+  await context.DB.importData(JSON.stringify([
+    importableRecipe({
+      id: 'date-non-valide',
+      name: 'Date non valide',
+      createdAt: -10,
+      updatedAt: Number.MAX_SAFE_INTEGER
+    }),
+    importableRecipe({
+      id: 'date-invertite',
+      name: 'Date invertite',
+      createdAt: 5000,
+      updatedAt: 4000
+    }),
+    importableRecipe({
+      id: 'solo-modifica',
+      name: 'Solo data modifica',
+      createdAt: null,
+      updatedAt: 3000
+    })
+  ]));
+
+  const invalid = await context.DB.getRecipe('date-non-valide');
+  const reversed = await context.DB.getRecipe('date-invertite');
+  const updatedOnly = await context.DB.getRecipe('solo-modifica');
+  assert.ok(invalid.createdAt >= startedAt && invalid.createdAt <= Date.now());
+  assert.equal(invalid.updatedAt, invalid.createdAt);
+  assert.equal(reversed.createdAt, 5000);
+  assert.equal(reversed.updatedAt, 5000);
+  assert.equal(updatedOnly.createdAt, 3000);
+  assert.equal(updatedOnly.updatedAt, 3000);
 });
 
 test('ignora categorie personalizzate con ID riservati', () => {
