@@ -5,7 +5,12 @@ const { indexedDB, IDBKeyRange } = require('fake-indexeddb');
 const { loadAppScripts, projectRoot } = require('../helpers/load-app.cjs');
 
 function createContext() {
-  return loadAppScripts(['js/utils.js', 'js/recipes.js', 'js/db.js'], {
+  return loadAppScripts([
+    'js/utils.js',
+    'js/recipes.js',
+    'js/sync/sync-preparation.js',
+    'js/db.js'
+  ], {
     indexedDB,
     IDBKeyRange
   });

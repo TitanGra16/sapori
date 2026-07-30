@@ -1,7 +1,7 @@
 /**
  * Sapori — IndexedDB Storage Module
- * Database: SaporiDB v2
- * Stores: recipes metadata, full-size images, settings.
+ * Database: SaporiDB v3
+ * Stores: recipes metadata, full-size images, settings and local sync state.
  */
 window.DB = {
   db: null,
@@ -22,7 +22,7 @@ window.DB = {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open('SaporiDB', 2);
+      const request = indexedDB.open('SaporiDB', 3);
 
       request.onerror = () => {
         reject(new Error('Impossibile aprire il database: ' + request.error));
@@ -48,6 +48,11 @@ window.DB = {
         if (!db.objectStoreNames.contains('images')) {
           db.createObjectStore('images', { keyPath: 'recipeId' });
         }
+
+        if (!window.SyncPreparation) {
+          throw new Error('Modulo di preparazione della sincronizzazione non disponibile');
+        }
+        window.SyncPreparation.installStores(db);
       };
 
       request.onblocked = () => {
@@ -60,17 +65,22 @@ window.DB = {
         // Handle unexpected close (e.g. version change from another tab)
         this.db.onclose = () => {
           this.db = null;
+          window.SyncPreparation.reset();
         };
         this.db.onversionchange = () => {
           this.db.close();
           this.db = null;
+          window.SyncPreparation.reset();
         };
 
-        this._migrateLegacyImages().then(() => resolve(this.db)).catch(error => {
-          this.db.close();
-          this.db = null;
-          reject(error);
-        });
+        this._migrateLegacyImages()
+          .then(() => window.SyncPreparation.hydrate(this.db))
+          .then(() => resolve(this.db))
+          .catch(error => {
+            this.db.close();
+            this.db = null;
+            reject(error);
+          });
       };
     });
 
@@ -266,10 +276,18 @@ window.DB = {
     };
     const prepared = this._toStoredRecipe(newRecipe);
 
-    const tx = db.transaction(['recipes', 'images'], 'readwrite');
+    const tx = db.transaction(
+      window.SyncPreparation.withQueue(['recipes', 'images']),
+      'readwrite'
+    );
     tx.objectStore('recipes').add(prepared.stored);
     if (prepared.fullImage) {
       tx.objectStore('images').put({ recipeId: newRecipe.id, data: prepared.fullImage });
+    }
+    window.SyncPreparation.queueRecipeContent(tx, newRecipe.id, now);
+    window.SyncPreparation.queueRecipeFavorite(tx, newRecipe.id, now);
+    if (prepared.fullImage) {
+      window.SyncPreparation.queueRecipeImage(tx, newRecipe.id, true, now);
     }
     await this._txComplete(tx);
 
@@ -295,13 +313,29 @@ window.DB = {
     };
     const prepared = this._toStoredRecipe(updatedRecipe);
 
-    const tx = db.transaction(['recipes', 'images'], 'readwrite');
+    const tx = db.transaction(
+      window.SyncPreparation.withQueue(['recipes', 'images']),
+      'readwrite'
+    );
     tx.objectStore('recipes').put(prepared.stored);
     const imageStore = tx.objectStore('images');
+    const previousImageRecord = await this._promisify(imageStore.get(recipe.id));
+    const previousImage = previousImageRecord && previousImageRecord.data
+      ? previousImageRecord.data
+      : null;
     if (prepared.fullImage) {
       imageStore.put({ recipeId: recipe.id, data: prepared.fullImage });
     } else {
       imageStore.delete(recipe.id);
+    }
+    window.SyncPreparation.queueRecipeContent(tx, recipe.id, updatedRecipe.updatedAt);
+    if (previousImage !== prepared.fullImage) {
+      window.SyncPreparation.queueRecipeImage(
+        tx,
+        recipe.id,
+        Boolean(prepared.fullImage),
+        updatedRecipe.updatedAt
+      );
     }
     await this._txComplete(tx);
   },
@@ -315,7 +349,10 @@ window.DB = {
     if (!id) return null;
 
     const db = await this._ensureDB();
-    const tx = db.transaction('recipes', 'readwrite');
+    const tx = db.transaction(
+      window.SyncPreparation.withQueue(['recipes']),
+      'readwrite'
+    );
     const store = tx.objectStore('recipes');
     const recipe = await this._promisify(store.get(id));
     if (!recipe) {
@@ -325,6 +362,7 @@ window.DB = {
 
     recipe.isFavorite = !recipe.isFavorite;
     store.put(recipe);
+    window.SyncPreparation.queueRecipeFavorite(tx, id, Date.now());
     await this._txComplete(tx);
     return recipe.isFavorite;
   },
@@ -340,9 +378,13 @@ window.DB = {
     }
 
     const db = await this._ensureDB();
-    const tx = db.transaction(['recipes', 'images'], 'readwrite');
+    const tx = db.transaction(
+      window.SyncPreparation.withQueue(['recipes', 'images']),
+      'readwrite'
+    );
     tx.objectStore('recipes').delete(id);
     tx.objectStore('images').delete(id);
+    window.SyncPreparation.queueRecipeDelete(tx, id, Date.now());
     await this._txComplete(tx);
   },
 
@@ -355,7 +397,10 @@ window.DB = {
     }
 
     const db = await this._ensureDB();
-    const tx = db.transaction(['recipes', 'settings'], 'readwrite');
+    const tx = db.transaction(
+      window.SyncPreparation.withQueue(['recipes', 'settings']),
+      'readwrite'
+    );
     const recipeStore = tx.objectStore('recipes');
     const settingsStore = tx.objectStore('settings');
     const [recipes, settingsRecord] = await Promise.all([
@@ -366,13 +411,16 @@ window.DB = {
       .filter(category => category.id !== categoryId);
     let movedRecipes = 0;
 
+    const changedAt = Date.now();
     recipes.forEach(recipe => {
       if (recipe.category === categoryId) {
-        recipeStore.put({ ...recipe, category: toCategory, updatedAt: Date.now() });
+        recipeStore.put({ ...recipe, category: toCategory, updatedAt: changedAt });
+        window.SyncPreparation.queueRecipeContent(tx, recipe.id, changedAt);
         movedRecipes++;
       }
     });
     settingsStore.put({ key: 'customCategories', value: JSON.stringify(customCategories) });
+    window.SyncPreparation.queueCategories(tx, changedAt);
     await this._txComplete(tx);
 
     return { movedRecipes, customCategories };
@@ -383,7 +431,10 @@ window.DB = {
     if (!normalized) throw new Error('Categoria personalizzata non valida');
 
     const db = await this._ensureDB();
-    const tx = db.transaction('settings', 'readwrite');
+    const tx = db.transaction(
+      window.SyncPreparation.withQueue(['settings']),
+      'readwrite'
+    );
     const store = tx.objectStore('settings');
     const record = await this._promisify(store.get('customCategories'));
     const categories = this._parseCustomCategories(record ? record.value : []);
@@ -396,6 +447,7 @@ window.DB = {
 
     categories.push(normalized);
     store.put({ key: 'customCategories', value: JSON.stringify(categories) });
+    window.SyncPreparation.queueCategories(tx, Date.now());
     await this._txComplete(tx);
     return normalized;
   },
@@ -428,9 +480,15 @@ window.DB = {
     }
 
     const db = await this._ensureDB();
-    const tx = db.transaction('settings', 'readwrite');
+    const stores = key === 'customCategories'
+      ? window.SyncPreparation.withQueue(['settings'])
+      : ['settings'];
+    const tx = db.transaction(stores, 'readwrite');
     const store = tx.objectStore('settings');
     store.put({ key, value });
+    if (key === 'customCategories') {
+      window.SyncPreparation.queueCategories(tx, Date.now());
+    }
     await this._txComplete(tx);
   },
 
@@ -741,10 +799,13 @@ window.DB = {
     }
 
     const db = await this._ensureDB();
-    const existing = mode === 'merge' ? await this.getRecipeSummaries() : [];
+    const previousRecipes = await this.getRecipeSummaries();
+    const existing = mode === 'merge' ? previousRecipes : [];
+    const previousIds = new Set(previousRecipes.map(recipe => recipe.id));
     const existingIds = new Set(existing.map(recipe => recipe.id));
     const existingById = new Map(existing.map(recipe => [recipe.id, recipe]));
     const fingerprints = this._createFingerprintTracker(existing);
+    const finalIds = new Set();
     const importedRecipes = [];
     for (const recipe of prepared.recipes) {
       importedRecipes.push({
@@ -752,7 +813,10 @@ window.DB = {
         thumbnail: await this._createThumbnail(recipe.image)
       });
     }
-    const tx = db.transaction(['recipes', 'images', 'settings'], 'readwrite');
+    const tx = db.transaction(
+      window.SyncPreparation.withQueue(['recipes', 'images', 'settings']),
+      'readwrite'
+    );
     const store = tx.objectStore('recipes');
     const imageStore = tx.objectStore('images');
     const settingsStore = tx.objectStore('settings');
@@ -793,6 +857,14 @@ window.DB = {
         }
         fingerprints.replace(recipe.id, fingerprint);
         existingById.set(recipe.id, recipe);
+        window.SyncPreparation.queueRecipeContent(tx, recipe.id, recipe.updatedAt);
+        window.SyncPreparation.queueRecipeFavorite(tx, recipe.id, recipe.updatedAt);
+        window.SyncPreparation.queueRecipeImage(
+          tx,
+          recipe.id,
+          Boolean(updated.fullImage),
+          recipe.updatedAt
+        );
         summary.updated++;
         continue;
       }
@@ -813,11 +885,29 @@ window.DB = {
       existingIds.add(id);
       existingById.set(id, addedRecipe);
       fingerprints.add(id, fingerprint);
+      finalIds.add(id);
+      window.SyncPreparation.queueRecipeContent(tx, id, addedRecipe.updatedAt);
+      window.SyncPreparation.queueRecipeFavorite(tx, id, addedRecipe.updatedAt);
+      window.SyncPreparation.queueRecipeImage(
+        tx,
+        id,
+        Boolean(added.fullImage),
+        addedRecipe.updatedAt
+      );
       summary.imported++;
+    }
+
+    if (mode === 'replace') {
+      previousIds.forEach(id => {
+        if (!finalIds.has(id)) {
+          window.SyncPreparation.queueRecipeDelete(tx, id, Date.now());
+        }
+      });
     }
 
     if (prepared.settingPresence.hasCustomCategories) {
       settingsStore.put({ key: 'customCategories', value: prepared.settings.customCategories });
+      window.SyncPreparation.queueCategories(tx, Date.now());
     }
     if (prepared.settingPresence.hasThemeMode && prepared.settings.themeMode) {
       settingsStore.put({ key: 'themeMode', value: prepared.settings.themeMode });
