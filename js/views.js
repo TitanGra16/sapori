@@ -642,10 +642,12 @@ window.Views = (function () {
     var currentPalette = theme.palette || 'classico';
     var settingsData = await Promise.all([
       DB.countRecipes(),
-      DB.getSetting('lastBackupAt')
+      DB.getSetting('lastBackupAt'),
+      SyncPreparation.getStatus()
     ]);
     var count = settingsData[0];
     var lastBackupAt = Number(settingsData[1]);
+    var syncStatus = settingsData[2];
     var lastBackupText = Number.isFinite(lastBackupAt) && lastBackupAt > 0
       ? new Date(lastBackupAt).toLocaleString('it-IT', {
           day: '2-digit',
@@ -694,6 +696,9 @@ window.Views = (function () {
     });
     html += '</div></div>';
     html += '</div></div>'; // close body + card
+
+    // — CARD: Account e sincronizzazione —
+    html += AccountView.renderSettingsCard(syncStatus);
 
     // — CARD: Categorie —
     html += '<div class="settings-card settings-card--categories">';

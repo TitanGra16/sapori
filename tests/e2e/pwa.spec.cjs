@@ -31,4 +31,8 @@ test('installa la PWA e riapre la shell senza connessione', async ({ page, conte
   await expect(page).toHaveTitle(/Sapori/);
   await expect(page.locator('#app-content')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Nuova ricetta' })).toBeVisible();
+
+  await page.goto('/index.html?pwa-test=1#account', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Account e sincronizzazione', level: 1 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Prepara questo dispositivo' })).toBeVisible();
 });

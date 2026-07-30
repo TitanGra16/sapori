@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sapori-v57';
+const CACHE_NAME = 'sapori-v58';
 
 const APP_SHELL = [
   './',
@@ -8,6 +8,7 @@ const APP_SHELL = [
   './css/base.css',
   './css/components.css',
   './css/animations.css',
+  './css/pages/account.css',
   './js/bootstrap-theme.js',
   './js/sync/sync-preparation.js',
   './js/db.js',
@@ -15,6 +16,7 @@ const APP_SHELL = [
   './js/theme.js',
   './js/recipes.js',
   './js/icons.js',
+  './js/account/account-view.js',
   './js/views.js',
   './js/app.js',
   './icons/icon-192.png',

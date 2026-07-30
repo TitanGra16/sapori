@@ -16,6 +16,7 @@ Provala online: [titangra16.github.io/sapori](https://titangra16.github.io/sapor
 - Tema chiaro/scuro e sette palette con contrasti accessibili.
 - Esportazione diretta in PDF/stampa della singola ricetta e ricettario completo.
 - Backup versione 2 con data dell’ultima esportazione, ricette, categorie e tema.
+- Schermata account con preparazione locale e coda leggera per la futura sincronizzazione.
 - Installazione PWA, uso offline e aggiornamenti senza versioni miste in cache.
 
 ## Dati e backup
@@ -24,6 +25,11 @@ Le ricette non vengono inviate a un server: restano nel database locale del
 browser. Cancellare i dati del sito o usare una pulizia completa del browser può
 eliminarle. È quindi consigliato creare periodicamente un **Backup JSON** dalla
 pagina Impostazioni.
+
+Il pulsante **Attiva sincronizzazione** prepara soltanto il dispositivo: crea una
+coda locale per contenuto, preferiti, foto e categorie, senza duplicare le immagini
+e senza inviare richieste esterne. Account e cloud non sono ancora collegati; la
+coda servirà in seguito per integrare Supabase senza perdere le ricette esistenti.
 
 L’importazione mostra un’anteprima e permette di:
 
@@ -71,7 +77,9 @@ sapori/
 │   ├── variables.css
 │   ├── base.css
 │   ├── components.css
-│   └── animations.css
+│   ├── animations.css
+│   └── pages/
+│       └── account.css
 ├── js/
 │   ├── bootstrap-theme.js
 │   ├── db.js
@@ -79,6 +87,10 @@ sapori/
 │   ├── theme.js
 │   ├── recipes.js
 │   ├── icons.js
+│   ├── account/
+│   │   └── account-view.js
+│   ├── sync/
+│   │   └── sync-preparation.js
 │   ├── views.js
 │   └── app.js
 ├── icons/

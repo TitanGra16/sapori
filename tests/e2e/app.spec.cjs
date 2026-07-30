@@ -318,7 +318,7 @@ test('salva la foto completa separata dalla miniatura delle card', async ({ page
 
   await expect(page.getByRole('heading', { name: 'Ricetta con foto', level: 3 })).toBeVisible();
   const stored = await page.evaluate(() => new Promise((resolve, reject) => {
-    const request = indexedDB.open('SaporiDB', 2);
+    const request = indexedDB.open('SaporiDB');
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result;

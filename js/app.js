@@ -751,6 +751,16 @@
         });
         break;
 
+      case 'account':
+        updateNav('settings');
+        showHeader(true);
+        appContent.innerHTML = '<div class="view" role="status">Caricamento account…</div>';
+        var accountRendered = await renderRouteView(token, function (container) {
+          return AccountView.render(container);
+        });
+        if (accountRendered) AccountView.focusHeading(appContent);
+        break;
+
       case 'pantry':
         updateNav('');
         showHeader(false);
@@ -1690,6 +1700,37 @@
         }
         case 'go-create': {
           navigateTo('#create');
+          break;
+        }
+        case 'go-account': {
+          navigateTo('#account');
+          break;
+        }
+        case 'go-settings': {
+          navigateTo('#settings');
+          break;
+        }
+        case 'prepare-sync': {
+          actionEl.disabled = true;
+          actionEl.setAttribute('aria-busy', 'true');
+          actionEl.textContent = 'Preparazione in corso…';
+          SyncPreparation.prepareDevice()
+            .then(function () {
+              Utils.showToast('Dispositivo preparato: nessun dato è stato inviato online', 'success');
+              return renderActiveView('account', function (container) {
+                return AccountView.render(container);
+              });
+            })
+            .then(function (rendered) {
+              if (rendered) AccountView.focusHeading(appContent);
+            })
+            .catch(function (error) {
+              console.error('Errore durante la preparazione locale:', error);
+              Utils.showToast('Impossibile preparare la sincronizzazione', 'error');
+              actionEl.disabled = false;
+              actionEl.removeAttribute('aria-busy');
+              actionEl.textContent = 'Prepara questo dispositivo';
+            });
           break;
         }
         case 'start-cooking': {
