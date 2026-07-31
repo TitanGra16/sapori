@@ -1,0 +1,63 @@
+.storage-health {
+  display: grid;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.storage-health__meter {
+  width: min(100%, 360px);
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+}
+
+.storage-health__meter > span {
+  display: block;
+  width: var(--storage-usage, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--success);
+}
+
+.storage-health--warning .storage-health__meter > span {
+  background: var(--warning);
+}
+
+.storage-health--critical .storage-health__meter > span {
+  background: var(--danger);
+}
+
+.storage-health__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.storage-health__actions .btn {
+  min-height: 44px;
+}
+
+.settings-warning-banner--urgent {
+  border-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg-secondary));
+}
+
+.backup-status--stale {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .storage-health__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .storage-health__actions .btn {
+    width: 100%;
+  }
+}

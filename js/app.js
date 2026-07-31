@@ -14,6 +14,10 @@
     savingRecipe: false,
     savingCategory: false,
     exportingPDF: false,
+    draftSession: null,
+    draftBaseRecipe: null,
+    draftClosingPromise: null,
+    imageProcessingPromise: null,
     routeToken: 0,
     lastStableHash: '#home',
     detailReturnHash: '#home',
@@ -596,7 +600,6 @@
 
   async function init() {
     await DB.init();
-    await requestPersistentStorage();
     await loadCustomCategories();
     await Theme.init();
     setupRouter();
@@ -605,6 +608,9 @@
     setupDataWarning();
     navigateTo(window.location.hash || '#home');
     restoreCookingSession();
+    DraftStore.cleanup().catch(function (error) {
+      console.warn('Pulizia periodica delle bozze non riuscita:', error);
+    });
     registerServiceWorker();
   }
 
@@ -625,29 +631,6 @@
       }
     } catch (e) {
       console.warn('Errore nel caricamento delle categorie personalizzate:', e);
-    }
-  }
-
-  async function requestPersistentStorage() {
-    if (navigator.storage && navigator.storage.persist) {
-      try {
-        var isPersisted = await navigator.storage.persisted();
-        console.log('Stato persistenza iniziale:', isPersisted);
-        
-        if (!isPersisted) {
-          var granted = await navigator.storage.persist();
-          console.log('Persistenza storage richiesta. Risultato:', granted);
-          if (granted) {
-            console.log('Il browser ha concesso lo storage persistente.');
-          } else {
-            console.warn('Il browser ha rifiutato lo storage persistente.');
-          }
-        } else {
-          console.log('Lo storage è già persistente.');
-        }
-      } catch (e) {
-        console.warn('Errore durante la richiesta di storage persistente:', e);
-      }
     }
   }
 
@@ -703,11 +686,205 @@
     }
   }
 
+  function isSafeDraftId(value) {
+    return typeof value === 'string' && /^[a-z0-9][a-z0-9_-]{0,127}$/i.test(value);
+  }
+
+  function updateDraftStatus(status, details) {
+    var element = document.getElementById('draft-save-status');
+    if (!element) return;
+    details = details || {};
+    var messages = {
+      empty: 'Le modifiche vengono salvate automaticamente su questo dispositivo.',
+      pending: 'Modifiche rilevate: salvataggio automatico in attesa…',
+      saving: 'Salvataggio della bozza in corso…',
+      recovered: 'Bozza recuperata. Le prossime modifiche saranno salvate automaticamente.',
+      discarded: 'Bozza rimossa.',
+      error: 'Non riesco a salvare la bozza su questo dispositivo.'
+    };
+    if (status === 'saved' && Number.isFinite(Number(details.updatedAt))) {
+      messages.saved = 'Bozza salvata alle ' + new Date(details.updatedAt).toLocaleTimeString(
+        'it-IT',
+        { hour: '2-digit', minute: '2-digit', second: '2-digit' }
+      ) + '.';
+    } else if (status === 'saved') {
+      messages.saved = 'Bozza salvata.';
+    }
+    element.dataset.status = status;
+    element.textContent = messages[status] || messages.empty;
+  }
+
+  function collectDraftPayload() {
+    var activeTab = document.querySelector('.form-tab.active');
+    return {
+      version: 1,
+      recipe: collectFormData(),
+      activeTab: activeTab ? activeTab.id : 'tab-info',
+      baseContentVersion: state.draftBaseRecipe &&
+        Number.isSafeInteger(Number(state.draftBaseRecipe.contentVersion))
+        ? Number(state.draftBaseRecipe.contentVersion)
+        : 0,
+      baseUpdatedAt: state.draftBaseRecipe
+        ? Number(state.draftBaseRecipe.updatedAt) || null
+        : null
+    };
+  }
+
+  async function prepareDraftForm(mode, baseRecipe, draftId) {
+    var target = {
+      mode: mode,
+      recipeId: mode === 'edit' ? baseRecipe.id : null,
+      draftId: draftId
+    };
+    var session = DraftManager.open({
+      target: target,
+      delay: 600,
+      read: collectDraftPayload,
+      isDirty: isFormDirty,
+      onStatus: updateDraftStatus
+    });
+    var record = null;
+    try {
+      record = await session.restore();
+    } catch (error) {
+      console.warn('Impossibile leggere la bozza locale:', error);
+      updateDraftStatus('error', { error: error });
+    }
+
+    var data = record && record.data &&
+      record.data.recipe &&
+      Object.prototype.toString.call(record.data.recipe) === '[object Object]'
+      ? record.data
+      : null;
+    var recipe = data ? Object.assign({}, data.recipe) : baseRecipe;
+    if (mode === 'edit') {
+      recipe.id = baseRecipe.id;
+      recipe.createdAt = baseRecipe.createdAt;
+      recipe.isFavorite = baseRecipe.isFavorite;
+
+      var currentContentVersion = Number.isSafeInteger(Number(baseRecipe.contentVersion))
+        ? Number(baseRecipe.contentVersion)
+        : 0;
+      var draftContentVersion = Number.isSafeInteger(Number(recipe.contentVersion))
+        ? Number(recipe.contentVersion)
+        : null;
+      if (draftContentVersion === null && data &&
+          Number.isSafeInteger(Number(data.baseContentVersion))) {
+        draftContentVersion = Number(data.baseContentVersion);
+      }
+      if (draftContentVersion === null) {
+        draftContentVersion = data &&
+          Number(data.baseUpdatedAt) !== Number(baseRecipe.updatedAt)
+          ? 0
+          : currentContentVersion;
+      }
+      recipe.contentVersion = draftContentVersion;
+    }
+    var activeTab = data && ['tab-info', 'tab-prep', 'tab-cook'].includes(data.activeTab)
+      ? data.activeTab
+      : 'tab-info';
+    var draftConflict = Boolean(
+      mode === 'edit' &&
+      data &&
+      Number(recipe.contentVersion) !== Number(baseRecipe.contentVersion)
+    );
+
+    return {
+      session: session,
+      record: record,
+      recipe: recipe,
+      activeTab: activeTab,
+      draftConflict: draftConflict
+    };
+  }
+
+  async function closeCurrentDraftSession(flush) {
+    var session = state.draftSession;
+    state.draftSession = null;
+    state.draftBaseRecipe = null;
+    if (!session) {
+      return state.draftClosingPromise
+        ? await state.draftClosingPromise
+        : null;
+    }
+
+    var closingPromise = session.close({ flush: flush !== false });
+    state.draftClosingPromise = closingPromise;
+    try {
+      var outcome = await closingPromise;
+      if (outcome && outcome.error) {
+        Utils.showToast(
+          'Non ho potuto salvare l’ultima modifica della bozza su questo dispositivo.',
+          'warning'
+        );
+      }
+      return outcome;
+    } finally {
+      if (state.draftClosingPromise === closingPromise) {
+        state.draftClosingPromise = null;
+      }
+    }
+  }
+
+  async function discardDraftSession(session) {
+    if (!session) {
+      if (state.draftClosingPromise) await state.draftClosingPromise;
+      return false;
+    }
+    if (state.draftClosingPromise) await state.draftClosingPromise;
+
+    var discardPromise = (async function () {
+      try {
+        return await session.discard();
+      } finally {
+        await session.close({ flush: false });
+      }
+    })();
+    state.draftClosingPromise = discardPromise;
+    try {
+      return await discardPromise;
+    } finally {
+      if (state.draftClosingPromise === discardPromise) {
+        state.draftClosingPromise = null;
+      }
+    }
+  }
+
+  async function discardCurrentDraftSession() {
+    var session = state.draftSession;
+    invalidatePendingImageProcessing();
+    state.draftSession = null;
+    state.draftBaseRecipe = null;
+    return discardDraftSession(session);
+  }
+
+  async function discardDraftAndNavigate(hash) {
+    try {
+      await discardCurrentDraftSession();
+      navigateTo(hash, true);
+    } catch (error) {
+      console.error('Impossibile rimuovere la bozza locale:', error);
+      Utils.showToast(
+        'Non riesco a eliminare la bozza. Riprova prima di uscire.',
+        'error'
+      );
+    }
+  }
+
+  function scheduleCurrentDraft() {
+    if (state.draftSession) state.draftSession.schedule();
+  }
+
   /* ──────────────────── HASH-BASED ROUTER ──────────────────── */
 
   function setupRouter() {
     window.addEventListener('hashchange', function () {
       var hash = window.location.hash || '#home';
+      if (state.savingRecipe && !state.navigationConfirmed) {
+        window.history.replaceState(null, '', state.lastStableHash || '#home');
+        Utils.showToast('Salvataggio in corso: attendi ancora un momento.', 'warning');
+        return;
+      }
       if (!state.navigationConfirmed && hasUnsavedForm()) {
         var requestedHash = hash;
         window.history.replaceState(null, '', state.lastStableHash || '#home');
@@ -758,15 +935,30 @@
     var token = ++state.routeToken;
     appContent.setAttribute('aria-busy', 'true');
     try {
+      var pendingImage = state.imageProcessingPromise;
+      if (pendingImage) await pendingImage;
+      if (token !== state.routeToken) return;
+      invalidatePendingImageProcessing();
+      await closeCurrentDraftSession(true);
+      if (token !== state.routeToken) return;
+
     // Parse the hash
     var parts = hash.replace('#', '').split('/');
     var view = parts[0] || 'home';
     var param = null;
+    var secondaryParam = null;
     if (parts.length > 1) {
       try {
-        param = decodeURIComponent(parts.slice(1).join('/'));
+        param = decodeURIComponent(parts[1]);
       } catch (error) {
-        param = parts.slice(1).join('/');
+        param = parts[1];
+      }
+    }
+    if (parts.length > 2) {
+      try {
+        secondaryParam = decodeURIComponent(parts[2]);
+      } catch (secondaryError) {
+        secondaryParam = parts[2];
       }
     }
 
@@ -795,8 +987,29 @@
         updateNav('create');
         showHeader(false, false);
         state.editingRecipe = null;
-        if (token !== state.routeToken) return;
-        Views.renderCreate(appContent, null);
+        var createDraftId = isSafeDraftId(param)
+          ? param
+          : DraftManager.createId('create');
+        if (createDraftId !== param) {
+          hash = '#create/' + encodeURIComponent(createDraftId);
+          window.history.replaceState(null, '', hash);
+        }
+        var emptyRecipe = Recipes.createEmptyRecipe();
+        state.draftBaseRecipe = emptyRecipe;
+        var createDraft = await prepareDraftForm('create', emptyRecipe, createDraftId);
+        if (token !== state.routeToken) {
+          await createDraft.session.close({ flush: false });
+          return;
+        }
+        state.draftSession = createDraft.session;
+        Views.renderCreate(appContent, createDraft.recipe, {
+          mode: 'create',
+          draftRecovered: Boolean(createDraft.record),
+          draftUpdatedAt: createDraft.record && createDraft.record.updatedAt
+        });
+        if (createDraft.activeTab !== 'tab-info') {
+          switchFormTab(createDraft.activeTab);
+        }
         break;
 
       case 'edit':
@@ -808,7 +1021,30 @@
           if (token !== state.routeToken) return;
           if (recipe) {
             state.editingRecipe = recipe;
-            Views.renderCreate(appContent, recipe);
+            var editDraftId = isSafeDraftId(secondaryParam)
+              ? secondaryParam
+              : DraftManager.createId('edit');
+            if (editDraftId !== secondaryParam) {
+              hash = '#edit/' + encodeURIComponent(param) + '/' +
+                encodeURIComponent(editDraftId);
+              window.history.replaceState(null, '', hash);
+            }
+            state.draftBaseRecipe = recipe;
+            var editDraft = await prepareDraftForm('edit', recipe, editDraftId);
+            if (token !== state.routeToken) {
+              await editDraft.session.close({ flush: false });
+              return;
+            }
+            state.draftSession = editDraft.session;
+            Views.renderCreate(appContent, editDraft.recipe, {
+              mode: 'edit',
+              draftRecovered: Boolean(editDraft.record),
+              draftUpdatedAt: editDraft.record && editDraft.record.updatedAt,
+              draftConflict: editDraft.draftConflict
+            });
+            if (editDraft.activeTab !== 'tab-info') {
+              switchFormTab(editDraft.activeTab);
+            }
           } else {
             Utils.showToast('Ricetta non trovata', 'error');
             navigateTo('#home', true);
@@ -895,13 +1131,13 @@
   function hasUnsavedForm() {
     return (state.currentView === 'create' || state.currentView === 'edit') &&
       !!document.getElementById('recipe-form') &&
-      isFormDirty();
+      (isFormDirty() || !!state.imageProcessingPromise);
   }
 
   function confirmUnsavedNavigation(hash) {
     Views.showConfirmModal(
       'Modifiche non salvate',
-      'Uscendo da questa pagina perderai le modifiche non salvate. Vuoi continuare?',
+      'Le modifiche resteranno in una bozza locale su questo dispositivo. Vuoi uscire dal modulo?',
       function () {
         Views.hideModal();
         navigateTo(hash, true);
@@ -910,6 +1146,10 @@
   }
 
   function navigateTo(hash, force) {
+    if (state.savingRecipe) {
+      Utils.showToast('Salvataggio in corso: attendi ancora un momento.', 'warning');
+      return;
+    }
     if (!force && hasUnsavedForm()) {
       confirmUnsavedNavigation(hash);
       return;
@@ -1033,6 +1273,7 @@
     }
 
     var idInput = document.getElementById('input-id');
+    var contentVersionInput = document.getElementById('input-content-version');
     var name = document.getElementById('input-name').value.trim();
     var category = document.getElementById('input-category').value;
     var description = (document.getElementById('input-description').value || '').trim();
@@ -1084,6 +1325,10 @@
       image: imageData || null,
       imageThumbnail: imageThumbnailData || null,
       isFavorite: state.editingRecipe ? state.editingRecipe.isFavorite : false,
+      contentVersion: contentVersionInput &&
+        Number.isSafeInteger(Number(contentVersionInput.value))
+        ? Number(contentVersionInput.value)
+        : 0,
       createdAt: state.editingRecipe ? state.editingRecipe.createdAt : now,
       updatedAt: now
     };
@@ -1306,40 +1551,113 @@
 
   async function saveRecipe() {
     if (state.savingRecipe) return;
-    clearFormErrors();
-    var recipe = collectFormData();
-    var validation = Recipes.validate(recipe);
+    var formAtSave = document.getElementById('recipe-form');
+    if (!formAtSave) return;
+    var draftSessionAtSave = state.draftSession;
+    var editingRecipeAtSave = state.editingRecipe;
+    var routeTokenAtSave = state.routeToken;
+    var hashAtSave = window.location.hash;
+    var submitButton = formAtSave.querySelector('button[type="submit"]');
+    var previousBusy = appContent.getAttribute('aria-busy');
+    var wasInert = appContent.inert === true;
+    var successMessage = null;
+    var shouldNavigateHome = false;
 
-    if (!validation.valid) {
-      showFormErrors(validation.errors);
-      Utils.showToast('Correggi gli errori nel modulo', 'error');
-      return;
-    }
-
-    var submitButton = document.querySelector('#recipe-form button[type="submit"]');
     state.savingRecipe = true;
+    appContent.inert = true;
+    appContent.setAttribute('aria-busy', 'true');
     if (submitButton) {
       submitButton.disabled = true;
       submitButton.setAttribute('aria-busy', 'true');
     }
 
     try {
-      if (state.editingRecipe) {
+      var pendingImage = state.imageProcessingPromise;
+      if (pendingImage) {
+        var imageReady = await pendingImage;
+        if (!imageReady) {
+          Utils.showToast(
+            'La foto non è stata preparata. Riprova oppure rimuovila prima di salvare.',
+            'error'
+          );
+          return;
+        }
+      }
+
+      if (
+        state.draftSession !== draftSessionAtSave ||
+        state.routeToken !== routeTokenAtSave ||
+        window.location.hash !== hashAtSave ||
+        document.getElementById('recipe-form') !== formAtSave
+      ) {
+        Utils.showToast(
+          'Il modulo è cambiato durante il salvataggio. Controlla i dati e riprova.',
+          'warning'
+        );
+        return;
+      }
+
+      clearFormErrors();
+      var recipe = collectFormData();
+      var validation = Recipes.validate(recipe);
+      if (!validation.valid) {
+        showFormErrors(validation.errors);
+        Utils.showToast('Correggi gli errori nel modulo', 'error');
+        return;
+      }
+
+      if (editingRecipeAtSave) {
         await DB.updateRecipe(recipe);
-        Utils.showToast('Ricetta aggiornata con successo! ✅', 'success');
+        successMessage = 'Ricetta aggiornata con successo! ✅';
       } else {
         await DB.addRecipe(recipe);
-        Utils.showToast('Ricetta creata con successo! 🎉', 'success');
+        successMessage = 'Ricetta creata con successo! 🎉';
       }
-      navigateTo('#home', true);
+
+      try {
+        if (state.draftSession === draftSessionAtSave) {
+          state.draftSession = null;
+          state.draftBaseRecipe = null;
+        }
+        await discardDraftSession(draftSessionAtSave);
+      } catch (draftError) {
+        console.warn('Ricetta salvata, ma la bozza non è stata rimossa:', draftError);
+      }
+      shouldNavigateHome =
+        state.routeToken === routeTokenAtSave &&
+        window.location.hash === hashAtSave &&
+        document.getElementById('recipe-form') === formAtSave;
     } catch (e) {
-      Utils.showToast('Errore nel salvataggio: ' + e.message, 'error');
+      if (e && e.code === 'RECIPE_CONFLICT') {
+        if (draftSessionAtSave) {
+          await draftSessionAtSave.flush().catch(function (draftError) {
+            console.warn('Impossibile aggiornare la bozza in conflitto:', draftError);
+          });
+        }
+        Utils.showToast(
+          'La ricetta è cambiata in un’altra scheda. La tua bozza resta al sicuro: riapri la ricetta e confronta le modifiche.',
+          'warning'
+        );
+      } else {
+        Utils.showToast('Errore nel salvataggio: ' + e.message, 'error');
+      }
     } finally {
       state.savingRecipe = false;
+      appContent.inert = wasInert;
+      if (previousBusy === null) {
+        appContent.removeAttribute('aria-busy');
+      } else {
+        appContent.setAttribute('aria-busy', previousBusy);
+      }
       if (submitButton && submitButton.isConnected) {
         submitButton.disabled = false;
         submitButton.removeAttribute('aria-busy');
       }
+    }
+
+    if (successMessage) {
+      Utils.showToast(successMessage, 'success');
+      if (shouldNavigateHome) navigateTo('#home', true);
     }
   }
 
@@ -1401,6 +1719,7 @@
     var list = document.getElementById('ingredients-list');
     if (!list) return;
     list.innerHTML = Views.ingredientRowsHTML(ingredients);
+    scheduleCurrentDraft();
   }
 
   function addStepRow() {
@@ -1438,11 +1757,17 @@
     var list = document.getElementById('steps-list');
     if (!list) return;
     list.innerHTML = Views.stepRowsHTML(steps);
+    scheduleCurrentDraft();
   }
 
   /* ──────────────────── IMAGE HANDLING ──────────────────── */
 
   var imageRequestToken = 0;
+
+  function invalidatePendingImageProcessing() {
+    imageRequestToken += 1;
+    state.imageProcessingPromise = null;
+  }
 
   function triggerImageUpload() {
     var fileInput = document.getElementById('input-image');
@@ -1450,28 +1775,41 @@
   }
 
   async function handleImageFile(file) {
-    var fileInput = document.getElementById('input-image');
-    if (!file) return;
+    var targetForm = document.getElementById('recipe-form');
+    var targetSession = state.draftSession;
+    var fileInput = targetForm && targetForm.querySelector('#input-image');
+    if (!file || !targetForm || !targetSession) return false;
     if (!Utils.ALLOWED_IMAGE_TYPES.includes(String(file.type || '').toLowerCase())) {
       if (fileInput) fileInput.value = '';
       Utils.showToast('Formato non supportato. Usa JPEG, PNG o WebP', 'error');
-      return;
+      return false;
     }
     if (file.size > Utils.MAX_IMAGE_FILE_BYTES) {
       if (fileInput) fileInput.value = '';
       Utils.showToast('La foto supera il limite di 12 MB', 'error');
-      return;
+      return false;
     }
 
     var requestToken = ++imageRequestToken;
-    var uploadArea = document.getElementById('image-upload-area');
+    var uploadArea = targetForm.querySelector('#image-upload-area');
+    var imageDataInput = targetForm.querySelector('#input-image-data');
+    var thumbnailDataInput = targetForm.querySelector('#input-image-thumbnail-data');
+    var isCurrentTarget = function () {
+      return requestToken === imageRequestToken &&
+        targetSession === state.draftSession &&
+        targetForm === document.getElementById('recipe-form') &&
+        targetForm.isConnected;
+    };
     if (uploadArea) uploadArea.setAttribute('aria-busy', 'true');
     try {
       var base64 = await Utils.compressImage(file, 1280);
+      if (!isCurrentTarget()) return false;
       var thumbnail = await Utils.createImageThumbnail(base64, 360);
-      if (requestToken !== imageRequestToken) return;
-      document.getElementById('input-image-data').value = base64;
-      document.getElementById('input-image-thumbnail-data').value = thumbnail;
+      if (!isCurrentTarget() || !imageDataInput || !thumbnailDataInput || !uploadArea) {
+        return false;
+      }
+      imageDataInput.value = base64;
+      thumbnailDataInput.value = thumbnail;
 
       uploadArea.innerHTML =
         '<div class="image-upload__preview">' +
@@ -1480,12 +1818,15 @@
           '</button>' +
           '<button type="button" class="image-upload__remove" data-action="remove-image" aria-label="Rimuovi foto">✕</button>' +
         '</div>';
+      targetSession.schedule();
+      return true;
     } catch (e) {
-      if (requestToken === imageRequestToken) {
+      if (isCurrentTarget()) {
         Utils.showToast(e && e.message ? e.message : 'Errore nel caricamento dell’immagine', 'error');
       }
+      return false;
     } finally {
-      if (requestToken === imageRequestToken && uploadArea) {
+      if (isCurrentTarget() && uploadArea) {
         uploadArea.removeAttribute('aria-busy');
       }
       if (fileInput) fileInput.value = '';
@@ -1493,18 +1834,24 @@
   }
 
   function removeImage() {
-    imageRequestToken += 1;
-    document.getElementById('input-image-data').value = '';
-    document.getElementById('input-image-thumbnail-data').value = '';
-    var fileInput = document.getElementById('input-image');
+    invalidatePendingImageProcessing();
+    var form = document.getElementById('recipe-form');
+    if (!form) return;
+    var imageDataInput = form.querySelector('#input-image-data');
+    var thumbnailDataInput = form.querySelector('#input-image-thumbnail-data');
+    if (imageDataInput) imageDataInput.value = '';
+    if (thumbnailDataInput) thumbnailDataInput.value = '';
+    var fileInput = form.querySelector('#input-image');
     if (fileInput) fileInput.value = '';
 
-    var uploadArea = document.getElementById('image-upload-area');
+    var uploadArea = form.querySelector('#image-upload-area');
+    if (!uploadArea) return;
     uploadArea.innerHTML =
       '<button type="button" class="image-upload__placeholder" id="image-placeholder" data-action="trigger-image-upload">' +
         '<span style="font-size:2rem">📷</span>' +
         '<span>Tocca per aggiungere una foto</span>' +
       '</button>';
+    scheduleCurrentDraft();
   }
 
   /* ──────────────────── EXPORT / IMPORT ──────────────────── */
@@ -1742,6 +2089,11 @@
     });
 
     document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden' && state.draftSession) {
+        state.draftSession.flush().catch(function (error) {
+          console.warn('Autosalvataggio della bozza non riuscito:', error);
+        });
+      }
       if (document.visibilityState === 'visible' &&
           state.cooking.recipe &&
           !modalOverlay.classList.contains('hidden')) {
@@ -1753,6 +2105,9 @@
 
     window.addEventListener('beforeunload', function (e) {
       if (hasUnsavedForm()) {
+        if (state.draftSession) {
+          state.draftSession.flush().catch(function () {});
+        }
         e.preventDefault();
         e.returnValue = '';
       }
@@ -1805,11 +2160,29 @@
       }
     });
 
+    document.addEventListener('input', function (e) {
+      if (e.target.closest && e.target.closest('#recipe-form')) {
+        scheduleCurrentDraft();
+      }
+    });
+
     // File input for image
     document.addEventListener('change', function (e) {
       if (e.target.id === 'input-image') {
         var file = e.target.files && e.target.files[0];
-        if (file) handleImageFile(file);
+        if (file) {
+          var imageProcessingPromise = handleImageFile(file);
+          state.imageProcessingPromise = imageProcessingPromise;
+          imageProcessingPromise.then(function () {
+            if (state.imageProcessingPromise === imageProcessingPromise) {
+              state.imageProcessingPromise = null;
+            }
+          }, function () {
+            if (state.imageProcessingPromise === imageProcessingPromise) {
+              state.imageProcessingPromise = null;
+            }
+          });
+        }
       }
       if (e.target.id === 'import-file-input') {
         var importFile = e.target.files && e.target.files[0];
@@ -1823,6 +2196,13 @@
             return Views.renderHome(container, state.filters);
           });
         }
+      }
+      if (
+        e.target.closest &&
+        e.target.closest('#recipe-form') &&
+        e.target.id !== 'input-image'
+      ) {
+        scheduleCurrentDraft();
       }
     });
 
@@ -2166,45 +2546,72 @@
         /* ── Form: tabs ── */
         case 'next-tab': {
           var nextId = actionEl.getAttribute('data-next');
-          if (nextId) switchFormTab(nextId, true);
+          if (nextId) {
+            switchFormTab(nextId, true);
+            scheduleCurrentDraft();
+          }
           break;
         }
         case 'prev-tab': {
           var prevId = actionEl.getAttribute('data-prev');
-          if (prevId) switchFormTab(prevId, true);
+          if (prevId) {
+            switchFormTab(prevId, true);
+            scheduleCurrentDraft();
+          }
           break;
         }
         case 'switch-tab': {
           var targetId = actionEl.getAttribute('data-target');
-          if (targetId) switchFormTab(targetId);
+          if (targetId) {
+            switchFormTab(targetId);
+            scheduleCurrentDraft();
+          }
           break;
         }
 
         /* ── Form: cancel ── */
-        case 'cancel-form': {
-          var performNavigate = function () {
-            if (state.editingRecipe) {
-              navigateTo('#detail/' + encodeURIComponent(state.editingRecipe.id));
-            } else {
-              navigateTo('#home');
+        case 'discard-draft': {
+          var discardTarget = state.editingRecipe
+            ? '#edit/' + encodeURIComponent(state.editingRecipe.id)
+            : '#create';
+          Views.showConfirmModal(
+            'Scartare la bozza?',
+            state.editingRecipe
+              ? 'Le modifiche recuperate saranno eliminate e il modulo tornerà alla ricetta già salvata.'
+              : 'Le modifiche recuperate saranno eliminate definitivamente da questo dispositivo.',
+            function () {
+              Views.hideModal();
+              discardDraftAndNavigate(discardTarget);
+            },
+            {
+              cancelLabel: 'Continua a modificare',
+              confirmLabel: 'Scarta bozza',
+              confirmClass: 'btn--danger'
             }
-          };
+          );
+          break;
+        }
+        case 'cancel-form': {
+          var cancelTarget = state.editingRecipe
+            ? '#detail/' + encodeURIComponent(state.editingRecipe.id)
+            : '#home';
 
           if (isFormDirty()) {
             Views.showConfirmModal(
-              'Uscire dal modulo?',
-              'Sei sicuro di voler uscire? Le modifiche non salvate andranno perse.',
+              'Scartare le modifiche?',
+              'Annullando, la bozza locale e tutte le modifiche non salvate saranno eliminate definitivamente.',
               function () {
                 Views.hideModal();
-                if (state.editingRecipe) {
-                  navigateTo('#detail/' + encodeURIComponent(state.editingRecipe.id), true);
-                } else {
-                  navigateTo('#home', true);
-                }
+                discardDraftAndNavigate(cancelTarget);
+              },
+              {
+                cancelLabel: 'Continua a modificare',
+                confirmLabel: 'Scarta e chiudi',
+                confirmClass: 'btn--danger'
               }
             );
           } else {
-            performNavigate();
+            discardDraftAndNavigate(cancelTarget);
           }
           break;
         }
@@ -2296,6 +2703,59 @@
         }
         case 'import-data': {
           importData();
+          break;
+        }
+        case 'request-storage-persistence': {
+          actionEl.disabled = true;
+          actionEl.setAttribute('aria-busy', 'true');
+          StorageHealth.requestPersistence()
+            .then(function (result) {
+              var status = document.getElementById('storage-health-status');
+              var health = status && status.closest('.storage-health');
+              var granted = result.persisted === true ||
+                result.persistenceGranted === true;
+
+              if (result.requestError) {
+                throw new Error(result.requestError);
+              }
+
+              if (granted) {
+                if (status) {
+                  status.textContent =
+                    'Archivio protetto dalla pulizia automatica del browser.';
+                }
+                if (health) {
+                  health.classList.remove(
+                    'storage-health--unknown',
+                    'storage-health--warning',
+                    'storage-health--critical'
+                  );
+                  health.classList.add('storage-health--healthy');
+                  var actions = health.querySelector('.storage-health__actions');
+                  if (actions) actions.remove();
+                }
+                Utils.showToast('Protezione locale attivata su questo dispositivo', 'success');
+              } else {
+                if (status) {
+                  status.textContent =
+                    'Il browser non ha concesso la protezione avanzata. Mantieni aggiornato il Backup JSON.';
+                }
+                Utils.showToast(
+                  'Protezione non concessa dal browser: il backup resta la tutela principale',
+                  'warning'
+                );
+              }
+            })
+            .catch(function (error) {
+              console.error('Richiesta di protezione locale non riuscita:', error);
+              Utils.showToast('Impossibile richiedere la protezione locale', 'error');
+            })
+            .finally(function () {
+              if (actionEl.isConnected) {
+                actionEl.disabled = false;
+                actionEl.removeAttribute('aria-busy');
+              }
+            });
           break;
         }
 

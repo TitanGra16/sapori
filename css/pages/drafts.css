@@ -1,0 +1,83 @@
+.draft-recovery-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-secondary));
+}
+
+.draft-recovery-banner__copy {
+  min-width: 0;
+}
+
+.draft-recovery-banner__copy strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.draft-recovery-banner__copy p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.draft-recovery-banner .btn {
+  min-height: 44px;
+  flex: 0 0 auto;
+}
+
+.draft-save-status {
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 var(--space-sm);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.draft-save-status::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  content: '';
+  flex: 0 0 auto;
+}
+
+.draft-save-status[data-status='pending']::before,
+.draft-save-status[data-status='saving']::before {
+  background: var(--warning);
+}
+
+.draft-save-status[data-status='saved']::before,
+.draft-save-status[data-status='recovered']::before {
+  background: var(--success);
+}
+
+.draft-save-status[data-status='error'] {
+  color: var(--danger);
+}
+
+.draft-save-status[data-status='error']::before {
+  background: var(--danger);
+}
+
+@media (max-width: 560px) {
+  .draft-recovery-banner {
+    flex-direction: column;
+  }
+
+  .draft-recovery-banner .btn {
+    width: 100%;
+  }
+}

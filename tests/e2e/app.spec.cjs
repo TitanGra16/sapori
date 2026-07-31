@@ -613,7 +613,7 @@ test('protegge una bozza e intrappola il focus nella conferma', async ({ page })
   await page.getByRole('textbox', { name: 'Nome ricetta' }).fill('Bozza non salvata');
   await page.getByRole('button', { name: 'Annulla e torna indietro' }).click();
 
-  const dialog = page.getByRole('dialog', { name: 'Uscire dal modulo?' });
+  const dialog = page.getByRole('dialog', { name: 'Scartare le modifiche?' });
   await expect(dialog).toBeVisible();
   await expect(page.locator('#app-content')).toHaveAttribute('inert', '');
   await page.keyboard.press('Escape');
@@ -621,7 +621,7 @@ test('protegge una bozza e intrappola il focus nella conferma', async ({ page })
   await expect(page.getByRole('textbox', { name: 'Nome ricetta' })).toHaveValue('Bozza non salvata');
 
   await page.getByRole('button', { name: 'Annulla e torna indietro' }).click();
-  await dialog.getByRole('button', { name: 'Conferma' }).click();
+  await dialog.getByRole('button', { name: 'Scarta e chiudi' }).click();
   await expect(page.getByRole('heading', { name: 'Il tuo ricettario è vuoto' })).toBeVisible();
 });
 

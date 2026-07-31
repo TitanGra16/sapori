@@ -148,9 +148,16 @@ window.Views = (function () {
 
   /* ──────────────────── CREATE / EDIT VIEW ──────────────────── */
 
-  function renderCreate(container, recipe) {
-    var isEdit = !!recipe;
-    var r = recipe || Recipes.createEmptyRecipe();
+  function renderCreate(container, recipe, options) {
+    options = options || {};
+    var isEdit = options.mode ? options.mode === 'edit' : !!recipe;
+    var sourceRecipe = recipe || Recipes.createEmptyRecipe();
+    var r = Object.assign({}, sourceRecipe, {
+      ingredients: Array.isArray(sourceRecipe.ingredients)
+        ? sourceRecipe.ingredients.slice()
+        : [],
+      steps: Array.isArray(sourceRecipe.steps) ? sourceRecipe.steps.slice() : []
+    });
     var esc = Utils.escapeHtml;
 
     var title = isEdit ? 'Modifica Ricetta' : 'Nuova Ricetta';
@@ -169,6 +176,41 @@ window.Views = (function () {
     html += '<button type="button" class="btn btn--icon view-back-button" data-action="cancel-form" aria-label="Annulla e torna indietro">' + Icons.arrowLeft + '</button>';
     html += '<h1 class="view-header__title">' + esc(title) + '</h1></div>';
     html += '<div class="recipe-editor">';
+
+    if (options.draftRecovered) {
+      var recoveredAt = Number(options.draftUpdatedAt);
+      var recoveredText = Number.isFinite(recoveredAt)
+        ? new Date(recoveredAt).toLocaleString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'dall’ultima sessione';
+      html +=
+        '<div class="draft-recovery-banner" role="status">' +
+          '<div class="draft-recovery-banner__copy">' +
+            '<strong>Bozza recuperata</strong>' +
+            '<p>Ho ripristinato le modifiche salvate ' + esc(recoveredText) +
+              (options.draftConflict
+                ? '. La ricetta originale è cambiata nel frattempo: controlla i dati prima di salvare.'
+                : '.') +
+            '</p>' +
+          '</div>' +
+          '<button type="button" class="btn btn--ghost btn--small" data-action="discard-draft">' +
+            (isEdit ? 'Ripristina versione salvata' : 'Scarta bozza') +
+          '</button>' +
+        '</div>';
+    }
+
+    html +=
+      '<div class="draft-save-status" id="draft-save-status" data-status="' +
+        (options.draftRecovered ? 'recovered' : 'empty') +
+        '" role="status" aria-live="polite" aria-atomic="true">' +
+        (options.draftRecovered
+          ? 'Bozza recuperata. Le prossime modifiche saranno salvate automaticamente.'
+          : 'Le modifiche vengono salvate automaticamente su questo dispositivo.') +
+      '</div>';
     
     // Step Navigation Header
     html +=
@@ -191,10 +233,13 @@ window.Views = (function () {
 
     html += '<form id="recipe-form" class="recipe-form" novalidate>';
 
-    // Hidden field for ID in edit mode
-    if (isEdit) {
-      html += '<input type="hidden" id="input-id" value="' + esc(r.id) + '">';
-    }
+    // Un ID stabile evita che ogni autosalvataggio generi una ricetta diversa.
+    html += '<input type="hidden" id="input-id" value="' +
+      esc(r.id || Utils.generateId()) + '">';
+    html += '<input type="hidden" id="input-content-version" value="' +
+      esc(Number.isSafeInteger(Number(r.contentVersion))
+        ? String(Number(r.contentVersion))
+        : '0') + '">';
 
     // ──────────────────── TAB 1: INFO ────────────────────
     html += '<div id="tab-info" class="form-tab active" role="tabpanel" aria-labelledby="form-tab-info" aria-hidden="false">';
@@ -648,11 +693,18 @@ window.Views = (function () {
     var settingsData = await Promise.all([
       DB.countRecipes(),
       DB.getSetting('lastBackupAt'),
-      SyncPreparation.getStatus()
+      SyncPreparation.getStatus(),
+      StorageHealth.read()
     ]);
     var count = settingsData[0];
     var lastBackupAt = Number(settingsData[1]);
     var syncStatus = settingsData[2];
+    var storageHealth = settingsData[3];
+    var backupStale = count > 0 && (
+      !Number.isFinite(lastBackupAt) ||
+      lastBackupAt <= 0 ||
+      Date.now() - lastBackupAt > 30 * 24 * 60 * 60 * 1000
+    );
     var lastBackupText = Number.isFinite(lastBackupAt) && lastBackupAt > 0
       ? new Date(lastBackupAt).toLocaleString('it-IT', {
           day: '2-digit',
@@ -662,6 +714,18 @@ window.Views = (function () {
           minute: '2-digit'
         })
       : 'Mai eseguito';
+    var storageUsageText = storageHealth.usageBytes !== null &&
+      storageHealth.quotaBytes !== null
+      ? StorageHealth.formatBytes(storageHealth.usageBytes) + ' usati su ' +
+        StorageHealth.formatBytes(storageHealth.quotaBytes) + ' (' +
+        storageHealth.usagePercent + '%)'
+      : 'Il browser non rende disponibile una stima affidabile.';
+    var persistenceText = storageHealth.persisted === true
+      ? 'Archivio protetto dalla pulizia automatica del browser.'
+      : storageHealth.persistenceRequestSupported
+        ? 'La protezione avanzata non è ancora attiva su questo dispositivo.'
+        : 'Questo browser gestisce automaticamente la conservazione dei dati.';
+    var protectionUrgent = backupStale || storageHealth.level === 'critical';
 
     var palettes = Theme.PALETTES;
 
@@ -760,12 +824,15 @@ window.Views = (function () {
     html += '<div class="settings-card settings-card--data">';
     html += '<div class="settings-card__header"><span class="settings-card__icon">' + Icons.database + '</span><h2 class="settings-card__title">Dati e backup</h2></div>';
     html += '<div class="settings-card__body">';
-    html += '<div class="settings-warning-banner">' +
+    html += '<div class="settings-warning-banner' +
+              (protectionUrgent ? ' settings-warning-banner--urgent' : '') + '">' +
               '<span class="settings-warning-banner__icon">⚠️</span>' +
               '<div>' +
                 '<strong>Proteggi il tuo ricettario</strong>' +
                 '<p>' +
-                  'Le ricette restano su questo dispositivo. Se cancelli i dati del browser, vengono eliminate: salva periodicamente un <strong>Backup JSON</strong>.' +
+                  (backupStale
+                    ? 'Il backup manca o ha più di 30 giorni. Creane uno adesso per non rischiare di perdere le ricette.'
+                    : 'Le ricette restano su questo dispositivo. Mantieni aggiornato il <strong>Backup JSON</strong>.') +
                 '</p>' +
               '</div>' +
             '</div>';
@@ -780,7 +847,33 @@ window.Views = (function () {
       '<div class="settings-item">' +
         '<div class="settings-item__info">' +
           '<div class="settings-item__label">Ultimo backup JSON</div>' +
-          '<div class="settings-item__description" id="last-backup-status" aria-live="polite">' + esc(lastBackupText) + '</div>' +
+          '<div class="settings-item__description' + (backupStale ? ' backup-status--stale' : '') +
+            '" id="last-backup-status" aria-live="polite">' + esc(lastBackupText) + '</div>' +
+        '</div>' +
+      '</div>';
+    html +=
+      '<div class="settings-item settings-item--column">' +
+        '<div class="settings-item__label">Spazio e protezione locale</div>' +
+        '<div class="storage-health storage-health--' + esc(storageHealth.level) + '">' +
+          '<div class="settings-item__description" id="storage-health-status" aria-live="polite">' +
+            esc(storageUsageText) + ' ' + esc(persistenceText) +
+          '</div>' +
+          (storageHealth.usagePercent !== null
+            ? '<div class="storage-health__meter" role="meter" aria-label="Spazio locale utilizzato" ' +
+                'aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+                esc(String(storageHealth.usagePercent)) + '">' +
+                '<span style="--storage-usage:' +
+                  esc(String(Math.min(100, storageHealth.usagePercent))) + '%"></span>' +
+              '</div>'
+            : '') +
+          (storageHealth.persisted !== true && storageHealth.persistenceRequestSupported
+            ? '<div class="storage-health__actions">' +
+                '<button type="button" class="btn btn--secondary" data-action="request-storage-persistence">' +
+                  Icons.database + ' Proteggi archivio' +
+                '</button>' +
+                '<span class="settings-item__description">La richiesta parte solo quando premi il pulsante.</span>' +
+              '</div>'
+            : '') +
         '</div>' +
       '</div>';
     html +=
