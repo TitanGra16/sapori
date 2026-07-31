@@ -68,8 +68,29 @@
   color: var(--danger);
 }
 
+.draft-save-status[data-status='conflict'] {
+  color: var(--warning);
+  font-weight: 700;
+}
+
 .draft-save-status[data-status='error']::before {
   background: var(--danger);
+}
+
+.draft-save-status[data-status='conflict']::before {
+  background: var(--warning);
+}
+
+.draft-conflict-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: calc(-1 * var(--space-xs)) 0 var(--space-md);
+}
+
+.draft-conflict-actions .btn {
+  min-height: 44px;
 }
 
 @media (max-width: 560px) {
@@ -78,6 +99,15 @@
   }
 
   .draft-recovery-banner .btn {
+    width: 100%;
+  }
+
+  .draft-conflict-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .draft-conflict-actions .btn {
     width: 100%;
   }
 }

@@ -694,13 +694,17 @@
     var element = document.getElementById('draft-save-status');
     if (!element) return;
     details = details || {};
+    var error = details.error || null;
     var messages = {
       empty: 'Le modifiche vengono salvate automaticamente su questo dispositivo.',
       pending: 'Modifiche rilevate: salvataggio automatico in attesa…',
       saving: 'Salvataggio della bozza in corso…',
       recovered: 'Bozza recuperata. Le prossime modifiche saranno salvate automaticamente.',
       discarded: 'Bozza rimossa.',
-      error: 'Non riesco a salvare la bozza su questo dispositivo.'
+      conflict: 'Questa bozza è stata aggiornata in un’altra scheda. Scegli quale versione continuare.',
+      error: error && error.code === 'QUOTA_EXCEEDED'
+        ? 'Spazio locale insufficiente: rimuovi una foto o libera spazio prima di continuare.'
+        : 'Non riesco a salvare la bozza su questo dispositivo.'
     };
     if (status === 'saved' && Number.isFinite(Number(details.updatedAt))) {
       messages.saved = 'Bozza salvata alle ' + new Date(details.updatedAt).toLocaleTimeString(
@@ -710,8 +714,36 @@
     } else if (status === 'saved') {
       messages.saved = 'Bozza salvata.';
     }
-    element.dataset.status = status;
-    element.textContent = messages[status] || messages.empty;
+    var message = messages[status] || messages.empty;
+    if (element.dataset.status !== status || element.textContent !== message) {
+      element.dataset.status = status;
+      element.textContent = message;
+    }
+    element.setAttribute(
+      'role',
+      status === 'error' || status === 'conflict' ? 'alert' : 'status'
+    );
+    element.setAttribute(
+      'aria-live',
+      status === 'error' || status === 'conflict' ? 'assertive' : 'polite'
+    );
+
+    var conflictActions = document.getElementById('draft-conflict-actions');
+    if (status === 'conflict') {
+      if (!conflictActions) {
+        conflictActions = document.createElement('div');
+        conflictActions.id = 'draft-conflict-actions';
+        conflictActions.className = 'draft-conflict-actions';
+        conflictActions.innerHTML =
+          '<button type="button" class="btn btn--secondary btn--small" ' +
+            'data-action="duplicate-conflicted-draft">Continua in una copia</button>' +
+          '<button type="button" class="btn btn--ghost btn--small" ' +
+            'data-action="reload-conflicted-draft">Carica l’altra scheda</button>';
+        element.insertAdjacentElement('afterend', conflictActions);
+      }
+    } else if (conflictActions) {
+      conflictActions.remove();
+    }
   }
 
   function collectDraftPayload() {
@@ -736,12 +768,17 @@
       recipeId: mode === 'edit' ? baseRecipe.id : null,
       draftId: draftId
     };
-    var session = DraftManager.open({
+    var session = null;
+    session = DraftManager.open({
       target: target,
       delay: 600,
       read: collectDraftPayload,
       isDirty: isFormDirty,
-      onStatus: updateDraftStatus
+      onStatus: function (status, details) {
+        if (state.draftSession === session) {
+          updateDraftStatus(status, details);
+        }
+      }
     });
     var record = null;
     try {
@@ -800,26 +837,29 @@
 
   async function closeCurrentDraftSession(flush) {
     var session = state.draftSession;
-    state.draftSession = null;
-    state.draftBaseRecipe = null;
     if (!session) {
       return state.draftClosingPromise
         ? await state.draftClosingPromise
         : null;
     }
 
+    var formView = appContent.querySelector('.form-view');
+    var formWasInert = formView ? formView.inert === true : false;
+    if (formView) formView.inert = true;
     var closingPromise = session.close({ flush: flush !== false });
     state.draftClosingPromise = closingPromise;
+    var outcome = null;
     try {
-      var outcome = await closingPromise;
-      if (outcome && outcome.error) {
-        Utils.showToast(
-          'Non ho potuto salvare l’ultima modifica della bozza su questo dispositivo.',
-          'warning'
-        );
+      outcome = await closingPromise;
+      if (outcome && outcome.closed && state.draftSession === session) {
+        state.draftSession = null;
+        state.draftBaseRecipe = null;
       }
       return outcome;
     } finally {
+      if ((!outcome || !outcome.closed) && formView && formView.isConnected) {
+        formView.inert = formWasInert;
+      }
       if (state.draftClosingPromise === closingPromise) {
         state.draftClosingPromise = null;
       }
@@ -834,11 +874,9 @@
     if (state.draftClosingPromise) await state.draftClosingPromise;
 
     var discardPromise = (async function () {
-      try {
-        return await session.discard();
-      } finally {
-        await session.close({ flush: false });
-      }
+      var result = await session.discard();
+      await session.close({ flush: false, forceClose: true });
+      return result;
     })();
     state.draftClosingPromise = discardPromise;
     try {
@@ -853,22 +891,137 @@
   async function discardCurrentDraftSession() {
     var session = state.draftSession;
     invalidatePendingImageProcessing();
-    state.draftSession = null;
-    state.draftBaseRecipe = null;
-    return discardDraftSession(session);
+    var result = await discardDraftSession(session);
+    if (state.draftSession === session) {
+      state.draftSession = null;
+      state.draftBaseRecipe = null;
+    }
+    return result;
   }
 
   async function discardDraftAndNavigate(hash) {
+    var formView = appContent.querySelector('.form-view');
+    var wasInert = formView ? formView.inert === true : false;
+    if (formView) formView.inert = true;
     try {
-      await discardCurrentDraftSession();
+      var result = await discardCurrentDraftSession();
+      if (result && result.status === 'conflict') {
+        Utils.showToast(
+          'La bozza aggiornata nell’altra scheda è stata mantenuta.',
+          'warning'
+        );
+      }
       navigateTo(hash, true);
     } catch (error) {
+      if (formView && formView.isConnected) formView.inert = wasInert;
       console.error('Impossibile rimuovere la bozza locale:', error);
       Utils.showToast(
         'Non riesco a eliminare la bozza. Riprova prima di uscire.',
         'error'
       );
     }
+  }
+
+  async function abandonDraftAndNavigate(session, hash) {
+    var formView = appContent.querySelector('.form-view');
+    if (formView) formView.inert = true;
+    try {
+      invalidatePendingImageProcessing();
+      await session.close({ flush: false, forceClose: true });
+      if (state.draftSession === session) {
+        state.draftSession = null;
+        state.draftBaseRecipe = null;
+      }
+      navigateTo(hash, true);
+    } catch (error) {
+      if (formView && formView.isConnected) formView.inert = false;
+      console.error('Impossibile chiudere la sessione della bozza:', error);
+      Utils.showToast('Non riesco a chiudere il modulo in sicurezza.', 'error');
+    }
+  }
+
+  function showDraftCloseFailure(session, requestedHash) {
+    Views.showConfirmModal(
+      'Ultima modifica non salvata',
+      'Non riesco a salvare l’ultima modifica della bozza. Resta nel modulo e riprova; se esci ora, rimarrà soltanto l’ultima versione già salvata.',
+      function () {
+        Views.hideModal();
+        abandonDraftAndNavigate(session, requestedHash);
+      },
+      {
+        cancelLabel: 'Resta e riprova',
+        confirmLabel: 'Esci senza ultima modifica',
+        confirmClass: 'btn--danger'
+      }
+    );
+  }
+
+  function draftHash(target) {
+    if (target.mode === 'edit') {
+      return '#edit/' + encodeURIComponent(target.recipeId) + '/' +
+        encodeURIComponent(target.draftId);
+    }
+    return '#create/' + encodeURIComponent(target.draftId);
+  }
+
+  async function duplicateConflictedDraft() {
+    var session = state.draftSession;
+    var formView = appContent.querySelector('.form-view');
+    if (!session || !formView) return;
+    formView.inert = true;
+
+    try {
+      var pendingImage = state.imageProcessingPromise;
+      if (pendingImage) await pendingImage;
+      if (
+        state.draftSession !== session ||
+        !formView.isConnected
+      ) {
+        return;
+      }
+      var target = {
+        mode: session.target.mode,
+        recipeId: session.target.recipeId,
+        draftId: DraftManager.createId(
+          session.target.mode === 'edit' ? 'edit' : 'create'
+        )
+      };
+      await DraftStore.save(target, collectDraftPayload(), {
+        writerId: DraftManager.createId('copia'),
+        expectedRevision: null
+      });
+      invalidatePendingImageProcessing();
+      await session.close({ flush: false, forceClose: true });
+      if (state.draftSession === session) {
+        state.draftSession = null;
+        state.draftBaseRecipe = null;
+      }
+      Utils.showToast('Copia separata creata senza sovrascrivere l’altra scheda', 'success');
+      navigateTo(draftHash(target), true);
+    } catch (error) {
+      if (formView.isConnected) formView.inert = false;
+      console.error('Impossibile duplicare la bozza in conflitto:', error);
+      Utils.showToast('Non riesco a creare una copia della bozza', 'error');
+    }
+  }
+
+  function confirmReloadConflictedDraft() {
+    var session = state.draftSession;
+    if (!session) return;
+    var currentHash = window.location.hash;
+    Views.showConfirmModal(
+      'Caricare la bozza dell’altra scheda?',
+      'Le modifiche non ancora salvate in questa scheda saranno sostituite dalla versione più recente presente sul dispositivo.',
+      function () {
+        Views.hideModal();
+        abandonDraftAndNavigate(session, currentHash);
+      },
+      {
+        cancelLabel: 'Mantieni questa versione',
+        confirmLabel: 'Carica versione recente',
+        confirmClass: 'btn--primary'
+      }
+    );
   }
 
   function scheduleCurrentDraft() {
@@ -939,8 +1092,16 @@
       if (pendingImage) await pendingImage;
       if (token !== state.routeToken) return;
       invalidatePendingImageProcessing();
-      await closeCurrentDraftSession(true);
+      var sessionBeingClosed = state.draftSession;
+      var closeOutcome = await closeCurrentDraftSession(true);
       if (token !== state.routeToken) return;
+      if (closeOutcome && closeOutcome.closed === false) {
+        window.history.replaceState(null, '', state.lastStableHash || '#home');
+        state.navigationConfirmed = false;
+        appContent.setAttribute('aria-busy', 'false');
+        showDraftCloseFailure(sessionBeingClosed, hash);
+        return;
+      }
 
     // Parse the hash
     var parts = hash.replace('#', '').split('/');
@@ -1615,13 +1776,33 @@
       }
 
       try {
+        var draftDiscardResult = await discardDraftSession(draftSessionAtSave);
         if (state.draftSession === draftSessionAtSave) {
           state.draftSession = null;
           state.draftBaseRecipe = null;
         }
-        await discardDraftSession(draftSessionAtSave);
+        if (draftDiscardResult && draftDiscardResult.status === 'conflict') {
+          Utils.showToast(
+            'Ricetta salvata; la bozza dell’altra scheda è stata mantenuta.',
+            'warning'
+          );
+        }
       } catch (draftError) {
         console.warn('Ricetta salvata, ma la bozza non è stata rimossa:', draftError);
+        if (draftSessionAtSave) {
+          await draftSessionAtSave.close({
+            flush: false,
+            forceClose: true
+          }).catch(function () {});
+        }
+        if (state.draftSession === draftSessionAtSave) {
+          state.draftSession = null;
+          state.draftBaseRecipe = null;
+        }
+        Utils.showToast(
+          'Ricetta salvata, ma non ho potuto ripulire la vecchia bozza.',
+          'warning'
+        );
       }
       shouldNavigateHome =
         state.routeToken === routeTokenAtSave &&
@@ -2570,6 +2751,14 @@
         }
 
         /* ── Form: cancel ── */
+        case 'duplicate-conflicted-draft': {
+          duplicateConflictedDraft();
+          break;
+        }
+        case 'reload-conflicted-draft': {
+          confirmReloadConflictedDraft();
+          break;
+        }
         case 'discard-draft': {
           var discardTarget = state.editingRecipe
             ? '#edit/' + encodeURIComponent(state.editingRecipe.id)
