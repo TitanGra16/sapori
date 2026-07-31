@@ -68,7 +68,7 @@ test('descrive bozze attive, già salvate e rimaste senza ricetta originale', ()
       })
     ],
     [
-      { id: 'ricetta-salvata' },
+      { id: 'ricetta-salvata', name: 'Torta salvata', hasImage: false },
       { id: 'ricetta-esistente' }
     ]
   );
@@ -90,6 +90,38 @@ test('descrive bozze attive, già salvate e rimaste senza ricetta originale', ()
       { draftId: 'modifica-orfana', status: 'orphaned', savedRecipeId: null }
     ]
   );
+});
+
+test('non scambia per residuo una bozza con lo stesso ID ma contenuto diverso', () => {
+  const { DraftCatalog } = createContext();
+  const item = DraftCatalog.describe(
+    [
+      record({
+        draftId: 'bozza-copia-separata',
+        data: {
+          recipe: {
+            id: 'ricetta-salvata',
+            name: 'Versione ancora da completare'
+          }
+        }
+      })
+    ],
+    [
+      {
+        id: 'ricetta-salvata',
+        name: 'Versione già salvata',
+        hasImage: false
+      }
+    ]
+  )[0];
+
+  assert.equal(item.status, 'identity-conflict');
+  assert.equal(item.savedRecipeId, null);
+
+  const container = { innerHTML: '' };
+  DraftCatalog.render(container, [item]);
+  assert.match(container.innerHTML, /Copia separata/);
+  assert.match(container.innerHTML, /Apri come nuova/);
 });
 
 test('ignora record con destinazioni o revisioni non sicure', () => {

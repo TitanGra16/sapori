@@ -250,9 +250,15 @@ window.Views = (function () {
       html +=
         '<div class="draft-recovery-banner" role="status">' +
           '<div class="draft-recovery-banner__copy">' +
-            '<strong>Bozza recuperata</strong>' +
+            '<strong>' +
+              (options.draftIdentityReassigned
+                ? 'Bozza recuperata come nuova copia'
+                : 'Bozza recuperata') +
+            '</strong>' +
             '<p>Ho ripristinato le modifiche salvate ' + esc(recoveredText) +
-              (options.draftConflict
+              (options.draftIdentityReassigned
+                ? '. La ricetta con il vecchio identificatore esiste già: questa versione verrà salvata separatamente.'
+                : options.draftConflict
                 ? '. La ricetta originale è cambiata nel frattempo: controlla i dati prima di salvare.'
                 : '.') +
             '</p>' +

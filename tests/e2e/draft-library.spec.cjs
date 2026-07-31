@@ -394,13 +394,20 @@ test('una bozza create già salvata apre il dettaglio e rimuove il residuo', asy
     recipeId: null,
     draftId: 'bozza-create-gia-salvata'
   };
+  const savedRecipe = await page.evaluate(
+    recipeId => DB.getRecipe(recipeId),
+    savedRecipeId
+  );
   await seedDraft(
     page,
     residualTarget,
-    draftPayload('Ricetta già completata', savedRecipeId, {
-      baseContentVersion: 1,
-      recipe: { contentVersion: 1 }
-    })
+    {
+      schemaVersion: 1,
+      recipe: savedRecipe,
+      activeTab: 'tab-info',
+      baseContentVersion: savedRecipe.contentVersion,
+      baseUpdatedAt: savedRecipe.updatedAt
+    }
   );
 
   await goToDraftLibrary(page);

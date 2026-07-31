@@ -55,6 +55,74 @@ function importableRecipe(overrides = {}) {
   };
 }
 
+test('preserva su richiesta l’ID sicuro di una bozza', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const id = await context.DB.addRecipe({
+    id: 'bozza-stabile_123',
+    name: 'Ricetta da bozza',
+    category: 'altro',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Servi' }]
+  }, { preserveId: true });
+
+  assert.equal(id, 'bozza-stabile_123');
+  assert.equal((await context.DB.getRecipe(id)).name, 'Ricetta da bozza');
+});
+
+test('rigenera un ID non sicuro anche quando ne viene chiesta la conservazione', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  const id = await context.DB.addRecipe({
+    id: 'bozza/con-slash',
+    name: 'Ricetta con ID non sicuro',
+    category: 'altro',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Servi' }]
+  }, { preserveId: true });
+
+  assert.notEqual(id, 'bozza/con-slash');
+  assert.match(id, /^[a-z0-9][a-z0-9_-]{0,127}$/i);
+});
+
+test('segnala una collisione senza sovrascrivere la ricetta esistente', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+
+  await context.DB.addRecipe({
+    id: 'ricetta-esistente',
+    name: 'Versione originale',
+    category: 'altro',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Servi' }]
+  }, { preserveId: true });
+
+  await assert.rejects(
+    () => context.DB.addRecipe({
+      id: 'ricetta-esistente',
+      name: 'Versione da non salvare',
+      category: 'altro',
+      ingredients: [{ name: 'Farina' }],
+      steps: [{ text: 'Impasta' }]
+    }, { preserveId: true }),
+    error => {
+      assert.equal(error.code, 'RECIPE_ALREADY_EXISTS');
+      assert.equal(error.recipeId, 'ricetta-esistente');
+      return true;
+    }
+  );
+
+  const recipes = await context.DB.getAllRecipes();
+  assert.equal(recipes.length, 1);
+  assert.equal(recipes[0].name, 'Versione originale');
+  assert.equal(recipes[0].ingredients[0].name, 'Pane');
+});
+
 test('il preferito non altera data di modifica o foto della ricetta', async t => {
   const context = createContext();
   t.after(() => deleteDatabase(context));

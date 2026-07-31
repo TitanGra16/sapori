@@ -121,6 +121,10 @@
   border-color: var(--success);
 }
 
+.draft-card--identity-conflict {
+  border-color: var(--warning);
+}
+
 .draft-card--orphaned {
   border-color: var(--warning);
 }
@@ -167,6 +171,10 @@
 
 .draft-card--already-saved .draft-card__badge {
   color: var(--success);
+}
+
+.draft-card--identity-conflict .draft-card__badge {
+  color: var(--warning);
 }
 
 .draft-card--orphaned .draft-card__badge {

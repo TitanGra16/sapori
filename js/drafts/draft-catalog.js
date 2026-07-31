@@ -73,6 +73,33 @@
     return byId;
   }
 
+  function recipeFingerprint(recipe) {
+    recipe = isPlainObject(recipe) ? recipe : {};
+    return JSON.stringify({
+      name: String(recipe.name || '').toLocaleLowerCase('it-IT'),
+      category: recipe.category || 'altro',
+      description: recipe.description || '',
+      notes: recipe.notes || '',
+      storage: recipe.storage || '',
+      ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
+      steps: Array.isArray(recipe.steps) ? recipe.steps : [],
+      prepTime: Number(recipe.prepTime) || 0,
+      cookTime: Number(recipe.cookTime) || 0,
+      difficulty: recipe.difficulty || 'media',
+      servings: Number(recipe.servings) || 4
+    });
+  }
+
+  function confidentlyMatchesSavedRecipe(draftRecipe, savedRecipe) {
+    if (!isPlainObject(draftRecipe) || !isPlainObject(savedRecipe)) return false;
+    if (recipeFingerprint(draftRecipe) !== recipeFingerprint(savedRecipe)) {
+      return false;
+    }
+    // getRecipeSummaries espone soltanto la miniatura: se è coinvolta una
+    // foto, la verifica esatta viene rimandata a app.js prima di rimuovere.
+    return !draftRecipe.image && !savedRecipe.hasImage;
+  }
+
   function describe(records, recipes) {
     var existingRecipes = savedRecipesById(recipes);
     return (Array.isArray(records) ? records : []).reduce(function (items, record) {
@@ -93,6 +120,11 @@
       var normalizedRecord = normalized.valid
         ? Object.assign({}, record, { data: normalized.data })
         : record;
+      var normalizedRecipe = normalized.valid &&
+        normalized.data &&
+        isPlainObject(normalized.data.recipe)
+        ? normalized.data.recipe
+        : null;
       var savedId = record.mode === 'create' && normalized.valid
         ? recipeIdFromDraft(normalizedRecord)
         : null;
@@ -103,7 +135,12 @@
         savedId &&
         existingRecipes.has(savedId)
       ) {
-        status = 'already-saved';
+        status = confidentlyMatchesSavedRecipe(
+          normalizedRecipe,
+          existingRecipes.get(savedId)
+        )
+          ? 'already-saved'
+          : 'identity-conflict';
       } else if (
         normalized.valid &&
         record.mode === 'edit' &&
@@ -196,6 +233,13 @@
         badge: 'Già salvata',
         message: 'La ricetta è già nel ricettario. Puoi aprirla e rimuovere questa bozza residua.',
         action: 'Apri ricetta'
+      };
+    }
+    if (item.status === 'identity-conflict') {
+      return {
+        badge: 'Copia separata',
+        message: 'Esiste già una ricetta con lo stesso identificatore, ma il contenuto è diverso o include una foto da verificare.',
+        action: 'Apri come nuova'
       };
     }
     if (item.status === 'orphaned') {

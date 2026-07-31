@@ -286,17 +286,27 @@ window.DB = {
 
   /**
    * Add a new recipe to the store.
-   * Automatically assigns id, createdAt, and updatedAt.
+   * Automatically assigns id, createdAt, and updatedAt. A safe existing ID can
+   * optionally be preserved when the recipe originates from a local draft.
    * @param {Object} recipe
+   * @param {{preserveId?: boolean}} [options]
    * @returns {Promise<string>} The new recipe ID
    */
-  async addRecipe(recipe) {
+  async addRecipe(recipe, options = {}) {
     const db = await this._ensureDB();
 
+    const preserveId = Boolean(options && options.preserveId === true);
     const now = Date.now();
+    const requestedId = preserveId && recipe && typeof recipe.id === 'string'
+      ? recipe.id.trim()
+      : '';
+    const preservedId = /^[a-z0-9][a-z0-9_-]{0,127}$/i.test(requestedId)
+      ? requestedId
+      : null;
     const newRecipe = {
       ...recipe,
-      id: window.Utils ? window.Utils.generateId() : (crypto.randomUUID ? crypto.randomUUID() : this._fallbackId()),
+      id: preservedId ||
+        (window.Utils ? window.Utils.generateId() : (crypto.randomUUID ? crypto.randomUUID() : this._fallbackId())),
       createdAt: now,
       updatedAt: now,
       contentVersion: 1,
@@ -309,7 +319,11 @@ window.DB = {
       window.SyncPreparation.withQueue(['recipes', 'images']),
       'readwrite'
     );
-    tx.objectStore('recipes').add(prepared.stored);
+    const addRequest = tx.objectStore('recipes').add(prepared.stored);
+    let addError = null;
+    addRequest.onerror = () => {
+      addError = addRequest.error;
+    };
     if (prepared.fullImage) {
       tx.objectStore('images').put({ recipeId: newRecipe.id, data: prepared.fullImage });
     }
@@ -318,7 +332,18 @@ window.DB = {
     if (prepared.fullImage) {
       window.SyncPreparation.queueRecipeImage(tx, newRecipe.id, true, now);
     }
-    await this._txComplete(tx);
+    try {
+      await this._txComplete(tx);
+    } catch (error) {
+      if ((addError && addError.name === 'ConstraintError') ||
+          (error && error.name === 'ConstraintError')) {
+        const duplicateError = new Error('Esiste già una ricetta con questo ID.');
+        duplicateError.code = 'RECIPE_ALREADY_EXISTS';
+        duplicateError.recipeId = newRecipe.id;
+        throw duplicateError;
+      }
+      throw error;
+    }
 
     return newRecipe.id;
   },
