@@ -964,6 +964,190 @@
     return '#create/' + encodeURIComponent(target.draftId);
   }
 
+  async function renderDraftLibrary(container) {
+    var items = await DraftCatalog.load();
+    DraftCatalog.render(container, items);
+  }
+
+  function refreshDraftLibrary() {
+    if (state.currentView !== 'drafts') return Promise.resolve(false);
+    return renderActiveView('drafts', renderDraftLibrary).then(function (rendered) {
+      if (rendered) {
+        window.requestAnimationFrame(function () {
+          var heading = appContent.querySelector('.draft-library-view h1');
+          if (heading) heading.focus({ preventScroll: true });
+        });
+      }
+      return rendered;
+    });
+  }
+
+  function draftTargetFromSnapshot(snapshot) {
+    return {
+      mode: snapshot.mode,
+      recipeId: snapshot.recipeId,
+      draftId: snapshot.draftId
+    };
+  }
+
+  function draftRecipeId(record) {
+    var data = record && record.data;
+    var recipe = data && Object.prototype.toString.call(data.recipe) === '[object Object]'
+      ? data.recipe
+      : null;
+    return recipe && isSafeDraftId(recipe.id) ? recipe.id : null;
+  }
+
+  async function recoverOrphanedDraft(record, snapshot) {
+    var sourceData = record && record.data &&
+      Object.prototype.toString.call(record.data) === '[object Object]'
+      ? record.data
+      : {};
+    var sourceRecipe = sourceData.recipe &&
+      Object.prototype.toString.call(sourceData.recipe) === '[object Object]'
+      ? sourceData.recipe
+      : {};
+    var recoveredData = Object.assign({}, sourceData, {
+      recipe: Object.assign({}, sourceRecipe, {
+        id: Utils.generateId(),
+        contentVersion: 0,
+        isFavorite: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }),
+      baseContentVersion: 0,
+      baseUpdatedAt: null
+    });
+    var recoveredTarget = {
+      mode: 'create',
+      recipeId: null,
+      draftId: DraftManager.createId('recupero')
+    };
+
+    await DraftStore.save(recoveredTarget, recoveredData, {
+      writerId: DraftManager.createId('recupero'),
+      expectedRevision: null
+    });
+    var removed = await DraftStore.remove(draftTargetFromSnapshot(snapshot), {
+      expectedRevision: record.revision
+    });
+    Utils.showToast(
+      removed
+        ? 'Bozza recuperata come nuova ricetta'
+        : 'Copia recuperata; una versione più recente è rimasta nell’archivio',
+      removed ? 'success' : 'warning'
+    );
+    navigateTo(DraftCatalog.routeFor(recoveredTarget), true);
+  }
+
+  async function resumeDraft(actionElement) {
+    var snapshot = DraftCatalog.targetFromElement(actionElement);
+    if (!snapshot) {
+      Utils.showToast('Questa bozza non ha un identificatore valido', 'error');
+      return;
+    }
+    actionElement.disabled = true;
+    actionElement.setAttribute('aria-busy', 'true');
+    try {
+      var target = draftTargetFromSnapshot(snapshot);
+      var record = await DraftStore.get(target);
+      if (!record) {
+        Utils.showToast('La bozza non esiste più', 'warning');
+        await refreshDraftLibrary();
+        return;
+      }
+      if (Number(record.revision) !== Number(snapshot.revision)) {
+        Utils.showToast(
+          'La bozza è cambiata in un’altra scheda: ho aggiornato l’elenco.',
+          'warning'
+        );
+        await refreshDraftLibrary();
+        return;
+      }
+
+      if (record.mode === 'create') {
+        var savedRecipeId = draftRecipeId(record);
+        var savedRecipe = savedRecipeId
+          ? await DB.getRecipe(savedRecipeId)
+          : null;
+        if (savedRecipe) {
+          var removedResidual = await DraftStore.remove(target, {
+            expectedRevision: record.revision
+          });
+          Utils.showToast(
+            removedResidual
+              ? 'Bozza residua rimossa: la ricetta era già salvata'
+              : 'La bozza è cambiata ed è stata mantenuta',
+            removedResidual ? 'success' : 'warning'
+          );
+          navigateTo('#detail/' + encodeURIComponent(savedRecipeId), true);
+          return;
+        }
+        navigateTo(DraftCatalog.routeFor(record), true);
+        return;
+      }
+
+      var originalRecipe = await DB.getRecipe(record.recipeId);
+      if (originalRecipe) {
+        navigateTo(DraftCatalog.routeFor(record), true);
+        return;
+      }
+      await recoverOrphanedDraft(record, snapshot);
+    } catch (error) {
+      console.error('Impossibile aprire la bozza:', error);
+      Utils.showToast('Non riesco ad aprire questa bozza', 'error');
+    } finally {
+      if (actionElement.isConnected) {
+        actionElement.disabled = false;
+        actionElement.removeAttribute('aria-busy');
+      }
+    }
+  }
+
+  function confirmDeleteDraft(actionElement) {
+    var snapshot = DraftCatalog.targetFromElement(actionElement);
+    if (!snapshot) {
+      Utils.showToast('Questa bozza non ha un identificatore valido', 'error');
+      return;
+    }
+    var card = actionElement.closest('.draft-card');
+    var heading = card && card.querySelector('h2');
+    var draftName = heading ? heading.textContent.trim() : 'questa ricetta';
+    Views.showConfirmModal(
+      'Eliminare la bozza?',
+      'Le modifiche locali di “' + draftName + '” saranno eliminate definitivamente.',
+      async function () {
+        Views.hideModal();
+        try {
+          var target = draftTargetFromSnapshot(snapshot);
+          var removed = await DraftStore.remove(target, {
+            expectedRevision: snapshot.revision
+          });
+          if (removed) {
+            Utils.showToast('Bozza eliminata', 'success');
+          } else {
+            var current = await DraftStore.get(target);
+            Utils.showToast(
+              current
+                ? 'La bozza è cambiata in un’altra scheda ed è stata mantenuta'
+                : 'La bozza era già stata eliminata',
+              current ? 'warning' : 'info'
+            );
+          }
+          await refreshDraftLibrary();
+        } catch (error) {
+          console.error('Impossibile eliminare la bozza:', error);
+          Utils.showToast('Non riesco a eliminare questa bozza', 'error');
+        }
+      },
+      {
+        cancelLabel: 'Mantieni bozza',
+        confirmLabel: 'Elimina bozza',
+        confirmClass: 'btn--danger'
+      }
+    );
+  }
+
   async function duplicateConflictedDraft() {
     var session = state.draftSession;
     var formView = appContent.querySelector('.form-view');
@@ -1238,6 +1422,13 @@
         await renderRouteView(token, function (container) {
           return Views.renderFavorites(container);
         });
+        break;
+
+      case 'drafts':
+        updateNav('home');
+        showHeader(true, false);
+        appContent.innerHTML = '<div class="view" role="status">Caricamento bozze…</div>';
+        await renderRouteView(token, renderDraftLibrary);
         break;
 
       case 'settings':
@@ -2434,6 +2625,18 @@
         }
         case 'go-create': {
           navigateTo('#create');
+          break;
+        }
+        case 'open-drafts': {
+          navigateTo('#drafts');
+          break;
+        }
+        case 'resume-draft': {
+          resumeDraft(actionEl);
+          break;
+        }
+        case 'delete-draft': {
+          confirmDeleteDraft(actionEl);
           break;
         }
         case 'go-account': {

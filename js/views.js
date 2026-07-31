@@ -110,7 +110,23 @@ window.Views = (function () {
   async function renderHome(container, filters) {
     filters = filters || { search: '', category: '', sortBy: 'recent' };
 
+    var draftRecordsPromise = DraftStore.list().then(
+      function (records) {
+        return { records: records, error: null };
+      },
+      function (error) {
+        return { records: [], error: error };
+      }
+    );
     var recipes = await DB.getRecipeSummaries();
+    var draftResult = await draftRecordsPromise;
+    if (draftResult.error) {
+      console.warn(
+        'Impossibile leggere il riepilogo delle bozze:',
+        draftResult.error
+      );
+    }
+    var draftItems = DraftCatalog.describe(draftResult.records, recipes);
 
     var sortMap = {
       'recent': 'recent',
@@ -129,6 +145,7 @@ window.Views = (function () {
 
     var html = '<div class="view home-view animate-fade-in">';
     html += '<h1 class="sr-only">Le mie ricette</h1>';
+    html += DraftCatalog.homeSummaryHTML(draftItems);
     html += '<div class="home-toolbar">';
     html += categoryChipsHTML(filters.category);
     html += sortBarHTML(filters.sortBy);
@@ -137,7 +154,21 @@ window.Views = (function () {
     if (filtered.length > 0) {
       html += recipeGridHTML(filtered);
     } else if (recipes.length === 0) {
-      html += emptyStateHTML(Icons.bookOpen, 'Il tuo ricettario è vuoto', 'Crea la prima ricetta e ritrovala qui, sempre ordinata.', 'Crea la prima ricetta', 'go-create');
+      html += draftItems.length > 0
+        ? emptyStateHTML(
+            Icons.bookOpen,
+            'Nessuna ricetta completata',
+            'Puoi riprendere una bozza oppure iniziare una nuova ricetta.',
+            'Riprendi una bozza',
+            'open-drafts'
+          )
+        : emptyStateHTML(
+            Icons.bookOpen,
+            'Il tuo ricettario è vuoto',
+            'Crea la prima ricetta e ritrovala qui, sempre ordinata.',
+            'Crea la prima ricetta',
+            'go-create'
+          );
     } else {
       html += emptyStateHTML(Icons.searchLg, 'Nessuna ricetta trovata', 'Prova a cambiare ricerca, categoria o ordinamento.', null, null);
     }
