@@ -47,6 +47,23 @@
     return safeToken(recipe && recipe.id);
   }
 
+  function normalizeRecord(record, baseRecipe) {
+    if (
+      global.DraftSchema &&
+      typeof global.DraftSchema.tryNormalize === 'function'
+    ) {
+      return global.DraftSchema.tryNormalize(record.data, {
+        mode: record.mode,
+        baseRecipe: baseRecipe || null
+      });
+    }
+    return {
+      valid: true,
+      data: isPlainObject(record.data) ? record.data : { recipe: {} },
+      error: null
+    };
+  }
+
   function savedRecipesById(recipes) {
     var byId = new Map();
     (Array.isArray(recipes) ? recipes : []).forEach(function (recipe) {
@@ -71,13 +88,27 @@
         return items;
       }
 
-      var savedId = record.mode === 'create'
-        ? recipeIdFromDraft(record)
+      var baseRecipe = existingRecipes.get(recipeId) || null;
+      var normalized = normalizeRecord(record, baseRecipe);
+      var normalizedRecord = normalized.valid
+        ? Object.assign({}, record, { data: normalized.data })
+        : record;
+      var savedId = record.mode === 'create' && normalized.valid
+        ? recipeIdFromDraft(normalizedRecord)
         : null;
-      var status = 'active';
-      if (record.mode === 'create' && savedId && existingRecipes.has(savedId)) {
+      var status = normalized.valid ? 'active' : 'unreadable';
+      if (
+        normalized.valid &&
+        record.mode === 'create' &&
+        savedId &&
+        existingRecipes.has(savedId)
+      ) {
         status = 'already-saved';
-      } else if (record.mode === 'edit' && !existingRecipes.has(recipeId)) {
+      } else if (
+        normalized.valid &&
+        record.mode === 'edit' &&
+        !existingRecipes.has(recipeId)
+      ) {
         status = 'orphaned';
       }
 
@@ -87,12 +118,15 @@
         recipeId: recipeId,
         draftId: draftId,
         revision: revision,
-        name: safeName(record, existingRecipes.get(recipeId)),
+        name: normalized.valid
+          ? safeName(normalizedRecord, baseRecipe)
+          : 'Bozza non leggibile',
         updatedAt: Number.isFinite(updatedAt) && updatedAt > 0
           ? updatedAt
           : null,
         status: status,
-        savedRecipeId: status === 'already-saved' ? savedId : null
+        savedRecipeId: status === 'already-saved' ? savedId : null,
+        readable: normalized.valid
       });
       return items;
     }, []);
@@ -150,6 +184,13 @@
   }
 
   function statusCopy(item) {
+    if (item.status === 'unreadable') {
+      return {
+        badge: 'Da controllare',
+        message: 'Il contenuto non è leggibile. La bozza è stata preservata: puoi eliminarla oppure riprovare più tardi.',
+        action: null
+      };
+    }
     if (item.status === 'already-saved') {
       return {
         badge: 'Già salvata',
@@ -194,10 +235,12 @@
             esc(formatUpdatedAt(latest.updatedAt)) + '.</p>' +
         '</div>' +
         '<div class="draft-home-summary__actions">' +
-          '<button type="button" class="btn btn--primary btn--small" data-action="resume-draft"' +
-            targetAttributes(latest) + ' aria-label="' +
-            esc(latestCopy.action + ' ' + latest.name) + '">' +
-            esc(latestCopy.action) + '</button>' +
+          (latestCopy.action
+            ? '<button type="button" class="btn btn--primary btn--small" data-action="resume-draft"' +
+                targetAttributes(latest) + ' aria-label="' +
+                esc(latestCopy.action + ' ' + latest.name) + '">' +
+                esc(latestCopy.action) + '</button>'
+            : '') +
           '<button type="button" class="btn btn--ghost btn--small" data-action="open-drafts">' +
             'Gestisci tutte' +
           '</button>' +
@@ -231,10 +274,12 @@
           '</p>' +
         '</div>' +
         '<div class="draft-card__actions">' +
-          '<button type="button" class="btn btn--primary btn--small" data-action="resume-draft"' +
-            targetAttributes(item) + ' aria-label="' +
-            esc(copy.action + ' ' + item.name) + '">' +
-            esc(copy.action) + '</button>' +
+          (copy.action
+            ? '<button type="button" class="btn btn--primary btn--small" data-action="resume-draft"' +
+                targetAttributes(item) + ' aria-label="' +
+                esc(copy.action + ' ' + item.name) + '">' +
+                esc(copy.action) + '</button>'
+            : '') +
           '<button type="button" class="btn btn--ghost btn--small draft-card__delete" ' +
             'data-action="delete-draft"' + targetAttributes(item) +
             ' aria-label="Elimina la bozza ' + esc(item.name) + '">' +

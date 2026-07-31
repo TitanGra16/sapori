@@ -125,6 +125,10 @@
   border-color: var(--warning);
 }
 
+.draft-card--unreadable {
+  border-color: var(--danger);
+}
+
 .draft-card__body,
 .draft-card__heading {
   min-width: 0;
@@ -167,6 +171,10 @@
 
 .draft-card--orphaned .draft-card__badge {
   color: var(--warning);
+}
+
+.draft-card--unreadable .draft-card__badge {
+  color: var(--danger);
 }
 
 .draft-card__message {

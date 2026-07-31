@@ -197,10 +197,7 @@
     seen.delete(value);
   }
 
-  function cloneDraftData(value) {
-    if (!value || Object.prototype.toString.call(value) !== '[object Object]') {
-      throw draftError('La bozza deve essere un oggetto.', null, 'INVALID_DATA');
-    }
+  function clonePlainData(value) {
     assertPlainData(value, 'bozza', new Set());
 
     try {
@@ -213,13 +210,34 @@
     }
   }
 
+  function cloneDraftData(value) {
+    if (!value || Object.prototype.toString.call(value) !== '[object Object]') {
+      throw draftError('La bozza deve essere un oggetto.', null, 'INVALID_DATA');
+    }
+    return clonePlainData(value);
+  }
+
   function publicRecord(record) {
     if (!record) return null;
+    var publicData = null;
+    var dataUnreadable = false;
+    try {
+      publicData = record.data === undefined
+        ? null
+        : clonePlainData(record.data);
+    } catch (error) {
+      // Non lasciare che un singolo record legacy corrotto renda
+      // irraggiungibili tutte le altre bozze. Il dato grezzo resta intatto nel
+      // database e DraftSchema mostrerà lo stato "non leggibile".
+      dataUnreadable = true;
+      publicData = null;
+    }
     return {
       mode: record.mode,
       recipeId: record.recipeId || null,
       draftId: record.draftId,
-      data: cloneDraftData(record.data),
+      data: publicData,
+      dataUnreadable: dataUnreadable,
       writerId: record.writerId || null,
       revision: Number(record.revision) || 1,
       createdAt: Number(record.createdAt),

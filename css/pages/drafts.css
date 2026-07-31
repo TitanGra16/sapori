@@ -29,6 +29,26 @@
   line-height: 1.45;
 }
 
+.draft-recovery-banner--error {
+  border-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--border));
+  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg-secondary));
+}
+
+.draft-recovery-banner__actions {
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.recipe-form--recovery-blocked {
+  opacity: 0.58;
+  filter: grayscale(0.2);
+}
+
 .draft-recovery-banner .btn {
   min-height: 44px;
   flex: 0 0 auto;
@@ -99,6 +119,10 @@
   }
 
   .draft-recovery-banner .btn {
+    width: 100%;
+  }
+
+  .draft-recovery-banner__actions {
     width: 100%;
   }
 

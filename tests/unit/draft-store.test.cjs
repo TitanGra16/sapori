@@ -45,6 +45,16 @@ async function rawRecord(database, key) {
   });
 }
 
+async function putRawRecord(database, record) {
+  await new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readwrite');
+    transaction.objectStore('drafts').put(record);
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
 test('inizializza un database separato con gli indici per le bozze', async t => {
   const context = createContext();
   const database = await context.DraftStore.init();
@@ -412,6 +422,43 @@ test('list rifiuta filtri ambigui o non sicuri', async t => {
       error => error.name === 'DraftStoreError' && error.code === 'INVALID_FILTER'
     );
   }
+});
+
+test('restituisce record legacy illeggibili senza bloccare le altre bozze', async t => {
+  const context = createContext();
+  const database = await context.DraftStore.init();
+  t.after(() => database.close());
+  const now = Date.now();
+
+  await context.DraftStore.save(
+    target('create', 'valida-accanto'),
+    { recipe: { name: 'Bozza valida' } }
+  );
+  await putRawRecord(database, {
+    key: 'create:legacy-illeggibile',
+    mode: 'create',
+    recipeId: null,
+    draftId: 'legacy-illeggibile',
+    data: null,
+    writerId: 'versione-vecchia',
+    revision: 1,
+    createdAt: now,
+    updatedAt: now + 1,
+    expiresAt: now + context.DraftStore.DRAFT_TTL_MS
+  });
+
+  const unreadable = await context.DraftStore.get(
+    target('create', 'legacy-illeggibile')
+  );
+  assert.equal(unreadable.data, null);
+  const listed = await context.DraftStore.list();
+  assert.deepEqual(
+    plain(listed.map(record => [record.draftId, record.data])),
+    [
+      ['legacy-illeggibile', null],
+      ['valida-accanto', { recipe: { name: 'Bozza valida' } }]
+    ]
+  );
 });
 
 test('il fallback senza structuredClone conserva i dati semplici e rifiuta valori ambigui', async t => {

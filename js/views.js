@@ -208,6 +208,35 @@ window.Views = (function () {
     html += '<h1 class="view-header__title">' + esc(title) + '</h1></div>';
     html += '<div class="recipe-editor">';
 
+    if (options.draftRestoreError) {
+      html +=
+        '<div class="draft-recovery-banner draft-recovery-banner--error" role="alert">' +
+          '<div class="draft-recovery-banner__copy">' +
+            '<strong>Bozza non recuperata</strong>' +
+            '<p id="draft-recovery-message">' +
+              (options.unreadableDraftRecord
+                ? 'Il contenuto salvato non è leggibile. La modifica del modulo è sospesa per non sovrascrivere la bozza originale.'
+                : 'L’archivio locale non ha risposto. La modifica del modulo è sospesa finché non riprovi o scegli una copia pulita.') +
+            '</p>' +
+          '</div>' +
+          '<div class="draft-recovery-banner__actions">' +
+            '<button type="button" class="btn btn--secondary btn--small" data-action="retry-draft-restore">' +
+              'Riprova recupero' +
+            '</button>' +
+            '<button type="button" class="btn btn--ghost btn--small" data-action="continue-without-draft">' +
+              (options.unreadableDraftRecord
+                ? 'Continua in una copia pulita'
+                : 'Continua senza recupero') +
+            '</button>' +
+            (options.unreadableDraftRecord
+              ? '<button type="button" class="btn btn--ghost btn--small" data-action="discard-draft">' +
+                  'Elimina bozza illeggibile' +
+                '</button>'
+              : '') +
+          '</div>' +
+        '</div>';
+    }
+
     if (options.draftRecovered) {
       var recoveredAt = Number(options.draftUpdatedAt);
       var recoveredText = Number.isFinite(recoveredAt)
@@ -234,13 +263,19 @@ window.Views = (function () {
         '</div>';
     }
 
+    var initialDraftStatus = options.draftRestoreError
+      ? 'error'
+      : (options.draftRecovered ? 'recovered' : 'empty');
+    var initialDraftMessage = options.draftRestoreError
+      ? 'Il recupero della bozza non è riuscito. Riprova prima di continuare.'
+      : (options.draftRecovered
+          ? 'Bozza recuperata. Le prossime modifiche saranno salvate automaticamente.'
+          : 'Le modifiche vengono salvate automaticamente su questo dispositivo.');
     html +=
       '<div class="draft-save-status" id="draft-save-status" data-status="' +
-        (options.draftRecovered ? 'recovered' : 'empty') +
+        initialDraftStatus +
         '" role="status" aria-live="polite" aria-atomic="true">' +
-        (options.draftRecovered
-          ? 'Bozza recuperata. Le prossime modifiche saranno salvate automaticamente.'
-          : 'Le modifiche vengono salvate automaticamente su questo dispositivo.') +
+        initialDraftMessage +
       '</div>';
     
     // Step Navigation Header
@@ -262,7 +297,13 @@ window.Views = (function () {
         '</button>' +
       '</div>';
 
-    html += '<form id="recipe-form" class="recipe-form" novalidate>';
+    html += '<form id="recipe-form" class="recipe-form' +
+      (options.draftRestoreError ? ' recipe-form--recovery-blocked' : '') +
+      '" novalidate' +
+      (options.draftRestoreError
+        ? ' inert aria-describedby="draft-recovery-message"'
+        : '') +
+      '>';
 
     // Un ID stabile evita che ogni autosalvataggio generi una ricetta diversa.
     html += '<input type="hidden" id="input-id" value="' +

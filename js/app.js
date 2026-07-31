@@ -16,6 +16,7 @@
     exportingPDF: false,
     draftSession: null,
     draftBaseRecipe: null,
+    draftRecoveryBlocked: false,
     draftClosingPromise: null,
     imageProcessingPromise: null,
     routeToken: 0,
@@ -781,18 +782,27 @@
       }
     });
     var record = null;
+    var restoreError = null;
     try {
       record = await session.restore();
     } catch (error) {
       console.warn('Impossibile leggere la bozza locale:', error);
-      updateDraftStatus('error', { error: error });
+      restoreError = error;
     }
 
-    var data = record && record.data &&
-      record.data.recipe &&
-      Object.prototype.toString.call(record.data.recipe) === '[object Object]'
-      ? record.data
-      : null;
+    var data = null;
+    if (record) {
+      var normalizedDraft = DraftSchema.tryNormalize(record.data, {
+        mode: mode,
+        baseRecipe: baseRecipe
+      });
+      if (normalizedDraft.valid) {
+        data = normalizedDraft.data;
+      } else {
+        restoreError = normalizedDraft.error;
+        console.warn('Contenuto della bozza locale non leggibile:', restoreError);
+      }
+    }
     var recipe = data ? Object.assign({}, data.recipe) : baseRecipe;
     if (mode === 'edit') {
       recipe.id = baseRecipe.id;
@@ -831,7 +841,9 @@
       record: record,
       recipe: recipe,
       activeTab: activeTab,
-      draftConflict: draftConflict
+      draftConflict: draftConflict,
+      restoreError: restoreError,
+      unreadableRecord: Boolean(record && restoreError)
     };
   }
 
@@ -854,6 +866,7 @@
       if (outcome && outcome.closed && state.draftSession === session) {
         state.draftSession = null;
         state.draftBaseRecipe = null;
+        state.draftRecoveryBlocked = false;
       }
       return outcome;
     } finally {
@@ -895,6 +908,7 @@
     if (state.draftSession === session) {
       state.draftSession = null;
       state.draftBaseRecipe = null;
+      state.draftRecoveryBlocked = false;
     }
     return result;
   }
@@ -931,6 +945,7 @@
       if (state.draftSession === session) {
         state.draftSession = null;
         state.draftBaseRecipe = null;
+        state.draftRecoveryBlocked = false;
       }
       navigateTo(hash, true);
     } catch (error) {
@@ -1179,6 +1194,7 @@
       if (state.draftSession === session) {
         state.draftSession = null;
         state.draftBaseRecipe = null;
+        state.draftRecoveryBlocked = false;
       }
       Utils.showToast('Copia separata creata senza sovrascrivere l’altra scheda', 'success');
       navigateTo(draftHash(target), true);
@@ -1206,6 +1222,47 @@
         confirmClass: 'btn--primary'
       }
     );
+  }
+
+  function retryDraftRestore() {
+    var session = state.draftSession;
+    if (!session) return;
+    var currentHash = window.location.hash;
+    var retry = function () {
+      Views.hideModal();
+      abandonDraftAndNavigate(session, currentHash);
+    };
+    if (hasUnsavedForm()) {
+      Views.showConfirmModal(
+        'Riprovare il recupero?',
+        'Il modulo verrà ricaricato. Le modifiche inserite dopo l’errore e non ancora salvate andranno perse.',
+        retry,
+        {
+          cancelLabel: 'Continua a modificare',
+          confirmLabel: 'Ricarica e riprova',
+          confirmClass: 'btn--primary'
+        }
+      );
+      return;
+    }
+    abandonDraftAndNavigate(session, currentHash);
+  }
+
+  function continueWithoutRecoveredDraft() {
+    var session = state.draftSession;
+    if (!session) return;
+    var cleanTarget = {
+      mode: session.target.mode,
+      recipeId: session.target.recipeId,
+      draftId: DraftManager.createId(
+        session.target.mode === 'edit' ? 'edit' : 'create'
+      )
+    };
+    Utils.showToast(
+      'La bozza precedente resta separata e non verrà sovrascritta.',
+      'warning'
+    );
+    abandonDraftAndNavigate(session, draftHash(cleanTarget));
   }
 
   function scheduleCurrentDraft() {
@@ -1277,7 +1334,9 @@
       if (token !== state.routeToken) return;
       invalidatePendingImageProcessing();
       var sessionBeingClosed = state.draftSession;
-      var closeOutcome = await closeCurrentDraftSession(true);
+      var closeOutcome = await closeCurrentDraftSession(
+        state.draftRecoveryBlocked !== true
+      );
       if (token !== state.routeToken) return;
       if (closeOutcome && closeOutcome.closed === false) {
         window.history.replaceState(null, '', state.lastStableHash || '#home');
@@ -1347,11 +1406,17 @@
           return;
         }
         state.draftSession = createDraft.session;
+        state.draftRecoveryBlocked = Boolean(createDraft.restoreError);
         Views.renderCreate(appContent, createDraft.recipe, {
           mode: 'create',
-          draftRecovered: Boolean(createDraft.record),
-          draftUpdatedAt: createDraft.record && createDraft.record.updatedAt
+          draftRecovered: Boolean(createDraft.record && !createDraft.restoreError),
+          draftUpdatedAt: createDraft.record && createDraft.record.updatedAt,
+          draftRestoreError: createDraft.restoreError,
+          unreadableDraftRecord: createDraft.unreadableRecord
         });
+        if (createDraft.restoreError) {
+          updateDraftStatus('error', { error: createDraft.restoreError });
+        }
         if (createDraft.activeTab !== 'tab-info') {
           switchFormTab(createDraft.activeTab);
         }
@@ -1381,12 +1446,18 @@
               return;
             }
             state.draftSession = editDraft.session;
+            state.draftRecoveryBlocked = Boolean(editDraft.restoreError);
             Views.renderCreate(appContent, editDraft.recipe, {
               mode: 'edit',
-              draftRecovered: Boolean(editDraft.record),
+              draftRecovered: Boolean(editDraft.record && !editDraft.restoreError),
               draftUpdatedAt: editDraft.record && editDraft.record.updatedAt,
-              draftConflict: editDraft.draftConflict
+              draftConflict: editDraft.draftConflict,
+              draftRestoreError: editDraft.restoreError,
+              unreadableDraftRecord: editDraft.unreadableRecord
             });
+            if (editDraft.restoreError) {
+              updateDraftStatus('error', { error: editDraft.restoreError });
+            }
             if (editDraft.activeTab !== 'tab-info') {
               switchFormTab(editDraft.activeTab);
             }
@@ -1971,6 +2042,7 @@
         if (state.draftSession === draftSessionAtSave) {
           state.draftSession = null;
           state.draftBaseRecipe = null;
+          state.draftRecoveryBlocked = false;
         }
         if (draftDiscardResult && draftDiscardResult.status === 'conflict') {
           Utils.showToast(
@@ -1989,6 +2061,7 @@
         if (state.draftSession === draftSessionAtSave) {
           state.draftSession = null;
           state.draftBaseRecipe = null;
+          state.draftRecoveryBlocked = false;
         }
         Utils.showToast(
           'Ricetta salvata, ma non ho potuto ripulire la vecchia bozza.',
@@ -2461,7 +2534,11 @@
     });
 
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'hidden' && state.draftSession) {
+      if (
+        document.visibilityState === 'hidden' &&
+        state.draftSession &&
+        !state.draftRecoveryBlocked
+      ) {
         state.draftSession.flush().catch(function (error) {
           console.warn('Autosalvataggio della bozza non riuscito:', error);
         });
@@ -2962,6 +3039,14 @@
           confirmReloadConflictedDraft();
           break;
         }
+        case 'retry-draft-restore': {
+          retryDraftRestore();
+          break;
+        }
+        case 'continue-without-draft': {
+          continueWithoutRecoveredDraft();
+          break;
+        }
         case 'discard-draft': {
           var discardTarget = state.editingRecipe
             ? '#edit/' + encodeURIComponent(state.editingRecipe.id)
@@ -2988,7 +3073,13 @@
             ? '#detail/' + encodeURIComponent(state.editingRecipe.id)
             : '#home';
 
-          if (isFormDirty()) {
+          if (state.draftRecoveryBlocked) {
+            Utils.showToast(
+              'La bozza non recuperata è stata mantenuta nell’archivio.',
+              'warning'
+            );
+            abandonDraftAndNavigate(state.draftSession, cancelTarget);
+          } else if (isFormDirty()) {
             Views.showConfirmModal(
               'Scartare le modifiche?',
               'Annullando, la bozza locale e tutte le modifiche non salvate saranno eliminate definitivamente.',

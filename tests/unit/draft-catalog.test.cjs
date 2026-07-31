@@ -11,8 +11,11 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function createContext(additions = {}) {
-  return loadAppScripts(['js/drafts/draft-catalog.js'], {
+function createContext(additions = {}, withSchema = false) {
+  return loadAppScripts([
+    ...(withSchema ? ['js/drafts/draft-schema.js'] : []),
+    'js/drafts/draft-catalog.js'
+  ], {
     Utils: { escapeHtml },
     Icons: {
       arrowLeft: '<svg>indietro</svg>',
@@ -229,4 +232,21 @@ test('renderizza elenco e stato vuoto con azioni accessibili', () => {
   DraftCatalog.render(container, []);
   assert.match(container.innerHTML, /Nessuna bozza da recuperare/);
   assert.match(container.innerHTML, /data-action="go-create"/);
+});
+
+test('preserva e segnala una bozza illeggibile senza offrire azioni di apertura', () => {
+  const { DraftCatalog } = createContext({}, true);
+  const container = { innerHTML: '' };
+  const item = DraftCatalog.describe([
+    record({ data: null })
+  ], [])[0];
+
+  assert.equal(item.status, 'unreadable');
+  assert.equal(item.readable, false);
+  assert.equal(item.name, 'Bozza non leggibile');
+
+  DraftCatalog.render(container, [item]);
+  assert.match(container.innerHTML, /Da controllare/);
+  assert.doesNotMatch(container.innerHTML, /data-action="resume-draft"/);
+  assert.match(container.innerHTML, /data-action="delete-draft"/);
 });
