@@ -1161,14 +1161,18 @@ window.Views = (function () {
 
     // ── Header ──
     var wlClass = wakeLockActive ? 'cooking-modal__wakelock--active' : 'cooking-modal__wakelock--inactive';
-    var wlText  = wakeLockActive ? '⚡ Schermo attivo' : '📱 Standard';
+    var wlText  = wakeLockActive ? 'Schermo attivo' : 'Modalità standard';
+    var wlIcon  = wakeLockActive ? '⚡' : '📱';
     html += '<div class="cooking-modal__header">';
     html +=   '<div class="cooking-modal__header-left">';
     html +=     '<span class="cooking-modal__label">👨‍🍳 Modalità cucina</span>';
     html +=     '<h2 class="cooking-modal__title" id="cooking-modal-title">' + esc(recipe.name) + '</h2>';
     html +=   '</div>';
     html +=   '<div class="cooking-modal__header-right">';
-    html +=     '<span class="cooking-modal__wakelock ' + wlClass + '">' + wlText + '</span>';
+    html +=     '<span class="cooking-modal__wakelock ' + wlClass + '" aria-label="' + wlText + '">';
+    html +=       '<span class="cooking-modal__wakelock-icon" aria-hidden="true">' + wlIcon + '</span>';
+    html +=       '<span class="cooking-modal__wakelock-text">' + wlText + '</span>';
+    html +=     '</span>';
     html +=     '<button type="button" class="cooking-modal__close" data-action="close-cooking" aria-label="Chiudi modalità cucina">' + Icons.x + '</button>';
     html +=   '</div>';
     html += '</div>';
@@ -1242,11 +1246,11 @@ window.Views = (function () {
 
       // Timer
       html += '<div class="cooking-modal__timer">';
-      html +=   '<div>';
+      html +=   '<div class="cooking-modal__timer-summary">';
       html +=     '<div class="cooking-modal__timer-label">⏱ Timer</div>';
       html +=     '<div class="cooking-modal__timer-display ' + timerClass + '" id="cooking-timer-display">' + timerDisplay + '</div>';
       html +=   '</div>';
-      html +=   '<div style="display:flex;flex-direction:column;align-items:center;gap:6px">';
+      html +=   '<div class="cooking-modal__timer-setup">';
       html +=     '<div class="cooking-modal__timer-input-wrap">';
       html +=       '<input type="number" class="cooking-modal__timer-input" id="cooking-timer-min" min="0" max="' + Recipes.LIMITS.minutes + '" value="' + (timerState.minutes || 0) + '" aria-label="Minuti"' + timerInputDisabled + '>';
       html +=       '<span style="font-weight:700;color:var(--text-muted)">:</span>';
@@ -1296,6 +1300,14 @@ window.Views = (function () {
     // ── Touch swipe gesture (mobile) ──
     var modal = document.getElementById('cooking-modal-inner');
     if (modal) {
+      var dotStrip = modal.querySelector('.cooking-modal__dots');
+      var activeDot = modal.querySelector('.cooking-modal__dot--active');
+      if (dotStrip && activeDot) {
+        window.requestAnimationFrame(function () {
+          activeDot.scrollIntoView({ block: 'nearest', inline: 'center' });
+        });
+      }
+
       var touchStartX = 0;
       var touchStartY = 0;
       modal.addEventListener('touchstart', function(e) {

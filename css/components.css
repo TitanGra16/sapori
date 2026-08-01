@@ -3311,14 +3311,19 @@ body.search-open #app-content {
 
 /* Mobile: fullscreen cooking modal */
 @media (max-width: 600px) {
-  .modal-overlay {
+  #modal-overlay:has(> .cooking-modal) {
     padding: 0;
     align-items: flex-end;
+    overflow: hidden;
   }
+
   .cooking-modal {
+    height: 100vh;
+    height: 100dvh;
     max-height: 100vh;
     max-height: 100dvh;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    min-height: 0;
+    border-radius: 0;
     max-width: 100%;
   }
 }
@@ -3744,6 +3749,13 @@ body.search-open #app-content {
   text-align: center;
 }
 
+.cooking-modal__timer-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
 .cooking-modal__timer-input-wrap {
   display: flex;
   align-items: center;
@@ -4041,8 +4053,9 @@ body.search-open #app-content {
 
 @media (max-width: 480px) {
   .cooking-modal__timer {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(90px, 1fr) minmax(146px, 1.35fr);
+    align-items: center;
   }
 
   .cooking-modal__timer > div,
@@ -4054,6 +4067,167 @@ body.search-open #app-content {
     flex: 1;
     min-width: 0;
     max-width: none;
+  }
+}
+
+/* ── Cooking: mobile readability and non-destructive scrolling ── */
+@media (max-width: 600px) {
+  .cooking-modal__header {
+    gap: var(--space-sm);
+    padding:
+      calc(var(--space-sm) + env(safe-area-inset-top, 0px))
+      var(--space-md)
+      var(--space-sm);
+  }
+
+  .cooking-modal__header-right {
+    gap: 6px;
+  }
+
+  .cooking-modal__title {
+    font-size: clamp(1.1rem, 5vw, 1.35rem);
+  }
+
+  .cooking-modal__wakelock {
+    min-width: 44px;
+    min-height: 45px;
+    justify-content: center;
+    padding: 6px 9px;
+  }
+
+  .cooking-modal__progress-wrap {
+    padding: var(--space-sm) var(--space-md) var(--space-xs);
+  }
+
+  .cooking-modal__dots {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: var(--space-xs) var(--space-md) var(--space-sm);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    overscroll-behavior-inline: contain;
+  }
+
+  .cooking-modal__dots::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cooking-modal__dot {
+    width: 46px;
+    height: 46px;
+    font-size: 0.8125rem;
+    scroll-snap-align: center;
+  }
+
+  .cooking-modal__body {
+    min-height: 0;
+    padding: var(--space-sm) var(--space-md);
+    gap: var(--space-sm);
+  }
+
+  .cooking-modal__step-card,
+  .cooking-modal__ing-panel,
+  .cooking-modal__timer,
+  .cooking-modal__swipe-hint {
+    flex: 0 0 auto;
+  }
+
+  .cooking-modal__step-card {
+    padding: var(--space-md);
+    gap: var(--space-sm);
+  }
+
+  .cooking-modal__step-text {
+    font-size: clamp(1.2rem, 4.8vw, 1.4rem);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .cooking-modal__step-notes {
+    display: block;
+    padding: var(--space-sm) var(--space-md);
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .cooking-modal__step-notes strong {
+    display: inline;
+    margin-right: 4px;
+  }
+
+  .cooking-modal__label,
+  .cooking-modal__wakelock,
+  .cooking-modal__step-counter,
+  .cooking-modal__progress-pct,
+  .cooking-modal__timer-label,
+  .cooking-modal__swipe-hint {
+    font-size: 0.8125rem;
+  }
+
+  .cooking-modal__step-badge,
+  .cooking-modal__ing-title,
+  .cooking-modal__ing-progress,
+  .cooking-modal__ing-chip {
+    font-size: 0.875rem;
+  }
+
+  .cooking-modal__ing-chip {
+    min-height: 45px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .cooking-modal__close,
+  .cooking-modal__timer-btn {
+    width: 45px;
+    height: 45px;
+  }
+
+  .cooking-modal__timer-input,
+  .cooking-modal__ing-header {
+    min-height: 45px;
+  }
+
+  .cooking-modal__timer {
+    min-height: 0;
+  }
+
+  .cooking-modal__timer-summary,
+  .cooking-modal__timer-setup,
+  .cooking-modal__timer-input-wrap {
+    min-width: 0;
+  }
+
+  .cooking-modal__footer {
+    padding: var(--space-sm) var(--space-md);
+    padding-bottom:
+      max(var(--space-sm), env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 390px) {
+  .cooking-modal__wakelock-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .cooking-modal__wakelock {
+    width: 44px;
+    padding-inline: 0;
   }
 }
 
