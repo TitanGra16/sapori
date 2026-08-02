@@ -1396,12 +1396,6 @@ window.Views = (function () {
     var diffEmoji = Utils.getDifficultyEmoji(recipe.difficulty);
     var diffMap = { facile: 'Facile', media: 'Media', difficile: 'Difficile' };
     var totalMinutes = (parseInt(recipe.prepTime, 10) || 0) + (parseInt(recipe.cookTime, 10) || 0);
-    var printedOn = options.printedOn || new Date().toLocaleDateString('it-IT', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-    var appUrl = options.appUrl || (window.location.origin + window.location.pathname);
     var recipeNumber = options.recipeNumber
       ? '<span class="print-recipe-sheet__number">Ricetta ' + esc(String(options.recipeNumber).padStart(2, '0')) + '</span>'
       : '';
@@ -1498,10 +1492,6 @@ window.Views = (function () {
           '</section>' +
           storageHtml +
         '</div>' +
-        '<footer class="print-recipe-sheet__footer">' +
-          '<span>Stampato il ' + esc(printedOn) + '</span>' +
-          '<span>' + esc(appUrl) + '</span>' +
-        '</footer>' +
       '</article>'
     );
   }

@@ -2472,7 +2472,6 @@
       printDiv = await CookbookBuilder.build(recipes, {
         buildRecipeHTML: Views.buildPrintableRecipeHTML,
         getCategoryInfo: Utils.getCategoryInfo,
-        appUrl: new URL('./', window.location.href).href,
         signal: controller.signal,
         batchSize: 20,
         onProgress: function (progress) {

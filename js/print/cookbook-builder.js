@@ -19,7 +19,7 @@
     return element;
   }
 
-  function buildCover(documentRef, count, printedOn, appUrl) {
+  function buildCover(documentRef, count) {
     var cover = documentRef.createElement('section');
     cover.className = 'print-cover-page';
     appendTextElement(documentRef, cover, 'div', 'print-cover-brand', '🍴 SAPORI');
@@ -36,11 +36,6 @@
       'print-cover-subtitle',
       count + (count === 1 ? ' ricetta della tradizione di casa' : ' ricette della tradizione di casa')
     );
-    var meta = documentRef.createElement('div');
-    meta.className = 'print-cover-meta';
-    appendTextElement(documentRef, meta, 'span', '', 'Esportato il ' + printedOn);
-    appendTextElement(documentRef, meta, 'span', '', appUrl);
-    cover.appendChild(meta);
     return cover;
   }
 
@@ -90,19 +85,13 @@
     var batchSize = Number.isInteger(Number(options.batchSize))
       ? Math.max(1, Math.min(100, Number(options.batchSize)))
       : 25;
-    var printedOn = options.printedOn || new Date().toLocaleDateString('it-IT', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-    var appUrl = String(options.appUrl || '');
     var sortedRecipes = recipes.slice().sort(function (first, second) {
       return String(first.name || '').localeCompare(String(second.name || ''), 'it-IT');
     });
 
     var root = documentRef.createElement('div');
     root.className = 'print-document-root print-document-root--cookbook print-all-recipes-container';
-    root.appendChild(buildCover(documentRef, sortedRecipes.length, printedOn, appUrl));
+    root.appendChild(buildCover(documentRef, sortedRecipes.length));
     var index = buildIndexShell(documentRef);
     root.appendChild(index.section);
 
@@ -159,9 +148,7 @@
         var wrapper = documentRef.createElement('div');
         wrapper.className = 'print-cookbook-recipe';
         wrapper.innerHTML = buildRecipeHTML(recipe, {
-          recipeNumber: recipeIndex + 1,
-          printedOn: printedOn,
-          appUrl: appUrl
+          recipeNumber: recipeIndex + 1
         });
         return wrapper;
       },
