@@ -12,6 +12,7 @@ const APP_SHELL = [
   './css/pages/account.css',
   './js/bootstrap-theme.js',
   './js/sync/sync-preparation.js',
+  './js/print/print-recipe-view.js',
   './js/db.js',
   './js/utils.js',
   './js/theme.js',
