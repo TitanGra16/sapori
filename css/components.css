@@ -76,8 +76,8 @@ body.search-open #app-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 45px;
+  height: 45px;
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   transition:
@@ -247,7 +247,7 @@ body.search-open #app-content {
 .search-bar input {
   width: 100%;
   height: 50px;
-  padding: 0 var(--space-md) 0 48px;
+  padding: 0 64px 0 48px;
   font-size: 0.95rem;
   color: var(--text-primary);
   background: var(--bg-secondary);
@@ -278,8 +278,8 @@ body.search-open #app-content {
   right: max(calc(var(--space-md) + var(--space-sm)), calc(env(safe-area-inset-right, 0px) + var(--space-sm)));
   top: 50%;
   transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
+  width: 45px;
+  height: 45px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -318,7 +318,7 @@ body.search-open #app-content {
   align-items: center;
   gap: 6px;
   padding: 8px 18px;
-  min-height: 44px;
+  min-height: 45px;
   max-width: min(80vw, 320px);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -374,6 +374,7 @@ body.search-open #app-content {
 .sort-select select {
   appearance: none;
   -webkit-appearance: none;
+  min-height: 45px;
   padding: 8px 36px 8px 14px;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -674,8 +675,8 @@ body.search-open #app-content {
   top: var(--space-md);
   left: var(--space-md);
   z-index: 3;
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -701,6 +702,30 @@ body.search-open #app-content {
 
 .recipe-detail__back:active {
   transform: scale(0.9);
+}
+
+.recipe-detail__servings-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.recipe-detail__servings-button {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.recipe-detail__servings-value {
+  min-width: 1.5ch;
+  font-weight: 700;
+  text-align: center;
 }
 
 /* Detail title */
@@ -1880,8 +1905,8 @@ body.search-open #app-content {
 }
 
 .toast .toast-dismiss {
-  width: 44px;
-  height: 44px;
+  width: 45px;
+  height: 45px;
   display: flex;
   align-items: center;
   justify-content: center;

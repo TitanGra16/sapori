@@ -624,11 +624,11 @@ window.Views = (function () {
         '<div class="recipe-detail__info-item"><span>' + Icons.flame + '</span><span>Cottura: ' + esc(Utils.formatTime(recipe.cookTime || 0)) + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + esc(diffEmoji) + '</span><span>' + esc(recipe.difficulty || 'facile') + '</span></div>' +
         '<div class="recipe-detail__info-item"><span>' + Icons.users + '</span>' +
-          '<div style="display:inline-flex;align-items:center;gap:.3rem;">' +
-            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-down" aria-label="Riduci porzioni" style="width:40px;height:40px;min-width:40px;padding:0;font-size:18px;border:1px solid var(--border);border-radius:99px;line-height:1">-</button>' +
-            '<span id="detail-servings-val" data-base-servings="' + (recipe.servings || 4) + '" style="font-weight:700;">' + (recipe.servings || 4) + '</span>' +
+          '<div class="recipe-detail__servings-control">' +
+            '<button type="button" class="btn btn--icon btn--small recipe-detail__servings-button" data-action="scale-servings-down" aria-label="Riduci porzioni">-</button>' +
+            '<span class="recipe-detail__servings-value" id="detail-servings-val" data-base-servings="' + (recipe.servings || 4) + '">' + (recipe.servings || 4) + '</span>' +
             '<span>porzioni</span>' +
-            '<button type="button" class="btn btn--icon btn--small" data-action="scale-servings-up" aria-label="Aumenta porzioni" style="width:40px;height:40px;min-width:40px;padding:0;font-size:18px;border:1px solid var(--border);border-radius:99px;line-height:1">+</button>' +
+            '<button type="button" class="btn btn--icon btn--small recipe-detail__servings-button" data-action="scale-servings-up" aria-label="Aumenta porzioni">+</button>' +
           '</div>' +
         '</div>' +
       '</div>';
