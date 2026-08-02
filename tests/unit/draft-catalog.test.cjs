@@ -14,6 +14,7 @@ function escapeHtml(value) {
 function createContext(additions = {}, withSchema = false) {
   return loadAppScripts([
     ...(withSchema ? ['js/drafts/draft-schema.js'] : []),
+    'js/drafts/draft-identity.js',
     'js/drafts/draft-catalog.js'
   ], {
     Utils: { escapeHtml },
@@ -122,6 +123,39 @@ test('non scambia per residuo una bozza con lo stesso ID ma contenuto diverso', 
   DraftCatalog.render(container, [item]);
   assert.match(container.innerHTML, /Copia separata/);
   assert.match(container.innerHTML, /Apri come nuova/);
+});
+
+test('rimanda il confronto alla foto completa quando il testo coincide', () => {
+  const { DraftCatalog } = createContext();
+  const item = DraftCatalog.describe(
+    [
+      record({
+        draftId: 'bozza-con-foto',
+        data: {
+          recipe: {
+            id: 'ricetta-con-foto',
+            name: 'Torta fotografata',
+            image: 'data:image/png;base64,QUFB'
+          }
+        }
+      })
+    ],
+    [
+      {
+        id: 'ricetta-con-foto',
+        name: 'Torta fotografata',
+        hasImage: true
+      }
+    ]
+  )[0];
+
+  assert.equal(item.status, 'photo-check');
+  assert.equal(item.savedRecipeId, null);
+
+  const container = { innerHTML: '' };
+  DraftCatalog.render(container, [item]);
+  assert.match(container.innerHTML, /Foto da verificare/);
+  assert.match(container.innerHTML, /Verifica ricetta/);
 });
 
 test('ignora record con destinazioni o revisioni non sicure', () => {

@@ -73,31 +73,22 @@
     return byId;
   }
 
-  function recipeFingerprint(recipe) {
-    recipe = isPlainObject(recipe) ? recipe : {};
-    return JSON.stringify({
-      name: String(recipe.name || '').toLocaleLowerCase('it-IT'),
-      category: recipe.category || 'altro',
-      description: recipe.description || '',
-      notes: recipe.notes || '',
-      storage: recipe.storage || '',
-      ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
-      steps: Array.isArray(recipe.steps) ? recipe.steps : [],
-      prepTime: Number(recipe.prepTime) || 0,
-      cookTime: Number(recipe.cookTime) || 0,
-      difficulty: recipe.difficulty || 'media',
-      servings: Number(recipe.servings) || 4
-    });
-  }
-
-  function confidentlyMatchesSavedRecipe(draftRecipe, savedRecipe) {
-    if (!isPlainObject(draftRecipe) || !isPlainObject(savedRecipe)) return false;
-    if (recipeFingerprint(draftRecipe) !== recipeFingerprint(savedRecipe)) {
-      return false;
+  function compareWithSavedSummary(draftRecipe, savedRecipe) {
+    if (
+      !isPlainObject(draftRecipe) ||
+      !isPlainObject(savedRecipe) ||
+      !global.DraftIdentity ||
+      typeof global.DraftIdentity.sameContent !== 'function'
+    ) {
+      return 'different';
     }
-    // getRecipeSummaries espone soltanto la miniatura: se è coinvolta una
-    // foto, la verifica esatta viene rimandata a app.js prima di rimuovere.
-    return !draftRecipe.image && !savedRecipe.hasImage;
+    if (!global.DraftIdentity.sameContent(draftRecipe, savedRecipe)) {
+      return 'different';
+    }
+    // getRecipeSummaries non espone la foto completa. Se una delle versioni
+    // ha una foto, app.js esegue il confronto esatto prima di rimuovere.
+    if (draftRecipe.image || savedRecipe.hasImage) return 'photo-check';
+    return 'same';
   }
 
   function describe(records, recipes) {
@@ -135,12 +126,15 @@
         savedId &&
         existingRecipes.has(savedId)
       ) {
-        status = confidentlyMatchesSavedRecipe(
+        var summaryComparison = compareWithSavedSummary(
           normalizedRecipe,
           existingRecipes.get(savedId)
-        )
+        );
+        status = summaryComparison === 'same'
           ? 'already-saved'
-          : 'identity-conflict';
+          : summaryComparison === 'photo-check'
+            ? 'photo-check'
+            : 'identity-conflict';
       } else if (
         normalized.valid &&
         record.mode === 'edit' &&
@@ -238,8 +232,15 @@
     if (item.status === 'identity-conflict') {
       return {
         badge: 'Copia separata',
-        message: 'Esiste già una ricetta con lo stesso identificatore, ma il contenuto è diverso o include una foto da verificare.',
+        message: 'Esiste già una ricetta con lo stesso identificatore, ma il contenuto è diverso.',
         action: 'Apri come nuova'
+      };
+    }
+    if (item.status === 'photo-check') {
+      return {
+        badge: 'Foto da verificare',
+        message: 'Il testo coincide con una ricetta salvata. Apri la bozza per confrontare anche la foto completa in sicurezza.',
+        action: 'Verifica ricetta'
       };
     }
     if (item.status === 'orphaned') {

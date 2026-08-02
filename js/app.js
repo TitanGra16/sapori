@@ -1036,10 +1036,54 @@
     return Boolean(
       draftRecipe &&
       savedRecipe &&
-      typeof DB._recipeFingerprint === 'function' &&
-      DB._recipeFingerprint(draftRecipe) === DB._recipeFingerprint(savedRecipe) &&
-      (draftRecipe.image || null) === (savedRecipe.image || null)
+      window.DraftIdentity &&
+      typeof DraftIdentity.sameRecipeVersion === 'function' &&
+      DraftIdentity.sameRecipeVersion(draftRecipe, savedRecipe)
     );
+  }
+
+  async function preserveCollidingCreateDraft(session, recipe) {
+    var target = {
+      mode: 'create',
+      recipeId: null,
+      draftId: DraftManager.createId('copia')
+    };
+    var copyRecipe = Object.assign({}, recipe, {
+      id: DraftIdentity.recipeIdForDraft(target.draftId),
+      contentVersion: 0,
+      favoriteVersion: 0,
+      imageVersion: 0,
+      isFavorite: false
+    });
+    var payload = collectDraftPayload();
+    payload.recipe = copyRecipe;
+    payload.baseContentVersion = 0;
+    payload.baseUpdatedAt = null;
+
+    await DraftStore.save(target, payload, {
+      writerId: DraftManager.createId('copia'),
+      expectedRevision: null
+    });
+    if (session) {
+      try {
+        await session.discard();
+      } catch (cleanupError) {
+        console.warn(
+          'La copia è al sicuro, ma la bozza sorgente non è stata rimossa:',
+          cleanupError
+        );
+      }
+      await session.close({
+        flush: false,
+        forceClose: true
+      });
+    }
+    if (state.draftSession === session) {
+      state.draftSession = null;
+      state.draftBaseRecipe = null;
+      state.draftRecoveryBlocked = false;
+    }
+    return target;
   }
 
   async function recoverOrphanedDraft(record, snapshot) {
@@ -1444,6 +1488,7 @@
           window.history.replaceState(null, '', hash);
         }
         var emptyRecipe = Recipes.createEmptyRecipe();
+        emptyRecipe.id = DraftIdentity.recipeIdForDraft(createDraftId);
         state.draftBaseRecipe = emptyRecipe;
         var createDraft = await prepareDraftForm('create', emptyRecipe, createDraftId);
         if (token !== state.routeToken) {
@@ -1490,7 +1535,7 @@
         }
         if (createDraft.createIdentityConflict) {
           createDraft.recipe = Object.assign({}, createDraft.recipe, {
-            id: Utils.generateId(),
+            id: DraftIdentity.copyRecipeIdForDraft(createDraftId),
             contentVersion: 0,
             isFavorite: false
           });
@@ -2076,6 +2121,9 @@
     var wasInert = appContent.inert === true;
     var successMessage = null;
     var shouldNavigateHome = false;
+    var postCollisionHash = null;
+    var postCollisionMessage = null;
+    var postCollisionMessageType = 'warning';
 
     state.savingRecipe = true;
     appContent.inert = true;
@@ -2175,15 +2223,62 @@
           'warning'
         );
       } else if (e && e.code === 'RECIPE_ALREADY_EXISTS') {
-        if (draftSessionAtSave) {
-          await draftSessionAtSave.flush().catch(function (draftError) {
-            console.warn('Impossibile aggiornare la bozza duplicata:', draftError);
-          });
+        var existingRecipe = e.recipeId
+          ? await DB.getRecipe(e.recipeId)
+          : null;
+        if (existingRecipe && sameSavedRecipeVersion(recipe, existingRecipe)) {
+          try {
+            await discardDraftSession(draftSessionAtSave);
+          } catch (residualError) {
+            console.warn(
+              'Ricetta già salvata, ma residuo non rimosso:',
+              residualError
+            );
+            if (draftSessionAtSave) {
+              await draftSessionAtSave.close({
+                flush: false,
+                forceClose: true
+              }).catch(function () {});
+            }
+          }
+          if (state.draftSession === draftSessionAtSave) {
+            state.draftSession = null;
+            state.draftBaseRecipe = null;
+            state.draftRecoveryBlocked = false;
+          }
+          postCollisionHash =
+            '#detail/' + encodeURIComponent(existingRecipe.id);
+          postCollisionMessage =
+            'La stessa ricetta era già stata salvata nell’altra scheda.';
+          postCollisionMessageType = 'info';
+        } else {
+          try {
+            var preservedTarget = await preserveCollidingCreateDraft(
+              draftSessionAtSave,
+              recipe
+            );
+            postCollisionHash = draftHash(preservedTarget);
+            postCollisionMessage =
+              'L’altra scheda ha salvato per prima: questa versione è al sicuro come nuova copia.';
+          } catch (preserveError) {
+            console.error(
+              'Impossibile creare una copia della bozza duplicata:',
+              preserveError
+            );
+            if (draftSessionAtSave) {
+              await draftSessionAtSave.flush().catch(function (draftError) {
+                console.warn(
+                  'Impossibile aggiornare la bozza duplicata:',
+                  draftError
+                );
+              });
+            }
+            Utils.showToast(
+              'La ricetta esiste già e non riesco a creare una copia sicura. Non chiudere questa scheda e riprova.',
+              'error'
+            );
+          }
         }
-        Utils.showToast(
-          'Questa ricetta è già stata salvata in un’altra scheda. La tua bozza è stata mantenuta per il confronto.',
-          'warning'
-        );
       } else {
         Utils.showToast('Errore nel salvataggio: ' + e.message, 'error');
       }
@@ -2201,6 +2296,11 @@
       }
     }
 
+    if (postCollisionHash) {
+      Utils.showToast(postCollisionMessage, postCollisionMessageType);
+      navigateTo(postCollisionHash, true);
+      return;
+    }
     if (successMessage) {
       Utils.showToast(successMessage, 'success');
       if (shouldNavigateHome) navigateTo('#home', true);

@@ -61,6 +61,25 @@ async function recipeCount(page) {
   return page.evaluate(async () => (await DB.getAllRecipes()).length);
 }
 
+async function listCreateDrafts(page) {
+  return page.evaluate(async () => {
+    const records = await DraftStore.list({ mode: 'create' });
+    return records.map(record => ({
+      draftId: record.draftId,
+      revision: record.revision,
+      data: record.data
+    }));
+  });
+}
+
+async function waitForDraftStatus(page, status) {
+  await expect(page.locator('#draft-save-status')).toHaveAttribute(
+    'data-status',
+    status,
+    { timeout: 10_000 }
+  );
+}
+
 async function fillValidRecipe(page, name) {
   await page.locator('#input-name').fill(name);
   await page.locator('#input-description').fill(
@@ -137,6 +156,16 @@ async function openDraftDirectly(page, target) {
     APP_PATH + '#create/' + encodeURIComponent(target.draftId)
   );
   await expect(page.locator('#recipe-form')).toBeVisible();
+}
+
+async function goToDraftLibrary(page) {
+  await page.evaluate(() => {
+    location.hash = '#drafts';
+  });
+  await expect(page).toHaveURL(/#drafts$/);
+  await expect(
+    page.getByRole('heading', { name: 'Bozze locali', level: 1 })
+  ).toBeVisible();
 }
 
 test('la creazione UI conserva lo stesso ID del modulo e della bozza', async ({
@@ -258,7 +287,7 @@ test('l accesso diretto a una bozza già salvata apre il dettaglio e ripulisce i
   expect(await recipeCount(page)).toBe(1);
 });
 
-test('due schede con lo stesso ID non si sovrascrivono e conservano la bozza perdente', async ({
+test('due schede con lo stesso ID non si sovrascrivono e trasformano la bozza perdente in copia', async ({
   page,
   context
 }) => {
@@ -301,20 +330,22 @@ test('due schede con lo stesso ID non si sovrascrivono e conservano la bozza per
 
   await submitRecipe(secondPage);
 
-  await expect(secondPage).toHaveURL(
-    new RegExp(`#create/${encodeURIComponent(secondTarget.draftId)}$`)
-  );
+  await expect(secondPage).toHaveURL(/#create\/copia-[^/]+$/);
   await expect(
     secondPage.locator('.toast--warning .toast-message')
-  ).toContainText('già stata salvata in un’altra scheda');
+  ).toContainText('al sicuro come nuova copia');
 
   const storedRecipe = await secondPage.evaluate(id => DB.getRecipe(id), sharedRecipeId);
   expect(storedRecipe.name).toBe('Versione salvata per prima');
   expect(await recipeCount(secondPage)).toBe(1);
 
-  const preservedDraft = await readDraft(secondPage, secondTarget);
+  await expect.poll(() => readDraft(secondPage, secondTarget)).toBeNull();
+  const copyMatch = new URL(secondPage.url()).hash.match(/^#create\/([^/]+)$/);
+  expect(copyMatch).not.toBeNull();
+  const copyTarget = createTarget(decodeURIComponent(copyMatch[1]));
+  const preservedDraft = await readDraft(secondPage, copyTarget);
   expect(preservedDraft).not.toBeNull();
-  expect(preservedDraft.data.recipe.id).toBe(sharedRecipeId);
+  expect(preservedDraft.data.recipe.id).not.toBe(sharedRecipeId);
   expect(preservedDraft.data.recipe.name).toBe(
     'Versione concorrente da preservare'
   );
@@ -323,12 +354,9 @@ test('due schede con lo stesso ID non si sovrascrivono e conservano la bozza per
   const recoveredPage = await context.newPage();
   await bootApp(
     recoveredPage,
-    APP_PATH + '#create/' + encodeURIComponent(secondTarget.draftId)
+    APP_PATH + '#create/' + encodeURIComponent(copyTarget.draftId)
   );
   await expect(recoveredPage.locator('#recipe-form')).toBeVisible();
-  await expect(
-    recoveredPage.locator('.draft-recovery-banner')
-  ).toContainText('Bozza recuperata come nuova copia');
   await expect(recoveredPage.locator('#input-name')).toHaveValue(
     'Versione concorrente da preservare'
   );
@@ -351,5 +379,266 @@ test('due schede con lo stesso ID non si sovrascrivono e conservano la bozza per
   expect(recoveredStoredRecipe.name).toBe(
     'Versione concorrente da preservare'
   );
-  await expect.poll(() => readDraft(recoveredPage, secondTarget)).toBeNull();
+  await expect.poll(() => readDraft(recoveredPage, copyTarget)).toBeNull();
+});
+
+test('la stessa URL aperta prima del primo autosalvataggio condivide l ID e non crea duplicati', async ({
+  page,
+  context
+}) => {
+  await openHome(page);
+  const target = await openNewRecipe(page);
+  const sharedUrl = page.url();
+  const firstRecipeId = await page.locator('#input-id').inputValue();
+  expect(await readDraft(page, target)).toBeNull();
+
+  const secondPage = await context.newPage();
+  await bootApp(secondPage, sharedUrl);
+  await expect(secondPage.locator('#recipe-form')).toBeVisible();
+  const secondRecipeId = await secondPage.locator('#input-id').inputValue();
+
+  await fillValidRecipe(page, 'Ricetta dalla stessa URL');
+  await waitForDraftSaved(page);
+  await fillValidRecipe(secondPage, 'Ricetta dalla stessa URL');
+  await waitForDraftStatus(secondPage, 'conflict');
+
+  await submitRecipe(page);
+  await expect(page).toHaveURL(/#home$/);
+  await submitRecipe(secondPage);
+
+  expect(secondRecipeId).toBe(firstRecipeId);
+  await expect.poll(() => recipeCount(secondPage)).toBe(1);
+  const recipes = await secondPage.evaluate(async () => {
+    return (await DB.getAllRecipes()).map(recipe => ({
+      id: recipe.id,
+      name: recipe.name
+    }));
+  });
+  expect(recipes).toEqual([
+    {
+      id: firstRecipeId,
+      name: 'Ricetta dalla stessa URL'
+    }
+  ]);
+});
+
+test('la versione divergente della stessa bozza diventa una copia durevole e salvabile', async ({
+  page,
+  context
+}) => {
+  await openHome(page);
+  const originalTarget = await openNewRecipe(page);
+  await fillValidRecipe(page, 'Versione condivisa iniziale');
+  await waitForDraftSaved(page);
+  const sharedUrl = page.url();
+  const sharedRecipeId = await page.locator('#input-id').inputValue();
+
+  const losingPage = await context.newPage();
+  await bootApp(losingPage, sharedUrl);
+  await expect(losingPage.locator('#recipe-form')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Informazioni generali' }).click();
+  await page.locator('#input-name').fill('Versione salvata per prima');
+  await waitForDraftSaved(page);
+
+  await losingPage.getByRole('tab', { name: 'Informazioni generali' }).click();
+  await losingPage
+    .locator('#input-name')
+    .fill('Versione divergente da recuperare');
+  await waitForDraftStatus(losingPage, 'conflict');
+
+  await submitRecipe(page);
+  await expect(page).toHaveURL(/#home$/);
+  await submitRecipe(losingPage);
+
+  let recoveredDraft = null;
+  await expect.poll(async () => {
+    const drafts = await listCreateDrafts(losingPage);
+    recoveredDraft = drafts.find(record => (
+      record.data &&
+      record.data.recipe &&
+      record.data.recipe.name === 'Versione divergente da recuperare'
+    )) || null;
+    return Boolean(recoveredDraft);
+  }).toBe(true);
+  expect(recoveredDraft.draftId).not.toBe(originalTarget.draftId);
+
+  await losingPage.close();
+  const recoveredPage = await context.newPage();
+  await bootApp(
+    recoveredPage,
+    APP_PATH + '#create/' + encodeURIComponent(recoveredDraft.draftId)
+  );
+  await expect(recoveredPage.locator('#recipe-form')).toBeVisible();
+  await expect(recoveredPage.locator('#input-name')).toHaveValue(
+    'Versione divergente da recuperare'
+  );
+  const recoveredRecipeId = await recoveredPage.locator('#input-id').inputValue();
+  expect(recoveredRecipeId).not.toBe(sharedRecipeId);
+
+  await submitRecipe(recoveredPage);
+  await expect(recoveredPage).toHaveURL(/#home$/);
+  await expect.poll(() => recipeCount(recoveredPage)).toBe(2);
+  const recipesById = await recoveredPage.evaluate(async () => {
+    return Object.fromEntries(
+      (await DB.getAllRecipes()).map(recipe => [recipe.id, recipe.name])
+    );
+  });
+  expect(recipesById[sharedRecipeId]).toBe('Versione salvata per prima');
+  expect(recipesById[recoveredRecipeId]).toBe(
+    'Versione divergente da recuperare'
+  );
+  await expect.poll(
+    () => readDraft(recoveredPage, createTarget(recoveredDraft.draftId))
+  ).toBeNull();
+});
+
+test('una differenza di sole maiuscole resta una copia e non viene eliminata come residuo', async ({
+  page
+}) => {
+  await openHome(page);
+  const savedRecipeId = 'ricetta-con-maiuscole';
+  const target = createTarget('bozza-con-minuscole');
+  const savedPayload = draftPayload(savedRecipeId, 'Torta Classica');
+  const divergentPayload = draftPayload(savedRecipeId, 'torta classica');
+
+  await page.evaluate(
+    payload => DB.addRecipe(payload.recipe, { preserveId: true }),
+    savedPayload
+  );
+  await seedDraft(
+    page,
+    target,
+    divergentPayload,
+    'test-differenza-maiuscole'
+  );
+
+  await page.goto(
+    APP_PATH + '#create/' + encodeURIComponent(target.draftId)
+  );
+
+  await expect(page.locator('#recipe-form')).toBeVisible();
+  await expect(page).toHaveURL(
+    new RegExp(`#create/${encodeURIComponent(target.draftId)}$`)
+  );
+  await expect(page.locator('#input-name')).toHaveValue('torta classica');
+  expect(await readDraft(page, target)).not.toBeNull();
+  const copyRecipeId = await page.locator('#input-id').inputValue();
+  expect(copyRecipeId).not.toBe(savedRecipeId);
+
+  await submitRecipe(page);
+  await expect(page).toHaveURL(/#home$/);
+  await expect.poll(() => recipeCount(page)).toBe(2);
+  const names = await page.evaluate(async () => {
+    return (await DB.getAllRecipes()).map(recipe => recipe.name).sort();
+  });
+  expect(names).toEqual(['Torta Classica', 'torta classica'].sort());
+});
+
+test('un residuo con foto identica apre la ricetta salvata e viene rimosso', async ({
+  page
+}) => {
+  await openHome(page);
+  const recipeId = 'ricetta-foto-identica';
+  const target = createTarget('bozza-foto-identica');
+  const fullImage = 'data:image/jpeg;base64,Rk9UT19JREVOVElDQQ==';
+  const thumbnail = 'data:image/jpeg;base64,TUlOSV9JREVOVElDQQ==';
+  const payload = draftPayload(recipeId, 'Ricetta con foto identica');
+  payload.recipe.image = fullImage;
+  payload.recipe.imageThumbnail = thumbnail;
+
+  await page.evaluate(
+    recipe => DB.addRecipe(recipe, { preserveId: true }),
+    payload.recipe
+  );
+  await seedDraft(page, target, payload, 'test-foto-identica');
+  await goToDraftLibrary(page);
+
+  const card = page.locator('.draft-card').filter({
+    has: page.getByRole('heading', {
+      name: 'Ricetta con foto identica',
+      level: 2
+    })
+  });
+  await expect(card).toBeVisible();
+  await card.locator('[data-action="resume-draft"]').click();
+
+  await expect(page).toHaveURL(
+    new RegExp(`#detail/${encodeURIComponent(recipeId)}$`)
+  );
+  await expect.poll(() => readDraft(page, target)).toBeNull();
+  expect(await recipeCount(page)).toBe(1);
+  const storedImage = await page.evaluate(id => (
+    DB.getRecipe(id).then(recipe => recipe.image)
+  ), recipeId);
+  expect(storedImage).toBe(fullImage);
+});
+
+test('un residuo con foto diversa viene salvato come nuova copia senza sovrascrivere l originale', async ({
+  page
+}) => {
+  await openHome(page);
+  const savedRecipeId = 'ricetta-foto-originale';
+  const target = createTarget('bozza-foto-diversa');
+  const originalImage = 'data:image/jpeg;base64,Rk9UT19PUklHSU5BTEU=';
+  const draftImage = 'data:image/jpeg;base64,Rk9UT19ESVZFUlNB';
+  const savedPayload = draftPayload(
+    savedRecipeId,
+    'Ricetta fotografica salvata'
+  );
+  savedPayload.recipe.image = originalImage;
+  savedPayload.recipe.imageThumbnail =
+    'data:image/jpeg;base64,TUlOSV9PUklHSU5BTEU=';
+  const divergentPayload = draftPayload(
+    savedRecipeId,
+    'Ricetta fotografica salvata'
+  );
+  divergentPayload.recipe.image = draftImage;
+  divergentPayload.recipe.imageThumbnail =
+    'data:image/jpeg;base64,TUlOSV9ESVZFUlNB';
+
+  await page.evaluate(
+    recipe => DB.addRecipe(recipe, { preserveId: true }),
+    savedPayload.recipe
+  );
+  await seedDraft(
+    page,
+    target,
+    divergentPayload,
+    'test-foto-diversa'
+  );
+  await goToDraftLibrary(page);
+
+  const card = page.locator('.draft-card').filter({
+    has: page.getByRole('heading', {
+      name: 'Ricetta fotografica salvata',
+      level: 2
+    })
+  });
+  await expect(card).toHaveClass(/draft-card--photo-check/);
+  await card.locator('[data-action="resume-draft"]').click();
+
+  await expect(page.locator('#recipe-form')).toBeVisible();
+  const copyRecipeId = await page.locator('#input-id').inputValue();
+  expect(copyRecipeId).not.toBe(savedRecipeId);
+  await submitRecipe(page);
+  await expect(page).toHaveURL(/#home$/);
+  await expect.poll(() => recipeCount(page)).toBe(2);
+
+  const images = await page.evaluate(async ({ originalId, copyId }) => {
+    const [original, copy] = await Promise.all([
+      DB.getRecipe(originalId),
+      DB.getRecipe(copyId)
+    ]);
+    return {
+      original: original && original.image,
+      copy: copy && copy.image
+    };
+  }, {
+    originalId: savedRecipeId,
+    copyId: copyRecipeId
+  });
+  expect(images.original).toBe(originalImage);
+  expect(images.copy).toBe(draftImage);
+  await expect.poll(() => readDraft(page, target)).toBeNull();
 });

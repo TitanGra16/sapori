@@ -4,6 +4,10 @@ const assert = require('node:assert/strict');
 const { indexedDB, IDBKeyRange } = require('fake-indexeddb');
 const { loadAppScripts, projectRoot } = require('../helpers/load-app.cjs');
 
+function plain(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function createContext() {
   return loadAppScripts([
     'js/utils.js',
@@ -121,6 +125,54 @@ test('segnala una collisione senza sovrascrivere la ricetta esistente', async t 
   assert.equal(recipes.length, 1);
   assert.equal(recipes[0].name, 'Versione originale');
   assert.equal(recipes[0].ingredients[0].name, 'Pane');
+});
+
+test('una collisione non altera foto miniatura o coda della ricetta esistente', async t => {
+  const context = createContext();
+  t.after(() => deleteDatabase(context));
+  await context.DB.init();
+  await context.SyncPreparation.prepareDevice();
+
+  const firstImage = 'data:image/png;base64,QUFB';
+  const firstThumbnail = 'data:image/jpeg;base64,VEhVTUIx';
+  const secondImage = 'data:image/png;base64,QkJC';
+  const secondThumbnail = 'data:image/jpeg;base64,VEhVTUIy';
+  const recipeId = 'ricetta-foto-esistente';
+
+  await context.DB.addRecipe({
+    id: recipeId,
+    name: 'Versione originale con foto',
+    category: 'altro',
+    ingredients: [{ name: 'Pane' }],
+    steps: [{ text: 'Servi' }],
+    image: firstImage,
+    imageThumbnail: firstThumbnail
+  }, { preserveId: true });
+  const queueBeforeCollision = plain(
+    await context.SyncPreparation.getPendingChanges()
+  );
+
+  await assert.rejects(
+    () => context.DB.addRecipe({
+      id: recipeId,
+      name: 'Versione concorrente con foto',
+      category: 'altro',
+      ingredients: [{ name: 'Farina' }],
+      steps: [{ text: 'Impasta' }],
+      image: secondImage,
+      imageThumbnail: secondThumbnail
+    }, { preserveId: true }),
+    error => error.code === 'RECIPE_ALREADY_EXISTS'
+  );
+
+  const stored = await getStoredRecords(context, recipeId);
+  assert.equal(stored.recipe.name, 'Versione originale con foto');
+  assert.equal(stored.recipe.imageThumbnail, firstThumbnail);
+  assert.equal(stored.image.data, firstImage);
+  assert.deepEqual(
+    plain(await context.SyncPreparation.getPendingChanges()),
+    queueBeforeCollision
+  );
 });
 
 test('il preferito non altera data di modifica o foto della ricetta', async t => {

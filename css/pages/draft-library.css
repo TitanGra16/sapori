@@ -125,6 +125,10 @@
   border-color: var(--warning);
 }
 
+.draft-card--photo-check {
+  border-color: var(--warning);
+}
+
 .draft-card--orphaned {
   border-color: var(--warning);
 }
@@ -174,6 +178,10 @@
 }
 
 .draft-card--identity-conflict .draft-card__badge {
+  color: var(--warning);
+}
+
+.draft-card--photo-check .draft-card__badge {
   color: var(--warning);
 }
 
