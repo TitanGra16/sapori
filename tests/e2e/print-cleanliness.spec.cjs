@@ -76,3 +76,44 @@ test('non ripete metadati tecnici nella copertina o nel ricettario', async ({ pa
   expect(result.text).not.toContain('file:///');
   expect(result.text).not.toContain('C:/Users/');
 });
+
+test('usa un layout frammentabile per non perdere righe nei PDF lunghi', async ({ page }) => {
+  await page.emulateMedia({ media: 'print' });
+  const result = await page.evaluate(recipe => {
+    const longRecipe = {
+      ...recipe,
+      ingredients: Array.from({ length: 40 }, (_, index) => ({
+        name: 'Ingrediente numero ' + (index + 1),
+        quantity: String(index + 1),
+        unit: 'g',
+        notes: ''
+      })),
+      steps: Array.from({ length: 60 }, (_, index) => ({
+        text: 'Passaggio numero ' + (index + 1),
+        notes: ''
+      }))
+    };
+    const root = document.createElement('div');
+    root.className = 'print-document-root print-document-root--cookbook';
+    root.innerHTML = '<div class="print-cookbook-recipe">' +
+      Views.buildPrintableRecipeHTML(longRecipe, { recipeNumber: 1 }) +
+      '</div>';
+    document.body.appendChild(root);
+    document.body.classList.add('printing-all-recipes');
+    const sheet = root.querySelector('.print-recipe-sheet');
+    const snapshot = {
+      display: getComputedStyle(sheet).display,
+      ingredients: sheet.querySelectorAll('.print-recipe-sheet__ingredient').length,
+      steps: sheet.querySelectorAll('.print-recipe-sheet__step').length
+    };
+    root.remove();
+    document.body.classList.remove('printing-all-recipes');
+    return snapshot;
+  }, printableRecipe());
+
+  expect(result).toEqual({
+    display: 'block',
+    ingredients: 40,
+    steps: 60
+  });
+});

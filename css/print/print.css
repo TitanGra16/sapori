@@ -84,6 +84,17 @@
   flex-shrink: 0;
 }
 
+.print-recipe-sheet__header,
+.print-recipe-sheet__meta,
+.print-recipe-sheet__section,
+.print-recipe-sheet__aftercare {
+  position: relative;
+}
+
+.print-recipe-sheet__intro {
+  display: block;
+}
+
 .print-recipe-sheet__brand-row {
   display: flex;
   align-items: center;
@@ -214,6 +225,7 @@
   font-family: var(--font-heading), Georgia, serif;
   font-size: 1.18em;
   font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .print-recipe-sheet__ingredients,
@@ -362,22 +374,6 @@
   border-bottom: 1px dotted #cdbeb6;
 }
 
-.print-recipe-sheet__footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 1em;
-  margin-top: auto;
-  padding-top: 0.6em;
-  color: #89766d;
-  font-size: 0.68em;
-}
-
-.print-recipe-sheet__footer span:last-child {
-  color: #a32f1d;
-  text-align: right;
-  overflow-wrap: anywhere;
-}
-
 @media print {
   :root,
   html,
@@ -420,12 +416,150 @@
     padding: 0 !important;
   }
 
+  /* Fallback leggibile per chi usa Ctrl+P direttamente dal dettaglio. */
+  body:not(.printing-recipe):not(.printing-all-recipes) :is(
+    #app-header,
+    #bottom-nav,
+    .btn--fab,
+    .modal-overlay,
+    #modal-overlay,
+    .install-prompt,
+    .filter-bar,
+    .recipe-detail__hero,
+    .recipe-detail__hero-placeholder,
+    .recipe-detail__back,
+    .recipe-detail__actions,
+    .recipe-detail__actions-row,
+    .recipe-detail__dates-row,
+    .no-print,
+    [data-action="start-cooking"]
+  ) {
+    display: none !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) :is(
+    #app-content,
+    .view,
+    .recipe-detail
+  ) {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) .recipe-detail__title {
+    margin: 0 0 5mm !important;
+    padding-bottom: 2.5mm !important;
+    border-bottom: 0.7mm solid #c94127 !important;
+    color: #a32f1d !important;
+    font-size: 24pt !important;
+    line-height: 1.2 !important;
+    break-after: avoid !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) .recipe-card__category {
+    display: inline-flex !important;
+    margin: 0 0 6mm !important;
+    padding: 1mm 3.5mm !important;
+    border: 0.4mm solid #c94127 !important;
+    border-radius: 99px !important;
+    color: #a32f1d !important;
+    background: transparent !important;
+    font-size: 9pt !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) .recipe-detail__info-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 3mm 12mm !important;
+    margin-bottom: 8mm !important;
+    padding: 3mm 0 !important;
+    border-top: 1px dotted #cdbeb6 !important;
+    border-bottom: 1px dotted #cdbeb6 !important;
+    background: transparent !important;
+    break-inside: avoid !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) .recipe-detail__info-item {
+    color: #21150f !important;
+    font-size: 10.5pt !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) .recipe-detail__info-item svg {
+    display: none !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) :is(
+    .recipe-detail__description-section,
+    .recipe-detail__notes-section
+  ) {
+    margin-bottom: 7mm !important;
+    break-inside: avoid !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) .recipe-detail__notes-section {
+    display: block !important;
+    min-height: 25mm !important;
+    padding: 4mm 5mm !important;
+    border: 0.4mm solid #c94127 !important;
+    border-radius: 2mm !important;
+    background: #fdfcfb !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) :is(
+    .recipe-detail__description-title,
+    .recipe-detail__notes-title,
+    .recipe-detail__section-title
+  ) {
+    color: #a32f1d !important;
+    break-after: avoid !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) .recipe-detail__body-layout {
+    display: block !important;
+    margin: 0 !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) :is(
+    .ingredient-item,
+    .step-item
+  ) {
+    color: #21150f !important;
+    border-bottom: 1px dotted #cdbeb6 !important;
+    break-inside: avoid !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) :is(
+    .ingredient-item__name,
+    .step-item p
+  ) {
+    color: #21150f !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) :is(
+    .ingredient-item__qty,
+    .step-item__notes
+  ) {
+    color: #a32f1d !important;
+  }
+
+  body:not(.printing-recipe):not(.printing-all-recipes) .print-dotted-line {
+    width: 100% !important;
+    height: 7mm !important;
+    border-bottom: 1px dotted #cdbeb6 !important;
+  }
+
   .print-document-root--recipe .print-recipe-sheet,
   .print-cookbook-recipe {
     page: sapori-recipe;
   }
 
   .print-recipe-sheet {
+    display: block !important;
     min-height: 262mm !important;
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 10pt !important;
@@ -441,8 +575,7 @@
   .print-recipe-sheet__ingredient,
   .print-recipe-sheet__step,
   .print-recipe-sheet__notes,
-  .print-recipe-sheet__storage,
-  .print-recipe-sheet__footer {
+  .print-recipe-sheet__storage {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
@@ -521,26 +654,6 @@
     color: #6f5c53 !important;
     font-size: 13pt !important;
     font-style: italic !important;
-  }
-
-  .print-cover-meta {
-    display: flex !important;
-    width: 100% !important;
-    justify-content: space-between !important;
-    margin-top: 25mm !important;
-    padding-top: 4mm !important;
-    border-top: 1px dotted #cdbeb6 !important;
-    color: #6f5c53 !important;
-    font-size: 9.5pt !important;
-  }
-
-  .print-cover-meta span {
-    max-width: 48% !important;
-    overflow-wrap: anywhere !important;
-  }
-
-  .print-cover-meta span:last-child {
-    text-align: right !important;
   }
 
   .print-index-page {
