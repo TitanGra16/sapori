@@ -52,3 +52,74 @@ test('mantiene utilizzabili i controlli principali fra 360 e 430 pixel', async (
     expect(viewportFits, `overflow a ${width}px`).toBe(true);
   }
 });
+
+test('mantiene leggibili categorie e badge delle bozze su smartphone', async ({ page }) => {
+  await openCleanApp(page, 360);
+
+  await page.evaluate(async () => {
+    await DB.addRecipe({
+      name: 'Tipografia mobile',
+      category: 'dolci',
+      description: '',
+      ingredients: [{ name: 'Farina', quantity: '100', unit: 'g', notes: '' }],
+      steps: [{ text: 'Impasta.', notes: '' }],
+      prepTime: 0,
+      cookTime: 0,
+      servings: 4,
+      difficulty: 'facile',
+      notes: '',
+      storage: '',
+      image: null,
+      imageThumbnail: null,
+      isFavorite: false
+    });
+
+    await DraftStore.save({
+      mode: 'create',
+      recipeId: null,
+      draftId: 'tipografia-mobile'
+    }, {
+      schemaVersion: 1,
+      recipe: {
+        id: null,
+        name: 'Bozza leggibile',
+        category: 'dolci',
+        description: '',
+        ingredients: [{ name: 'Farina', quantity: '100', unit: 'g', notes: '' }],
+        steps: [{ text: 'Impasta.', notes: '' }],
+        prepTime: 0,
+        cookTime: 0,
+        servings: 4,
+        difficulty: 'facile',
+        notes: '',
+        storage: '',
+        image: null,
+        imageThumbnail: null,
+        isFavorite: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      },
+      activeTab: 'tab-info',
+      baseContentVersion: 0,
+      baseUpdatedAt: null
+    }, {
+      writerId: 'test-tipografia',
+      expectedRevision: null
+    });
+  });
+
+  await page.reload();
+  const categorySize = await page.locator('.recipe-card__category').first().evaluate(element => (
+    parseFloat(getComputedStyle(element).fontSize)
+  ));
+  expect(categorySize).toBeGreaterThanOrEqual(13);
+
+  await page.evaluate(() => {
+    location.hash = '#drafts';
+  });
+  await expect(page.getByRole('heading', { name: 'Bozze locali', level: 1 })).toBeVisible();
+  const badgeSize = await page.locator('.draft-card__badge').first().evaluate(element => (
+    parseFloat(getComputedStyle(element).fontSize)
+  ));
+  expect(badgeSize).toBeGreaterThanOrEqual(13);
+});
