@@ -428,12 +428,11 @@ test('restituisce record legacy illeggibili senza bloccare le altre bozze', asyn
   const context = createContext();
   const database = await context.DraftStore.init();
   t.after(() => database.close());
-  const now = Date.now();
-
-  await context.DraftStore.save(
+  const validRecord = await context.DraftStore.save(
     target('create', 'valida-accanto'),
     { recipe: { name: 'Bozza valida' } }
   );
+  const legacyUpdatedAt = validRecord.updatedAt + 1;
   await putRawRecord(database, {
     key: 'create:legacy-illeggibile',
     mode: 'create',
@@ -442,9 +441,9 @@ test('restituisce record legacy illeggibili senza bloccare le altre bozze', asyn
     data: null,
     writerId: 'versione-vecchia',
     revision: 1,
-    createdAt: now,
-    updatedAt: now + 1,
-    expiresAt: now + context.DraftStore.DRAFT_TTL_MS
+    createdAt: validRecord.createdAt,
+    updatedAt: legacyUpdatedAt,
+    expiresAt: legacyUpdatedAt + context.DraftStore.DRAFT_TTL_MS
   });
 
   const unreadable = await context.DraftStore.get(
