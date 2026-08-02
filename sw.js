@@ -7,6 +7,7 @@ const APP_SHELL = [
   './css/variables.css',
   './css/base.css',
   './css/components.css',
+  './css/pages/cooking.css',
   './css/animations.css',
   './css/pages/account.css',
   './js/bootstrap-theme.js',
