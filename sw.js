@@ -1,7 +1,11 @@
-const CACHE_NAME = 'sapori-v58';
+const APP_SHELL_REVISION = 'e5f95479c26149bec994965242c01ec66b2dd702b3c0f566d50c02a0cfce2011';
+
+const SCOPE_URL = new URL(self.registration.scope);
+const CACHE_PREFIX = 'sapori-' + encodeURIComponent(SCOPE_URL.pathname) + '-';
+const CACHE_NAME = CACHE_PREFIX + 'v60-' + APP_SHELL_REVISION.slice(0, 12);
+const SHELL_URL = new URL('./index.html', SCOPE_URL).href;
 
 const APP_SHELL = [
-  './',
   './index.html',
   './manifest.json',
   './css/variables.css',
@@ -10,8 +14,21 @@ const APP_SHELL = [
   './css/pages/cooking.css',
   './css/animations.css',
   './css/pages/account.css',
+  './css/pages/drafts.css',
+  './css/pages/draft-library.css',
+  './css/pages/data-protection.css',
+  './css/print/print.css',
   './js/bootstrap-theme.js',
+  './js/drafts/draft-store.js',
+  './js/drafts/draft-manager.js',
+  './js/drafts/draft-schema.js',
+  './js/drafts/draft-identity.js',
+  './js/drafts/draft-catalog.js',
+  './js/data/storage-health.js',
   './js/sync/sync-preparation.js',
+  './js/print/print-service.js',
+  './js/print/cookbook-builder.js',
+  './js/print/print-progress-view.js',
   './js/print/print-recipe-view.js',
   './js/db.js',
   './js/utils.js',
@@ -28,58 +45,59 @@ const APP_SHELL = [
   './icons/apple-touch-icon-180.png'
 ];
 
-function isCacheable(response) {
-  return Boolean(
-    response &&
-    response.ok &&
-    response.type === 'basic'
-  );
+const STATIC_ASSET_URLS = new Set(
+  APP_SHELL.map(asset => new URL(asset, SCOPE_URL).href)
+);
+
+function errorResponse() {
+  return typeof Response.error === 'function'
+    ? Response.error()
+    : new Response('', { status: 503 });
 }
 
-async function cacheResponse(request, response) {
-  if (!isCacheable(response)) return;
-  const cache = await caches.open(CACHE_NAME);
-  await cache.put(request, response.clone());
+async function matchCurrentCache(request) {
+  try {
+    return await caches.match(request, { cacheName: CACHE_NAME });
+  } catch (error) {
+    // Un problema temporaneo di CacheStorage non deve impedire l'uso online.
+    return undefined;
+  }
 }
 
 async function handleNavigation(request) {
+  const cachedShell = await matchCurrentCache(SHELL_URL);
+  if (cachedShell) return cachedShell;
+
+  // L'installazione della shell è atomica. La rete viene usata solo come
+  // ultima risorsa se la cache è stata rimossa o danneggiata.
   try {
-    const response = await fetch(request);
-    const contentType = response.headers.get('content-type') || '';
-    if (isCacheable(response) && contentType.includes('text/html')) {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.put('./index.html', response.clone());
-    }
-    return response;
+    return await fetch(request);
   } catch (error) {
-    const cachedShell = await caches.match('./index.html');
-    return cachedShell || Response.error();
+    return errorResponse();
   }
 }
 
-async function handleAsset(event) {
-  const request = event.request;
-  const cached = await caches.match(request);
-  const networkUpdate = fetch(request).then(async response => {
-    await cacheResponse(request, response);
-    return response;
-  });
+async function handleAsset(request) {
+  const cached = await matchCurrentCache(request);
+  if (cached) return cached;
 
-  if (cached) {
-    event.waitUntil(networkUpdate.catch(() => undefined));
-    return cached;
-  }
-
+  // Non scrivere mai nella cache di una revisione già installata: HTML, CSS e
+  // JavaScript devono provenire tutti dalla stessa versione della shell.
   try {
-    return await networkUpdate;
+    return await fetch(request);
   } catch (error) {
-    return Response.error();
+    return errorResponse();
   }
 }
 
 self.addEventListener('install', event => {
+  const requests = APP_SHELL.map(asset => new Request(
+    new URL(asset, SCOPE_URL),
+    { cache: 'reload' }
+  ));
+
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(requests))
   );
 });
 
@@ -92,9 +110,13 @@ self.addEventListener('message', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(
+      .catch(() => [])
+      .then(keys => Promise.allSettled(
         keys
-          .filter(key => key.startsWith('sapori-') && key !== CACHE_NAME)
+          .filter(key => (
+            (key.startsWith(CACHE_PREFIX) || /^sapori-v\d+(?:-[a-f0-9]{12})?$/.test(key)) &&
+            key !== CACHE_NAME
+          ))
           .map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim())
@@ -106,12 +128,18 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
 
   const requestUrl = new URL(request.url);
-  if (requestUrl.origin !== self.location.origin) return;
+  if (
+    requestUrl.origin !== SCOPE_URL.origin ||
+    !requestUrl.pathname.startsWith(SCOPE_URL.pathname)
+  ) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(handleNavigation(request));
     return;
   }
 
-  event.respondWith(handleAsset(event));
+  // Endpoint applicativi e URL non dichiarati restano interamente alla rete.
+  if (!STATIC_ASSET_URLS.has(requestUrl.href)) return;
+
+  event.respondWith(handleAsset(request));
 });
