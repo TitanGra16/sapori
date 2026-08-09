@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.61.1",
-    "fake-indexeddb": "6.2.5"
+    "fake-indexeddb": "6.2.5",
+    "supabase": "^2.113.0"
   }
 }
