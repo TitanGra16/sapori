@@ -771,7 +771,9 @@ window.Views = (function () {
     var settingsData = await Promise.all([
       DB.countRecipes(),
       DB.getSetting('lastBackupAt'),
-      SyncPreparation.getStatus(),
+      window.AccountController && typeof window.AccountController.refresh === 'function'
+        ? window.AccountController.refresh('settings-view-render')
+        : SyncPreparation.getStatus(),
       StorageHealth.read()
     ]);
     var count = settingsData[0];
@@ -804,6 +806,7 @@ window.Views = (function () {
         ? 'La protezione avanzata non è ancora attiva su questo dispositivo.'
         : 'Questo browser gestisce automaticamente la conservazione dei dati.';
     var protectionUrgent = backupStale || storageHealth.level === 'critical';
+    var cloudConnected = syncStatus.authenticated === true && syncStatus.bound === true;
 
     var palettes = Theme.PALETTES;
 
@@ -910,7 +913,9 @@ window.Views = (function () {
                 '<p>' +
                   (backupStale
                     ? 'Il backup manca o ha più di 30 giorni. Creane uno adesso per non rischiare di perdere le ricette.'
-                    : 'Le ricette restano su questo dispositivo. Mantieni aggiornato il <strong>Backup JSON</strong>.') +
+                    : cloudConnected
+                      ? 'La sincronizzazione è attiva. Mantieni anche un <strong>Backup JSON</strong> periodico come copia indipendente.'
+                      : 'Le ricette restano su questo dispositivo. Mantieni aggiornato il <strong>Backup JSON</strong>.') +
                 '</p>' +
               '</div>' +
             '</div>';
@@ -985,7 +990,11 @@ window.Views = (function () {
       '<div class="settings-item">' +
         '<div class="settings-item__info">' +
           '<div class="settings-item__label">' + Icons.shield + ' Privacy</div>' +
-          '<div class="settings-item__description">I tuoi dati sono salvati localmente sul dispositivo</div>' +
+          '<div class="settings-item__description">' +
+            (cloudConnected
+              ? 'Le ricette restano disponibili localmente e vengono sincronizzate nel tuo spazio cloud personale'
+              : 'I tuoi dati sono salvati localmente sul dispositivo') +
+          '</div>' +
         '</div>' +
       '</div>';
     html += '</div></div>';

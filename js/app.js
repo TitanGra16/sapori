@@ -76,6 +76,9 @@
   var timerAudioContext = null;
   var COOKING_SESSION_KEY = 'sapori-cooking-session';
   var COOKING_SESSION_MAX_AGE = 8 * 24 * 60 * 60 * 1000;
+  var syncedDataRefreshTimer = null;
+  var pendingSyncedRecipeIds = new Set();
+  var pendingSyncedCategories = false;
 
   function persistCookingSession() {
     if (!state.cooking || !state.cooking.recipe || !state.cooking.recipe.id) return;
@@ -608,6 +611,16 @@
     setupModalAccessibility();
     setupDataWarning();
     navigateTo(window.location.hash || '#home');
+    // Il ricettario locale è già operativo: account e rete vengono avviati in
+    // sottofondo e non possono ritardare né interrompere il primo rendering.
+    if (window.AccountController && typeof window.AccountController.initialize === 'function') {
+      window.setTimeout(function () {
+        window.AccountController.initialize().catch(function () {
+          // Il controller espone già uno stato pubblico e sicuro alla vista.
+          // Evitiamo dettagli tecnici in console che potrebbero provenire dal provider.
+        });
+      }, 0);
+    }
     restoreCookingSession();
     DraftStore.cleanup().catch(function (error) {
       console.warn('Pulizia periodica delle bozze non riuscita:', error);
@@ -628,7 +641,6 @@
         custom.forEach(function (cat) {
           Recipes.CATEGORIES.push(cat);
         });
-        await DB.setSetting('customCategories', JSON.stringify(custom));
       }
     } catch (e) {
       console.warn('Errore nel caricamento delle categorie personalizzate:', e);
@@ -685,6 +697,55 @@
     } catch (e) {
       Utils.showToast('Errore durante l\'eliminazione della categoria', 'error');
     }
+  }
+
+  function scheduleSyncedDataRefresh(event) {
+    var detail = event && event.detail && typeof event.detail === 'object'
+      ? event.detail
+      : {};
+    (Array.isArray(detail.recipeIds) ? detail.recipeIds : []).forEach(function (id) {
+      if (typeof id === 'string' && id) pendingSyncedRecipeIds.add(id);
+    });
+    pendingSyncedCategories = pendingSyncedCategories || detail.categoriesChanged === true;
+
+    if (syncedDataRefreshTimer !== null) window.clearTimeout(syncedDataRefreshTimer);
+    syncedDataRefreshTimer = window.setTimeout(async function () {
+      syncedDataRefreshTimer = null;
+      var changedRecipeIds = new Set(pendingSyncedRecipeIds);
+      var categoriesChanged = pendingSyncedCategories;
+      pendingSyncedRecipeIds.clear();
+      pendingSyncedCategories = false;
+
+      if (categoriesChanged) await loadCustomCategories();
+      if (window.AccountController && typeof window.AccountController.refresh === 'function') {
+        window.AccountController.refresh('remote-data-changed').catch(function () {});
+      }
+
+      // Non sostituiamo mai DOM con moduli, bozze o modalità cucina attivi.
+      if (state.currentView === 'home') {
+        renderActiveView('home', function (container) {
+          return Views.renderHome(container, state.filters);
+        });
+      } else if (state.currentView === 'favorites') {
+        renderActiveView('favorites', function (container) {
+          return Views.renderFavorites(container);
+        });
+      } else if (state.currentView === 'detail' &&
+          !document.getElementById('cooking-modal-inner')) {
+        var hashParts = String(window.location.hash || '').replace(/^#/, '').split('/');
+        var detailId = null;
+        try {
+          detailId = hashParts[1] ? decodeURIComponent(hashParts[1]) : null;
+        } catch (error) {
+          detailId = hashParts[1] || null;
+        }
+        if (detailId && (categoriesChanged || changedRecipeIds.has(detailId))) {
+          renderActiveView('detail', function (container) {
+            return Views.renderDetail(container, detailId);
+          });
+        }
+      }
+    }, 120);
   }
 
   function isSafeDraftId(value) {
@@ -2688,6 +2749,8 @@
   /* ──────────────────── EVENT LISTENERS ──────────────────── */
 
   function setupEventListeners() {
+    window.addEventListener('sapori:data-changed', scheduleSyncedDataRefresh);
+
     // Bottom nav
     bottomNav.addEventListener('click', function (e) {
       var navItem = e.target.closest('.nav-item');
@@ -2925,26 +2988,33 @@
           break;
         }
         case 'prepare-sync': {
-          actionEl.disabled = true;
-          actionEl.setAttribute('aria-busy', 'true');
-          actionEl.textContent = 'Preparazione in corso…';
-          SyncPreparation.prepareDevice()
-            .then(function () {
-              Utils.showToast('Dispositivo preparato: nessun dato è stato inviato online', 'success');
-              return renderActiveView('account', function (container) {
-                return AccountView.render(container);
-              });
-            })
-            .then(function (rendered) {
-              if (rendered) AccountView.focusHeading(appContent);
-            })
-            .catch(function (error) {
-              console.error('Errore durante la preparazione locale:', error);
-              Utils.showToast('Impossibile preparare la sincronizzazione', 'error');
-              actionEl.disabled = false;
-              actionEl.removeAttribute('aria-busy');
-              actionEl.textContent = 'Prepara questo dispositivo';
-            });
+          if (window.AccountController) {
+            window.AccountController.prepareDevice(actionEl).catch(function () {});
+          }
+          break;
+        }
+        case 'login-google': {
+          if (window.AccountController) {
+            window.AccountController.signInWithGoogle(actionEl).catch(function () {});
+          }
+          break;
+        }
+        case 'sync-now': {
+          if (window.AccountController) {
+            window.AccountController.syncNow(actionEl).catch(function () {});
+          }
+          break;
+        }
+        case 'retry-sync': {
+          if (window.AccountController) {
+            window.AccountController.retrySync(actionEl).catch(function () {});
+          }
+          break;
+        }
+        case 'logout-account': {
+          if (window.AccountController) {
+            window.AccountController.signOut(actionEl).catch(function () {});
+          }
           break;
         }
         case 'start-cooking': {
