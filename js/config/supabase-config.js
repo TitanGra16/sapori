@@ -12,9 +12,9 @@
   var PROJECT_REF = 'jzezzwvvcawwonmjaeie';
   var PROJECT_URL = 'https://' + PROJECT_REF + '.supabase.co';
 
-  // Da compilare esclusivamente con la chiave che inizia con sb_publishable_.
-  // Finché resta vuota ogni modulo cloud rimane disattivato in modo sicuro.
-  var PUBLISHABLE_KEY = '';
+  // Chiave pubblica dedicata al frontend Sapori. Non concede privilegi: ogni
+  // accesso ai dati continua a essere filtrato dalle policy RLS di Supabase.
+  var PUBLISHABLE_KEY = 'sb_publishable_sp_FWH4Bn8QkHSdp4PGeoA_-5Ga-3Q8';
 
   function isValidProjectUrl(value) {
     if (typeof value !== 'string' || !value) return false;
