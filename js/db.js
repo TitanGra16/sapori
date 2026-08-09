@@ -1,6 +1,6 @@
 /**
  * Sapori — IndexedDB Storage Module
- * Database: SaporiDB v3
+ * Database: SaporiDB v4
  * Stores: recipes metadata, full-size images, settings and local sync state.
  */
 window.DB = {
@@ -23,7 +23,7 @@ window.DB = {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open('SaporiDB', 3);
+      const request = indexedDB.open('SaporiDB', 4);
 
       request.onerror = () => {
         reject(new Error('Impossibile aprire il database: ' + request.error));
@@ -53,7 +53,7 @@ window.DB = {
         if (!window.SyncPreparation) {
           throw new Error('Modulo di preparazione della sincronizzazione non disponibile');
         }
-        window.SyncPreparation.installStores(db);
+        window.SyncPreparation.installStores(db, event.target.transaction);
       };
 
       request.onblocked = () => {
