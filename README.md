@@ -109,6 +109,12 @@ sapori/
 - Le aree sicure iOS, la tastiera, il focus nelle modali e le preferenze di movimento
   ridotto sono gestite dall’interfaccia.
 
+## Nota sullo sviluppo
+
+Questo progetto è stato sviluppato con un uso significativo di strumenti AI. L’ho utilizzato come progetto sperimentale per trasformare un’idea in un’applicazione funzionante, iterare sulle funzionalità, testare il comportamento dell’applicazione e approfondire progressivamente il codice prodotto.
+
+Non considero tutte le tecnologie presenti nel progetto come competenze che padroneggio autonomamente; il repository rappresenta anche il mio percorso di apprendimento nell’uso responsabile di strumenti AI durante lo sviluppo.
+
 ## Licenza
 
 Distribuito con licenza [MIT](./LICENSE).
