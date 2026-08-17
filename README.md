@@ -3,7 +3,13 @@
 Sapori è una Progressive Web App in italiano per creare, organizzare e consultare ricette.
 Funziona anche offline e conserva ricette e preferenze localmente nel browser tramite IndexedDB.
 
-**Demo:** https://titangra16.github.io/sapori/
+**Demo attuale:** https://titangra16.github.io/sapori/
+
+**Nuova distribuzione Cloudflare Pages:** https://sapori-ricette.pages.dev/
+
+Il passaggio al nuovo dominio è intenzionalmente graduale: IndexedDB e le sessioni sono separate per origine.
+Prima di usare Cloudflare Pages come indirizzo principale, crea un backup JSON e verifica il ricettario
+sincronizzato su tutti i dispositivi.
 
 ## Nota sullo sviluppo
 
@@ -26,12 +32,13 @@ in piena autonomia.
 - Tema chiaro/scuro e palette personalizzabili
 - Backup e ripristino tramite JSON
 - Stampa / esportazione PDF delle ricette
+- Sincronizzazione facoltativa fra dispositivi tramite account Google e Supabase
 - Installazione PWA e utilizzo offline
 
 ## Dati e backup
 
-Le ricette non vengono inviate a un server: restano nel database locale del browser.
-La cancellazione dei dati del sito può quindi rimuoverle.
+Le ricette restano prima di tutto nel database locale del browser. La cancellazione dei dati del sito
+può quindi rimuoverle se non esiste un backup o una copia sincronizzata.
 
 È possibile creare un **backup JSON** dalla pagina Impostazioni e successivamente:
 
@@ -39,8 +46,9 @@ La cancellazione dei dati del sito può quindi rimuoverle.
 - sostituire il ricettario;
 - ripristinare categorie e preferenze del tema.
 
-La sezione di sincronizzazione prepara solamente una coda locale.
-Account e cloud non sono ancora collegati.
+La sincronizzazione è facoltativa e separata in passaggi espliciti: preparazione della coda locale,
+accesso Google e primo avvio manuale. L'app continua a funzionare offline e non invia ricette
+prima che l'utente completi questi passaggi.
 
 ## Avvio locale
 
@@ -78,7 +86,7 @@ sul funzionamento PWA/offline.
 
 - Escaping dei contenuti inseriti dall'utente prima del rendering
 - Validazione e compressione delle immagini JPEG, PNG e WebP
-- Content Security Policy limitata alla stessa origine
+- Content Security Policy limitata all'app e all'origine Supabase configurata
 - Gestione del focus, preferenze reduced-motion e safe area iOS
 
 ## Licenza
