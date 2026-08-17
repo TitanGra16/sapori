@@ -1,8 +1,8 @@
-const APP_SHELL_REVISION = 'e5f95479c26149bec994965242c01ec66b2dd702b3c0f566d50c02a0cfce2011';
+const APP_SHELL_REVISION = '855475619b3056fa9eb813e1ece60e5cd3ab4d108bc37afb0f65d3ddd9fbc546';
 
 const SCOPE_URL = new URL(self.registration.scope);
 const CACHE_PREFIX = 'sapori-' + encodeURIComponent(SCOPE_URL.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v60-' + APP_SHELL_REVISION.slice(0, 12);
+const CACHE_NAME = CACHE_PREFIX + 'v61-' + APP_SHELL_REVISION.slice(0, 12);
 const SHELL_URL = new URL('./index.html', SCOPE_URL).href;
 
 const APP_SHELL = [
@@ -14,11 +14,18 @@ const APP_SHELL = [
   './css/pages/cooking.css',
   './css/animations.css',
   './css/pages/account.css',
+  './css/components/sync-status.css',
+  './css/pages/account-auth.css',
   './css/pages/drafts.css',
   './css/pages/draft-library.css',
   './css/pages/data-protection.css',
   './css/print/print.css',
   './js/bootstrap-theme.js',
+  './js/config/supabase-config.js',
+  './js/vendor/supabase-2.55.0.js',
+  './js/auth/supabase-client.js',
+  './js/auth/auth-session.js',
+  './js/auth/auth-service.js',
   './js/drafts/draft-store.js',
   './js/drafts/draft-manager.js',
   './js/drafts/draft-schema.js',
@@ -35,7 +42,14 @@ const APP_SHELL = [
   './js/theme.js',
   './js/recipes.js',
   './js/icons.js',
+  './js/sync/sync-serializer.js',
+  './js/sync/sync-queue.js',
+  './js/sync/sync-transport.js',
+  './js/sync/sync-conflicts.js',
+  './js/sync/sync-local-store.js',
+  './js/sync/sync-engine.js',
   './js/account/account-view.js',
+  './js/account/account-controller.js',
   './js/views.js',
   './js/app.js',
   './icons/icon-192.png',

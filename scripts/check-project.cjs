@@ -16,6 +16,9 @@ const TEXT_EXTENSIONS = new Set([
   '.webmanifest',
   '.xml'
 ]);
+const DEPLOYMENT_REVISION_ASSETS = Object.freeze([
+  './deploy/cloudflare/_headers'
+]);
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -190,9 +193,9 @@ function normalizeAssetBytes(pathname, bytes) {
   return Buffer.from(bytes.toString('utf8').replace(/\r\n?|\u2028|\u2029/g, '\n'), 'utf8');
 }
 
-function calculateShellRevision(rootDirectory, appShell) {
+function calculateShellRevision(rootDirectory, appShell, extraAssets = []) {
   const shellHash = crypto.createHash('sha256');
-  for (const asset of appShell.slice().sort()) {
+  for (const asset of [...appShell, ...extraAssets].sort()) {
     const { file, pathname } = resolveAssetFile(rootDirectory, asset);
     shellHash.update(asset, 'utf8');
     shellHash.update(Buffer.from([0]));
@@ -299,7 +302,18 @@ function runChecks() {
     assert.ok(appShell.includes(asset), `Asset locale assente da APP_SHELL: ${asset}`);
   }
 
-  const calculatedRevision = calculateShellRevision(root, appShell);
+  for (const asset of DEPLOYMENT_REVISION_ASSETS) {
+    const { file } = resolveAssetFile(root, asset);
+    assert.ok(
+      fs.existsSync(file) && fs.statSync(file).isFile(),
+      `Input distribuzione mancante o non valido: ${asset}`
+    );
+  }
+  const calculatedRevision = calculateShellRevision(
+    root,
+    appShell,
+    DEPLOYMENT_REVISION_ASSETS
+  );
   assert.equal(
     revisionMatch[1],
     calculatedRevision,
@@ -316,6 +330,7 @@ if (require.main === module) runChecks();
 
 module.exports = {
   calculateShellRevision,
+  DEPLOYMENT_REVISION_ASSETS,
   extractLocalAssetsFromHtml,
   normalizeAssetBytes,
   normalizeAssetReference,
