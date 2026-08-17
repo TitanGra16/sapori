@@ -20,6 +20,7 @@
   var MAX_BATCH_SIZE = 100;
   var DEFAULT_RETRY_MS = 1500;
   var MAX_RETRY_MS = 5 * 60 * 1000;
+  var MAX_EXPLICIT_RETRY_MS = 24 * 60 * 60 * 1000;
 
   function requestResult(request) {
     return new Promise(function (resolve, reject) {
@@ -516,13 +517,19 @@
     if (error && typeof error === 'object') {
       if (error.code !== undefined) result.code = String(error.code).slice(0, 100);
       if (Number.isFinite(Number(error.status))) result.status = Number(error.status);
+      if (error.category !== undefined) {
+        result.category = String(error.category).slice(0, 100);
+      }
+      result.retryable = error.retryable === true;
     }
     return result;
   }
 
   function retryDelay(operation, options) {
-    if (options && Number.isFinite(Number(options.retryAfterMs))) {
-      return clampInteger(options.retryAfterMs, 0, 0, MAX_RETRY_MS);
+    if (options && options.retryAfterMs !== null &&
+        options.retryAfterMs !== undefined &&
+        Number.isFinite(Number(options.retryAfterMs))) {
+      return clampInteger(options.retryAfterMs, 0, 0, MAX_EXPLICIT_RETRY_MS);
     }
     var attempts = Math.max(1, Number(operation.attempts) || 1);
     var exponential = Math.min(
@@ -641,6 +648,43 @@
     return updated;
   }
 
+  async function retryAllBlocked(options) {
+    options = options || {};
+    var database = await ensureDatabase();
+    var now = nowFrom(options);
+    var transaction = database.transaction([QUEUE_STORE, META_STORE], 'readwrite');
+    var completion = transactionComplete(transaction);
+    var metaStore = transaction.objectStore(META_STORE);
+    var queueStore = transaction.objectStore(QUEUE_STORE);
+    var stateRecord = await requestResult(metaStore.get(STATE_KEY));
+    if (!stateHasAccount(stateRecord)) {
+      transaction.abort();
+      await completion.catch(function () {});
+      throw createStateError(stateRecord);
+    }
+    var operations = await requestResult(queueStore.getAll());
+    var retriedCount = 0;
+    operations.forEach(function (record) {
+      if (!record || record.ownerScope !== stateRecord.ownerScope ||
+          record.status !== 'blocked') return;
+      queueStore.put({
+        ...record,
+        status: 'pending',
+        attempts: 0,
+        nextAttemptAt: now,
+        leaseId: null,
+        leaseExpiresAt: null,
+        claimedAt: null,
+        blockedAt: null,
+        lastError: null
+      });
+      retriedCount++;
+    });
+    await completion;
+    if (retriedCount > 0) notifyQueueChanged('blocked-operations-retried', true);
+    return retriedCount;
+  }
+
   async function recoverExpired(options) {
     options = options || {};
     var database = await ensureDatabase();
@@ -697,6 +741,11 @@
     var countStatus = function (status) {
       return owned.filter(function (operation) { return operation.status === status; }).length;
     };
+    var blockedOperations = owned.filter(function (operation) {
+      return operation.status === 'blocked';
+    }).sort(function (first, second) {
+      return (Number(second.blockedAt) || 0) - (Number(first.blockedAt) || 0);
+    });
     var pendingAttempts = owned
       .filter(function (operation) { return operation.status === 'pending'; })
       .map(function (operation) { return Math.max(0, Number(operation.nextAttemptAt) || 0); });
@@ -710,7 +759,10 @@
       }).length,
       nextAttemptAt: pendingAttempts.length > 0 ? Math.min.apply(Math, pendingAttempts) : null,
       sendingCount: countStatus('sending'),
-      blockedCount: countStatus('blocked'),
+      blockedCount: blockedOperations.length,
+      blockedError: blockedOperations.length > 0 && blockedOperations[0].lastError
+        ? { ...blockedOperations[0].lastError }
+        : null,
       leaseActive: Boolean(stateRecord && isLeaseActive(currentLease, stateRecord, now)),
       leaseExpiresAt: stateRecord && isLeaseActive(currentLease, stateRecord, now)
         ? Number(currentLease.expiresAt)
@@ -747,6 +799,7 @@
     rebase: rebase,
     block: block,
     retryBlocked: retryBlocked,
+    retryAllBlocked: retryAllBlocked,
     recoverExpired: recoverExpired,
     getStats: getStats,
     bindAccount: bindAccount,

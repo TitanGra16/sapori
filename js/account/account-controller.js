@@ -377,6 +377,13 @@
     }
   }
 
+  async function retrySync(button) {
+    if (window.SyncQueue && typeof window.SyncQueue.retryAllBlocked === 'function') {
+      await window.SyncQueue.retryAllBlocked();
+    }
+    return syncNow(button);
+  }
+
   function destroy() {
     listeners.splice(0).forEach(function (remove) { remove(); });
     if (refreshTimer !== null) window.clearTimeout(refreshTimer);
@@ -395,7 +402,7 @@
     prepareDevice: prepareDevice,
     signInWithGoogle: signInWithGoogle,
     syncNow: syncNow,
-    retrySync: syncNow,
+    retrySync: retrySync,
     signOut: signOut,
     isInitialized: function () { return initialized; },
     destroy: destroy

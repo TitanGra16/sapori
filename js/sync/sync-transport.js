@@ -17,6 +17,11 @@
     this.category = details.category || 'unknown';
     this.status = Number.isFinite(Number(details.status)) ? Number(details.status) : null;
     this.retryable = details.retryable === true;
+    this.retryAfterMs = details.retryAfterMs !== null &&
+      details.retryAfterMs !== undefined &&
+      Number.isFinite(Number(details.retryAfterMs))
+      ? Math.max(0, Number(details.retryAfterMs))
+      : null;
     this.reauthRequired = details.reauthRequired === true;
     this.message = details.message || 'Sincronizzazione cloud non disponibile.';
     if (cause) {
@@ -42,16 +47,74 @@
     var status = Number(error && (error.status || error.statusCode));
     var code = safeCode(error && error.code) || 'sync-request-failed';
     var message = typeof (error && error.message) === 'string' ? error.message : '';
+    var normalizedMessage = message.toLowerCase();
     var offline = window.navigator && window.navigator.onLine === false;
     var network = offline || (error && ['TypeError', 'AbortError'].indexOf(error.name) !== -1) ||
       /fetch|network|load failed|timed out|abort(?:ed|error)?/i.test(message);
 
+    if (normalizedMessage.indexOf('sapori-sync-hourly-limit') !== -1) {
+      return new SyncTransportError({
+        code: 'sapori-sync-hourly-limit',
+        category: 'rate-limit',
+        status: status || 429,
+        retryable: true,
+        retryAfterMs: 15 * 60 * 1000,
+        message: 'Sono state sincronizzate molte modifiche. La coda riprenderà automaticamente tra poco.'
+      }, error);
+    }
+    if (normalizedMessage.indexOf('sapori-sync-daily-limit') !== -1) {
+      return new SyncTransportError({
+        code: 'sapori-sync-daily-limit',
+        category: 'rate-limit',
+        status: status || 429,
+        retryable: true,
+        retryAfterMs: 2 * 60 * 60 * 1000,
+        message: 'Il limite giornaliero di modifiche cloud è stato raggiunto. Le ricette restano nella coda locale.'
+      }, error);
+    }
+    if (normalizedMessage.indexOf('sapori-sync-receipt-limit') !== -1) {
+      return new SyncTransportError({
+        code: 'sapori-sync-receipt-limit',
+        category: 'quota',
+        status: status || 429,
+        retryable: false,
+        message: 'Questo account ha raggiunto il limite storico della sincronizzazione. Le ricette locali restano disponibili.'
+      }, error);
+    }
+    if (normalizedMessage.indexOf('sapori-recipe-active-limit') !== -1) {
+      return new SyncTransportError({
+        code: 'sapori-recipe-active-limit',
+        category: 'quota',
+        status: status || 409,
+        retryable: false,
+        message: 'Hai raggiunto il limite di 1.500 ricette attive nel cloud. Elimina una ricetta già sincronizzata e riprova.'
+      }, error);
+    }
+    if (normalizedMessage.indexOf('sapori-recipe-row-limit') !== -1) {
+      return new SyncTransportError({
+        code: 'sapori-recipe-row-limit',
+        category: 'quota',
+        status: status || 409,
+        retryable: false,
+        message: 'Questo account ha raggiunto il limite complessivo di ricette cloud. I dati locali non vengono eliminati.'
+      }, error);
+    }
+    if (normalizedMessage.indexOf('sapori-recipe-bytes-limit') !== -1) {
+      return new SyncTransportError({
+        code: 'sapori-recipe-bytes-limit',
+        category: 'quota',
+        status: status || 409,
+        retryable: false,
+        message: 'Il testo delle ricette di questo account ha raggiunto il limite cloud. Riduci o elimina contenuti gia sincronizzati e riprova.'
+      }, error);
+    }
     if (error && error.retryable === true) {
       return new SyncTransportError({
         code: code,
         category: typeof error.category === 'string' ? error.category : 'temporary',
         status: status,
         retryable: true,
+        retryAfterMs: error.retryAfterMs,
         reauthRequired: error.reauthRequired === true,
         message: message || 'La sincronizzazione verrà riprovata.'
       }, error);
@@ -277,6 +340,67 @@
     return result;
   }
 
+  function imageQuotaError(result) {
+    var reason = result && result.reason;
+    if (reason === 'global-byte-limit') {
+      return new SyncTransportError({
+        code: 'sapori-global-image-limit',
+        category: 'quota',
+        retryable: true,
+        retryAfterMs: 60 * 60 * 1000,
+        message: 'Lo spazio fotografico condiviso è momentaneamente pieno. La foto resta al sicuro sul dispositivo.'
+      });
+    }
+    if (reason === 'account-object-limit') {
+      return new SyncTransportError({
+        code: 'sapori-image-object-limit',
+        category: 'quota',
+        retryable: false,
+        message: 'Hai raggiunto il limite di 120 fotografie cloud. Rimuovi una foto già sincronizzata e riprova.'
+      });
+    }
+    if (reason === 'account-byte-limit') {
+      return new SyncTransportError({
+        code: 'sapori-image-byte-limit',
+        category: 'quota',
+        retryable: false,
+        message: 'Hai raggiunto i 50 MB di fotografie cloud. Rimuovi una foto già sincronizzata e riprova.'
+      });
+    }
+    return new SyncTransportError({
+      code: 'invalid-image-upload',
+      category: 'invalid-request',
+      retryable: false,
+      message: 'La fotografia non rispetta i requisiti del cloud.'
+    });
+  }
+
+  async function checkImageUpload(path, blob, expectedOwnerId) {
+    expectedOwnerId = requireExpectedOwnerId(expectedOwnerId);
+    if (typeof path !== 'string' || !(blob instanceof Blob) || blob.size < 1) {
+      throw imageQuotaError({ reason: 'invalid-size' });
+    }
+    var response = await withTimeout(function () {
+      return requireClient().rpc('check_recipe_image_upload', {
+        p_expected_owner_id: expectedOwnerId,
+        p_object_name: path,
+        p_size_bytes: blob.size
+      });
+    });
+    var result = throwResponseError(response);
+    if (!result || typeof result !== 'object' || Array.isArray(result) ||
+        typeof result.allowed !== 'boolean') {
+      throw new SyncTransportError({
+        code: 'invalid-image-quota-response',
+        category: 'service',
+        retryable: true,
+        message: 'Il cloud non ha restituito lo stato dello spazio fotografico.'
+      });
+    }
+    if (!result.allowed) throw imageQuotaError(result);
+    return result;
+  }
+
   async function pull(afterRevision, limit, expectedOwnerId) {
     expectedOwnerId = requireExpectedOwnerId(expectedOwnerId);
     var client = requireClient();
@@ -353,9 +477,10 @@
     };
   }
 
-  async function uploadImage(path, blob) {
+  async function uploadImage(path, blob, expectedOwnerId) {
     var client = requireClient();
     try {
+      await checkImageUpload(path, blob, expectedOwnerId);
       var response = await withPromiseTimeout(
         client.storage.from(BUCKET).upload(path, blob, {
           cacheControl: '31536000',
@@ -412,6 +537,7 @@
     classifyError: classify,
     push: push,
     pull: pull,
+    checkImageUpload: checkImageUpload,
     uploadImage: uploadImage,
     downloadImage: downloadImage,
     removeImages: removeImages

@@ -1,4 +1,4 @@
-const APP_SHELL_REVISION = '855475619b3056fa9eb813e1ece60e5cd3ab4d108bc37afb0f65d3ddd9fbc546';
+const APP_SHELL_REVISION = 'b013d5a9fadb48d2218fdd3c6d1594b3546bd4c823e6514ef1efa3453e351286';
 
 const SCOPE_URL = new URL(self.registration.scope);
 const CACHE_PREFIX = 'sapori-' + encodeURIComponent(SCOPE_URL.pathname) + '-';

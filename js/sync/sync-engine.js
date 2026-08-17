@@ -176,7 +176,9 @@
       blockedCount: queueStats.blockedCount || 0,
       conflictCount: conflicts.length,
       lastSyncAt: cursor.lastSyncAt || null,
-      lastError: cursor.lastError || state.lastError
+      lastError: queueStats.blockedError
+        ? publicError(queueStats.blockedError)
+        : (cursor.lastError || state.lastError)
     }, reason || 'status-refreshed');
   }
 
@@ -308,7 +310,8 @@
         if (snapshotPayload.imageUpload) {
           await window.SyncTransport.uploadImage(
             snapshotPayload.imageUpload.path,
-            snapshotPayload.imageUpload.blob
+            snapshotPayload.imageUpload.blob,
+            accountId
           );
           uploadedPath = snapshotPayload.imageUpload.path;
           assertExpectedAccount(accountId);
@@ -386,7 +389,10 @@
             });
           }
         } else if (classified.retryable) {
-          await window.SyncQueue.retry(claimedOperation, { error: classified });
+          await window.SyncQueue.retry(claimedOperation, {
+            error: classified,
+            retryAfterMs: classified.retryAfterMs
+          });
         } else {
           await window.SyncQueue.block(claimedOperation, { error: classified });
         }

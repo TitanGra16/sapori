@@ -178,7 +178,8 @@
         (status.online ? '' : ' disabled') + '>Accedi con Google</button>';
     }
     if (status.status === 'account-mismatch') return '';
-    if (status.status === 'error' && status.lastError && status.lastError.retryable !== true) {
+    if (status.status === 'error' && status.blockedCount === 0 &&
+        status.lastError && status.lastError.retryable !== true) {
       return '';
     }
     var action = status.status === 'error' ? 'retry-sync' : 'sync-now';
