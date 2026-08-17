@@ -117,8 +117,9 @@ test('precachea con reload tutti gli asset nello scope senza attivarsi da solo',
   assert.ok(worker.added.every(request => request instanceof Request));
   assert.ok(worker.added.every(request => request.cache === 'reload'));
   assert.ok(worker.added.some(request => (
-    request.url === 'https://sapori.test/ricettario/index.html'
+    request.url === 'https://sapori.test/ricettario/'
   )));
+  assert.ok(!worker.added.some(request => request.url.endsWith('/index.html')));
   assert.ok(worker.added.some(request => (
     request.url === 'https://sapori.test/ricettario/js/bootstrap-theme.js'
   )));
@@ -145,7 +146,7 @@ test('la navigazione offline usa la shell dello scope corrente', async () => {
   const worker = loadWorker({
     scope,
     match: async request => (
-      request === `${scope}index.html` ? shell : undefined
+      request === scope ? shell : undefined
     ),
     fetch: async () => {
       throw new Error('offline');

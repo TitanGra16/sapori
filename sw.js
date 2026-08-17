@@ -1,12 +1,17 @@
-const APP_SHELL_REVISION = 'b013d5a9fadb48d2218fdd3c6d1594b3546bd4c823e6514ef1efa3453e351286';
+const APP_SHELL_REVISION = '7bf76dd2aecbc1ce2723d5370366d85bc7169ad9af7a71f6171eff668c53c6a9';
 
 const SCOPE_URL = new URL(self.registration.scope);
 const CACHE_PREFIX = 'sapori-' + encodeURIComponent(SCOPE_URL.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v61-' + APP_SHELL_REVISION.slice(0, 12);
-const SHELL_URL = new URL('./index.html', SCOPE_URL).href;
+const CACHE_NAME = CACHE_PREFIX + 'v62-' + APP_SHELL_REVISION.slice(0, 12);
+
+// Cloudflare Pages normalizza /index.html con un redirect permanente verso
+// la radice dello scope. Memorizzare direttamente la radice evita di servire
+// da CacheStorage una Response reindirizzata durante le navigazioni: alcuni
+// browser Chromium (in particolare Brave) la rifiutano con ERR_FAILED.
+const SHELL_URL = SCOPE_URL.href;
 
 const APP_SHELL = [
-  './index.html',
+  './',
   './manifest.json',
   './css/variables.css',
   './css/base.css',

@@ -179,13 +179,18 @@ function resolveAssetFile(rootDirectory, asset) {
     assert.fail(`Asset con codifica URL non valida: ${asset}`);
   }
 
-  const relative = pathname.replace(/^\/+/, '').split('/').join(path.sep);
+  // "./" rappresenta la risposta HTTP della radice pubblica, ma il suo
+  // contenuto sorgente continua a essere index.html.
+  const isDocumentRoot = asset.split(/[?#]/, 1)[0] === './';
+  const relative = isDocumentRoot
+    ? 'index.html'
+    : pathname.replace(/^\/+/, '').split('/').join(path.sep);
   const file = path.resolve(rootDirectory, relative);
   assert.ok(
     file.startsWith(rootDirectory + path.sep),
     `Asset fuori dal progetto: ${asset}`
   );
-  return { file, pathname };
+  return { file, pathname: isDocumentRoot ? '/index.html' : pathname };
 }
 
 function normalizeAssetBytes(pathname, bytes) {
@@ -274,7 +279,11 @@ function runChecks() {
   const appShell = parseAppShell(serviceWorker);
   assert.ok(appShell.length > 0, 'APP_SHELL è vuota');
   assert.equal(new Set(appShell).size, appShell.length, 'APP_SHELL contiene percorsi duplicati');
-  assert.ok(!appShell.includes('./'), 'APP_SHELL non deve duplicare index.html tramite "./"');
+  assert.ok(appShell.includes('./'), 'APP_SHELL deve precacheare la radice pubblica');
+  assert.ok(
+    !appShell.includes('./index.html'),
+    'APP_SHELL non deve precacheare il redirect Cloudflare /index.html'
+  );
   for (const asset of appShell) {
     assert.ok(asset.startsWith('./'), `Percorso APP_SHELL non relativo: ${asset}`);
   }
@@ -285,7 +294,7 @@ function runChecks() {
   assert.ok(revisionMatch, 'APP_SHELL_REVISION SHA-256 non trovata');
 
   const requiredShellAssets = new Set([
-    './index.html',
+    './',
     ...extractLocalAssetsFromHtml(index),
     ...manifest.icons.map(icon => normalizeAssetReference(icon.src)).filter(Boolean)
   ]);

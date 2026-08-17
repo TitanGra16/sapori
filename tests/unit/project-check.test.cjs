@@ -44,6 +44,12 @@ test('estrae asset HTML tra apici singoli o doppi mantenendo le query', () => {
   ]);
 });
 
+test('risolve la radice pubblica sul contenuto locale di index.html', () => {
+  const resolved = resolveAssetFile(path.resolve(__dirname, '../..'), './');
+  assert.equal(path.basename(resolved.file), 'index.html');
+  assert.equal(resolved.pathname, '/index.html');
+});
+
 test('normalizza CRLF e CR senza alterare gli asset binari', () => {
   const windowsText = Buffer.from('prima\r\nseconda\rterza\n', 'utf8');
   const unixText = Buffer.from('prima\nseconda\nterza\n', 'utf8');

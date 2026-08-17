@@ -109,7 +109,13 @@ function buildSite() {
   const appShell = parseAppShell(
     fs.readFileSync(path.resolve(PROJECT_ROOT, 'sw.js'), 'utf8')
   );
-  const rootFiles = new Set(ROOT_FILES.map(file => `./${file}`));
+  // "./" è l'alias HTTP di index.html usato dal service worker per evitare
+  // il redirect /index.html -> / di Cloudflare. index.html viene già copiato
+  // tra i file radice e non deve essere trattato come asset di sottocartella.
+  const rootFiles = new Set([
+    './',
+    ...ROOT_FILES.map(file => `./${file}`)
+  ]);
   const publishableAssets = appShell.filter(asset => !rootFiles.has(asset));
 
   if (fs.existsSync(STAGING_DIRECTORY)) {
