@@ -1,3 +1,9 @@
 node_modules/
+.env
+.env.*
+!.env.example
+dist/
+.dist-cloudflare-*/
+.dist-cloudflare-previous-*/
 playwright-report/
 test-results/

@@ -4,6 +4,7 @@
   "private": true,
   "description": "PWA locale per creare, organizzare e stampare ricette.",
   "scripts": {
+    "build:site": "node scripts/build-site.cjs",
     "check": "node scripts/check-project.cjs",
     "test": "node --test tests/unit/*.test.cjs",
     "test:e2e": "playwright test",
