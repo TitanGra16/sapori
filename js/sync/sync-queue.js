@@ -80,6 +80,14 @@
     return normalized && normalized.length <= 256 ? normalized : null;
   }
 
+  function notifyQueueChanged(reason, triggerSync) {
+    if (!window.SyncPreparation ||
+        typeof window.SyncPreparation.notifyQueueChanged !== 'function') return;
+    window.SyncPreparation.notifyQueueChanged(reason, {
+      triggerSync: triggerSync !== false
+    });
+  }
+
   function stateIsPrepared(record) {
     return Boolean(
       record &&
@@ -223,7 +231,14 @@
       return renewedLease;
     }
 
-    recoverOperations(queueStore, operations, stateRecord, null, now, null);
+    var recoveredCount = recoverOperations(
+      queueStore,
+      operations,
+      stateRecord,
+      null,
+      now,
+      null
+    );
     var lease = {
       key: LEASE_KEY,
       leaseId: generateId(),
@@ -236,6 +251,7 @@
     };
     metaStore.put(lease);
     await completion;
+    if (recoveredCount > 0) notifyQueueChanged('lease-recovered', true);
     return lease;
   }
 
@@ -312,8 +328,9 @@
       return false;
     }
 
+    var recoveredCount = 0;
     if (options.recoverClaimed !== false) {
-      recoverOperations(
+      recoveredCount = recoverOperations(
         queueStore,
         operations,
         stateRecord,
@@ -324,6 +341,7 @@
     }
     metaStore.delete(LEASE_KEY);
     await completion;
+    notifyQueueChanged('lease-released', recoveredCount > 0);
     return true;
   }
 
@@ -356,7 +374,9 @@
     var stateRecord = results[0];
     var currentLease = results[1];
     var operations = results[2];
-    var shadows = results[3];
+    var shadows = new Map(results[3].map(function (record) {
+      return [record.entityKey, record];
+    }));
     if (!stateHasAccount(stateRecord) ||
         !isLeaseActive(currentLease, stateRecord, now) ||
         currentLease.leaseId !== expectedLeaseId) {
@@ -379,20 +399,34 @@
       .slice(0, limit);
 
     var claimed = candidates.map(function (operation) {
-      var shadow = shadows.find(function (candidate) {
-        return candidate && candidate.entityKey === operation.entityKey &&
-          candidate.ownerScope === stateRecord.ownerScope;
-      });
+      var shadow = shadows.get(operation.entityKey);
+      if (shadow && shadow.ownerScope !== stateRecord.ownerScope) shadow = null;
+      var storedBaseVersion = Number(operation.baseServerVersion);
+      var shadowBaseVersion = shadow ? Number(shadow.serverVersion) : NaN;
+      var previousAttempts = Number.isSafeInteger(Number(operation.attempts))
+        ? Number(operation.attempts)
+        : 0;
+      var hasStoredBaseVersion = operation.baseServerVersion !== null &&
+        operation.baseServerVersion !== undefined &&
+        Number.isSafeInteger(storedBaseVersion) && storedBaseVersion >= 0;
       var claimedOperation = {
         ...operation,
         deviceId: stateRecord.localProfileId,
-        baseServerVersion: shadow && Number.isSafeInteger(Number(shadow.serverVersion))
-          ? Number(shadow.serverVersion)
-          : null,
+        // L'idempotenza RPC comprende anche la versione di base. Una volta
+        // reclamata, deve restare invariata fino all'ack della stessa operationId:
+        // lo shadow potrebbe essere gia avanzato se il browser e caduto fra
+        // la risposta del server e la conferma della coda.
+        baseServerVersion: hasStoredBaseVersion
+          ? storedBaseVersion
+          // Una vecchia operazione gia tentata con null deve conservare null,
+          // perche anche quel valore fa parte dell'hash idempotente remoto.
+          : (previousAttempts > 0
+              ? null
+              : (Number.isSafeInteger(shadowBaseVersion) && shadowBaseVersion >= 0
+                  ? shadowBaseVersion
+                  : 0)),
         status: 'sending',
-        attempts: (Number.isSafeInteger(Number(operation.attempts))
-          ? Number(operation.attempts)
-          : 0) + 1,
+        attempts: previousAttempts + 1,
         claimedAt: now,
         leaseId: currentLease.leaseId,
         leaseExpiresAt: currentLease.expiresAt,
@@ -402,6 +436,7 @@
       return claimedOperation;
     });
     await completion;
+    if (claimed.length > 0) notifyQueueChanged('queue-claimed', false);
     return claimed;
   }
 
@@ -460,6 +495,7 @@
       }
     });
     await completion;
+    if (acknowledged.length > 0) notifyQueueChanged('queue-acknowledged', false);
     return { acknowledged: acknowledged, stale: stale };
   }
 
@@ -516,7 +552,7 @@
   }
 
   async function retry(reference, options) {
-    return updateClaimed(reference, options, function (operation, now, retryOptions) {
+    var updated = await updateClaimed(reference, options, function (operation, now, retryOptions) {
       var delay = retryDelay(operation, retryOptions);
       return {
         ...operation,
@@ -529,10 +565,39 @@
         lastError: normalizeError(retryOptions.error, now)
       };
     });
+    if (updated) notifyQueueChanged('queue-retry-scheduled', true);
+    return updated;
+  }
+
+  /**
+   * Sostituisce l'operationId dopo un conflitto server. Un operationId remoto
+   * e immutabile: riutilizzarlo con una nuova versione di base violerebbe
+   * l'idempotenza della RPC e bloccherebbe definitivamente la coda.
+   */
+  async function rebase(reference, options) {
+    var updated = await updateClaimed(reference, options, function (operation, now, rebaseOptions) {
+      return {
+        ...operation,
+        operationId: generateId(),
+        baseServerVersion: null,
+        status: 'pending',
+        attempts: 0,
+        nextAttemptAt: now + retryDelay(operation, rebaseOptions),
+        leaseId: null,
+        leaseExpiresAt: null,
+        claimedAt: null,
+        blockedAt: null,
+        lastAttemptAt: now,
+        lastError: normalizeError(rebaseOptions.error, now),
+        recoveryReason: 'server-conflict'
+      };
+    });
+    if (updated) notifyQueueChanged('queue-rebased', true);
+    return updated;
   }
 
   async function block(reference, options) {
-    return updateClaimed(reference, options, function (operation, now, blockOptions) {
+    var updated = await updateClaimed(reference, options, function (operation, now, blockOptions) {
       return {
         ...operation,
         status: 'blocked',
@@ -545,6 +610,8 @@
         lastError: normalizeError(blockOptions.error, now)
       };
     });
+    if (updated) notifyQueueChanged('queue-blocked', false);
+    return updated;
   }
 
   async function retryBlocked(reference, options) {
@@ -570,6 +637,7 @@
     };
     queueStore.put(updated);
     await completion;
+    notifyQueueChanged('blocked-operation-retried', true);
     return updated;
   }
 
@@ -608,6 +676,7 @@
     var leaseCleared = Boolean(currentLease && !activeLease);
     if (leaseCleared) metaStore.delete(LEASE_KEY);
     await completion;
+    if (recoveredCount > 0) notifyQueueChanged('expired-operation-recovered', true);
     return { recoveredCount: recoveredCount, leaseCleared: leaseCleared };
   }
 
@@ -628,6 +697,9 @@
     var countStatus = function (status) {
       return owned.filter(function (operation) { return operation.status === status; }).length;
     };
+    var pendingAttempts = owned
+      .filter(function (operation) { return operation.status === 'pending'; })
+      .map(function (operation) { return Math.max(0, Number(operation.nextAttemptAt) || 0); });
     return {
       accountId: stateRecord && stateRecord.accountId ? stateRecord.accountId : null,
       ownerScope: stateRecord && stateRecord.ownerScope ? stateRecord.ownerScope : null,
@@ -636,6 +708,7 @@
       dueCount: owned.filter(function (operation) {
         return operation.status === 'pending' && (Number(operation.nextAttemptAt) || 0) <= now;
       }).length,
+      nextAttemptAt: pendingAttempts.length > 0 ? Math.min.apply(Math, pendingAttempts) : null,
       sendingCount: countStatus('sending'),
       blockedCount: countStatus('blocked'),
       leaseActive: Boolean(stateRecord && isLeaseActive(currentLease, stateRecord, now)),
@@ -671,6 +744,7 @@
     acknowledge: acknowledge,
     acknowledgeBatch: acknowledgeBatch,
     retry: retry,
+    rebase: rebase,
     block: block,
     retryBlocked: retryBlocked,
     recoverExpired: recoverExpired,

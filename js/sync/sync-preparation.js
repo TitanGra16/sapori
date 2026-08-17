@@ -15,7 +15,10 @@
   var STATE_KEY = 'state';
   var LOCAL_SCOPE_PREFIX = 'locale:';
   var CHANNEL_NAME = 'sapori-sync-state';
+  var QUEUE_EVENT = 'sapori:queue-changed';
+  var coordinationOrigin = 'tab-' + generateId();
   var coordinationChannel = null;
+  var notifiedTransactions = new WeakSet();
   var state = {
     intentEnabled: false,
     localProfileId: null,
@@ -91,32 +94,104 @@
     };
   }
 
+  function createEvent(name, detail) {
+    if (typeof window.CustomEvent === 'function') {
+      return new window.CustomEvent(name, { detail: detail });
+    }
+    var event = document.createEvent('CustomEvent');
+    event.initCustomEvent(name, false, false, detail);
+    return event;
+  }
+
+  function dispatchQueueChanged(detail) {
+    if (typeof window.dispatchEvent !== 'function') return;
+    window.dispatchEvent(createEvent(QUEUE_EVENT, Object.freeze(detail)));
+  }
+
+  /**
+   * Notifica la modifica della coda nella scheda corrente e, quando possibile,
+   * nelle altre schede della stessa origine. I payload non includono ricette,
+   * identificativi account o altri dati personali.
+   */
+  function notifyQueueChanged(reason, options) {
+    options = options || {};
+    var detail = {
+      reason: String(reason || 'queue-changed').slice(0, 100),
+      triggerSync: options.triggerSync !== false,
+      source: options.source || 'local',
+      at: Date.now()
+    };
+    dispatchQueueChanged(detail);
+
+    if (options.broadcast === false) return;
+    setupCoordinationChannel();
+    if (!coordinationChannel) return;
+    coordinationChannel.postMessage({
+      type: 'queue-changed',
+      origin: coordinationOrigin,
+      detail: {
+        reason: detail.reason,
+        triggerSync: detail.triggerSync,
+        at: detail.at
+      }
+    });
+  }
+
+  function notifyQueueOnCommit(transaction, reason) {
+    if (!transaction || typeof transaction.addEventListener !== 'function' ||
+        notifiedTransactions.has(transaction)) return;
+    notifiedTransactions.add(transaction);
+    transaction.addEventListener('complete', function () {
+      notifyQueueChanged(reason || 'local-change');
+    }, { once: true });
+  }
+
   function setupCoordinationChannel() {
     if (coordinationChannel || typeof window.BroadcastChannel !== 'function') return;
     coordinationChannel = new window.BroadcastChannel(CHANNEL_NAME);
     coordinationChannel.addEventListener('message', function (event) {
-      if (!event.data || event.data.type !== 'sync-state') return;
-      state = normalizeState(event.data.state);
+      var message = event.data;
+      if (!message || typeof message !== 'object') return;
+      if (message.type === 'sync-state') {
+        state = normalizeState(message.state);
+        notifyQueueChanged('preparation-changed', {
+          broadcast: false,
+          source: 'broadcast'
+        });
+        return;
+      }
+      if (message.type === 'queue-changed' && message.origin !== coordinationOrigin) {
+        var detail = message.detail && typeof message.detail === 'object'
+          ? message.detail
+          : {};
+        notifyQueueChanged(detail.reason || 'queue-changed', {
+          broadcast: false,
+          source: 'broadcast',
+          triggerSync: detail.triggerSync !== false
+        });
+      }
     });
   }
 
-  function publishState() {
+  function publishState(reason) {
     setupCoordinationChannel();
-    if (!coordinationChannel) return;
-    coordinationChannel.postMessage({
-      type: 'sync-state',
-      state: {
-        key: STATE_KEY,
-        intentEnabled: state.intentEnabled,
-        localProfileId: state.localProfileId,
-        ownerScope: state.ownerScope,
-        accountId: state.accountId,
-        accountBoundAt: state.accountBoundAt,
-        preparedAt: state.preparedAt,
-        queueKeyVersion: state.queueKeyVersion,
-        queueSchemaVersion: state.queueSchemaVersion
-      }
-    });
+    if (coordinationChannel) {
+      coordinationChannel.postMessage({
+        type: 'sync-state',
+        state: {
+          key: STATE_KEY,
+          intentEnabled: state.intentEnabled,
+          localProfileId: state.localProfileId,
+          ownerScope: state.ownerScope,
+          accountId: state.accountId,
+          accountBoundAt: state.accountBoundAt,
+          preparedAt: state.preparedAt,
+          queueKeyVersion: state.queueKeyVersion,
+          queueSchemaVersion: state.queueSchemaVersion
+        }
+      });
+    }
+    notifyQueueChanged(reason || 'preparation-changed', { broadcast: false });
   }
 
   function ensureIndex(store, name, keyPath) {
@@ -239,6 +314,7 @@
     metaStore.put(migratedState);
     state = normalizeState(migratedState);
     await completion;
+    notifyQueueChanged('queue-migrated');
   }
 
   function reset() {
@@ -316,6 +392,7 @@
           transactionState.ownerScope
         )
       );
+      notifyQueueOnCommit(transaction, 'local-change');
     });
   }
 
@@ -352,6 +429,7 @@
       queueStore.put(
         buildOperation('recipe', recipeId, 'content', 'delete', changedAt, ownerScope)
       );
+      notifyQueueOnCommit(transaction, 'local-delete');
     });
   }
 
@@ -375,7 +453,7 @@
     if (persistedState.intentEnabled) {
       await completion;
       state = persistedState;
-      publishState();
+      publishState('already-prepared');
       return getStatus();
     }
 
@@ -418,7 +496,7 @@
 
     await completion;
     state = normalizeState(preparedState);
-    publishState();
+    publishState('device-prepared');
     return getStatus();
   }
 
@@ -483,7 +561,7 @@
     metaStore.put(boundState);
     await completion;
     state = normalizeState(boundState);
-    publishState();
+    publishState('account-bound');
 
     return {
       accountId: state.accountId,
@@ -608,6 +686,7 @@
     queueRecipeFavorite: queueRecipeFavorite,
     queueRecipeImage: queueRecipeImage,
     queueRecipeDelete: queueRecipeDelete,
-    queueCategories: queueCategories
+    queueCategories: queueCategories,
+    notifyQueueChanged: notifyQueueChanged
   };
 })();

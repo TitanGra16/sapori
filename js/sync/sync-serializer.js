@@ -96,10 +96,26 @@
 
   function normalizeCategory(category) {
     if (!category || typeof category !== 'object') return null;
-    var id = text(category.id, 128).toLowerCase();
-    var name = text(category.name, 100);
-    if (!/^[a-z0-9][a-z0-9_-]{0,127}$/.test(id) || !name) return null;
-    return { id: id, name: name };
+    var label = text(category.label || category.name, 60);
+    var id = text(category.id, 80).toLowerCase();
+    var icon = text(category.icon || '🍴', 16) || '🍴';
+    var colorValue = text(category.color, 7);
+    var color = /^#[0-9a-f]{6}$/i.test(colorValue) ? colorValue : '#E85D3A';
+    var reserved = new Set(
+      window.DB && Array.isArray(window.DB.BUILTIN_CATEGORY_IDS)
+        ? window.DB.BUILTIN_CATEGORY_IDS
+        : ['antipasti', 'primi', 'secondi', 'contorni', 'dolci', 'bevande', 'altro']
+    );
+    if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(id) || !label || reserved.has(id)) {
+      return null;
+    }
+    return {
+      id: id,
+      label: label,
+      icon: icon,
+      color: color,
+      isCustom: true
+    };
   }
 
   function serializeCategories(value) {
