@@ -137,7 +137,7 @@
       syncing: Boolean(sync && sync.status === 'syncing'),
       pendingCount: Math.max(
         Number(preparation.pendingCount) || 0,
-        sync ? (Number(sync.pendingCount) || 0) + (Number(sync.sendingCount) || 0) : 0
+        sync ? Number(sync.pendingCount) || 0 : 0
       ),
       pendingRecipeCount: Number(preparation.pendingRecipeCount) || 0,
       sendingCount: sync ? Number(sync.sendingCount) || 0 : Number(preparation.sendingCount) || 0,
@@ -148,7 +148,14 @@
       lastError: accountMismatch
         ? mismatchError()
         : safeError(
-            (sync && sync.lastError) || (auth && auth.error),
+            (sync && sync.lastError) ||
+            (sync && Number(sync.blockedCount) > 0 ? {
+              code: 'SYNC_BLOCKED_OPERATIONS',
+              category: 'data',
+              message: 'Una o più modifiche richiedono una correzione locale prima di poter essere sincronizzate.',
+              retryable: false
+            } : null) ||
+            (auth && auth.error),
             'Sincronizzazione non disponibile.'
           ),
       user: auth && auth.user ? auth.user : null,
@@ -324,6 +331,15 @@
         interruptedError.category = 'offline';
         interruptedError.retryable = true;
         throw interruptedError;
+      }
+      if (!value.bound || value.status === 'binding-required') {
+        var bindingError = new Error(
+          'Il collegamento del ricettario non è stato completato. Riprova tra qualche secondo.'
+        );
+        bindingError.code = 'SYNC_BINDING_INCOMPLETE';
+        bindingError.category = 'account';
+        bindingError.retryable = true;
+        throw bindingError;
       }
       toast(
         value.conflictCount > 0
