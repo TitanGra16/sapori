@@ -50,6 +50,20 @@ La sincronizzazione è facoltativa e separata in passaggi espliciti: preparazion
 accesso Google e primo avvio manuale. L'app continua a funzionare offline e non invia ricette
 prima che l'utente completi questi passaggi.
 
+## Uso multiutente
+
+Sapori accetta nuovi utenti tramite Google. Ogni account possiede un ricettario cloud privato:
+le policy RLS, le RPC con controllo dell'account atteso e i percorsi Storage separati impediscono
+a un utente di leggere o modificare ricette e fotografie appartenenti a un altro account.
+
+Per proteggere il piano gratuito senza impedire l'uso normale, il backend applica limiti di uso equo
+per singolo account: fino a 1.500 ricette cloud attive, 20 MiB di contenuto testuale, 50 MiB e
+120 fotografie. Le ricette continuano sempre a essere salvate localmente; se un limite cloud viene
+raggiunto, l'app conserva la modifica nella coda o la segnala come riprovabile dopo aver liberato spazio.
+
+Il supporto multiutente indica account privati indipendenti. Non è ancora presente la condivisione
+collaborativa dello stesso ricettario fra persone diverse.
+
 ## Avvio locale
 
 Il progetto non richiede una build, ma deve essere servito tramite HTTP perché service worker e PWA

@@ -58,6 +58,19 @@ In Google OAuth deve restare autorizzato come redirect il callback Supabase `htt
 
 Non cancellare il deployment GitHub Pages o i relativi dati locali finche backup e confronto delle ricette non sono conclusi.
 
+## Apertura a più utenti
+
+Nel pannello Supabase, in **Authentication → Sign In / Providers**, devono restare attivi:
+
+- `Allow new users to sign up`;
+- il provider Google.
+
+Non inserire allowlist o disabilitare le registrazioni se l'obiettivo è offrire Sapori a più persone.
+La separazione dei ricettari è garantita da RLS e dalle RPC; la migrazione
+`20260817190000_protegge_uso_multiutente.sql` aggiunge inoltre limiti per account su ricette,
+ricevute di sincronizzazione e fotografie. Dopo averla applicata, verificare la registrazione con
+due account Google distinti e confermare che ciascuno veda esclusivamente i propri dati.
+
 ## Controlli dopo il deploy
 
 1. Aprire l'app e verificare che non compaiano errori CSP nella console.

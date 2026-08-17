@@ -22,7 +22,7 @@ Importante: in questa fase **non è stata eseguita la full suite di test**. La p
 
 La parte infrastrutturale preparata in questa fase non è rimasta soltanto nel repository:
 
-- le migrazioni Supabase, inclusa <code>20260809223000_rinforza_account_e_ripristino_ricette.sql</code>, risultano applicate e registrate sul progetto remoto;
+- le migrazioni Supabase, incluse <code>20260809223000_rinforza_account_e_ripristino_ricette.sql</code> e <code>20260817190000_protegge_uso_multiutente.sql</code>, risultano applicate e registrate sul progetto remoto;
 - le RPC pubbliche espongono le firme attese, mentre le funzioni v1 interne sono nello schema privato e non eseguibili dal ruolo <code>authenticated</code>;
 - Cloudflare Pages è collegato a <code>TitanGra16/sapori</code>, branch di produzione <code>Main</code>, con build <code>npm run check &amp;&amp; npm run build:site</code> e output <code>dist</code>;
 - il deployment di produzione è raggiungibile su <code>https://sapori-ricette.pages.dev/</code>;
@@ -916,6 +916,8 @@ Il contenuto, il preferito e la foto possono così avanzare indipendentemente.
 
 La cancellazione non elimina subito la riga: imposta <code>deleted_at</code>, incrementa la versione del contenuto e rimuove il riferimento alla foto. Questo permette agli altri dispositivi di apprendere la cancellazione.
 
+Il trigger più recente riduce a un oggetto JSON vuoto il contenuto di una ricetta tombstonata. ID, versioni, revisione e data di cancellazione restano disponibili per il pull, ma il testo eliminato non continua a occupare inutilmente la quota database.
+
 La migrazione più recente consente il ripristino di un ID stabile dopo un tombstone solo se:
 
 - l’operazione è un upsert del contenuto;
@@ -939,9 +941,11 @@ Le RPC pubbliche:
 
 ### 13.8 Storage privato
 
-Il bucket <code>recipe-images</code> è privato, con limite 8 MB e MIME consentiti JPEG, PNG, WebP e GIF.
+Il bucket <code>recipe-images</code> è privato, con limite 8 MB per file e MIME consentiti JPEG, PNG, WebP e GIF.
 
-Le policy permettono select, insert e delete solo se la prima cartella del path coincide con <code>auth.uid()</code>. Il path include inoltre l’ID ricetta e l’operation ID, rendendo gli upload immutabili e idempotenti.
+Le policy permettono select, insert e delete solo se la prima cartella del path coincide con <code>auth.uid()</code>. Il path include inoltre l’ID ricetta e l’operation ID, rendendo gli upload immutabili e idempotenti. Prima dell’upload il client interroga <code>check_recipe_image_upload</code>; la policy RLS ripete comunque il controllo autorevole usando la dimensione realmente registrata in <code>storage.objects.metadata</code>.
+
+Ogni account può conservare al massimo 50 MiB e 120 oggetti fotografici. Un margine globale impedisce nuovi upload oltre 900 MiB nel bucket, lasciando spazio operativo rispetto al limite del piano gratuito. Il controllo usa un advisory lock globale, quindi due upload concorrenti non possono superare insieme il budget dopo aver letto lo stesso conteggio.
 
 Quando un’immagine viene sostituita, il vecchio path viene inserito in una coda locale persistente di cleanup. Un errore di rimozione non invalida la ricetta e viene ritentato.
 
@@ -952,7 +956,23 @@ Ordine logico:
 1. <code>20260809190331_crea_schema_sincronizzazione.sql</code>: tabelle, sequence, trigger e vincoli;
 2. <code>20260809190336_protegge_dati_e_fotografie.sql</code>: RLS, grants, bucket e policy;
 3. <code>20260809190341_aggiunge_funzioni_sincronizzazione.sql</code>: RPC idempotenti v1;
-4. <code>20260809223000_rinforza_account_e_ripristino_ricette.sql</code>: account atteso, schema privato, advisory lock e ripristino tombstone.
+4. <code>20260809223000_rinforza_account_e_ripristino_ricette.sql</code>: account atteso, schema privato, advisory lock e ripristino tombstone;
+5. <code>20260817190000_protegge_uso_multiutente.sql</code>: quote per account, rate limit, retention delle ricevute, compattazione tombstone e controllo Storage.
+
+### 13.10 Limiti di uso equo
+
+L’app è aperta a più utenti, ma il progetto Supabase usa risorse condivise. La protezione non può quindi essere soltanto un messaggio nel frontend. Trigger e policy server applicano questi limiti per account:
+
+| Risorsa | Limite | Comportamento |
+|---|---:|---|
+| Ricette attive cloud | 1.500 | La modifica resta locale e viene mostrato un errore correggibile |
+| Righe ricetta, inclusi tombstone | 3.000 | Impedisce crescita illimitata tramite creazioni e cancellazioni ripetute |
+| Contenuto JSON delle ricette | 20 MiB | Conteggio server su tutte le ricette dell’account |
+| Nuove operazioni sync | 1.000/ora, 5.000/giorno | La coda effettua un retry differito |
+| Ricevute conservate | 20.000 | Le ricevute applicate più vecchie di 180 giorni vengono rimosse |
+| Fotografie | 50 MiB e 120 oggetti | Preflight leggibile nel client più enforcement RLS |
+
+Questi limiti riguardano la replica cloud. IndexedDB continua a salvare la ricetta sul dispositivo prima di qualsiasi richiesta di rete. Per gli errori correggibili l’utente può rimuovere contenuti già sincronizzati e usare **Riprova sincronizzazione**, che rimette in coda le operazioni bloccate senza ricrearle.
 
 Le migrazioni vanno considerate append-only dopo l’applicazione in produzione. Una correzione futura deve essere una nuova migrazione, non una modifica silenziosa di una già registrata.
 
@@ -1122,7 +1142,7 @@ Nel checkout esaminato <code>.github/workflows</code> non contiene file di workf
 | Minaccia | Difesa corrente | Limite residuo |
 |---|---|---|
 | Lettura dati di un altro account | RLS, policy Storage, account atteso nelle RPC | Va verificata con test SQL automatici |
-| Riutilizzo di una richiesta dopo timeout | Ricevute e hash idempotente | La tabella ricevute cresce senza retention |
+| Riutilizzo di una richiesta dopo timeout | Ricevute, hash idempotente e retention di 180 giorni | Un dispositivo offline oltre la finestra può dover gestire un conflitto |
 | Cambio account durante una sync | Controlli client e server | La UI deve guidare bene il recupero |
 | XSS | Escape HTML, CSP, niente script inline | Molto markup usa <code>innerHTML</code>; ogni nuovo campo va escapato |
 | Clickjacking | <code>frame-ancestors 'none'</code> e <code>X-Frame-Options</code> | Protezione dipende dagli header del deploy |
@@ -1130,7 +1150,7 @@ Nel checkout esaminato <code>.github/workflows</code> non contiene file di workf
 | Accesso alle foto altrui | Bucket privato e path per utente | Il DB valida il formato del path, non l’esistenza dell’oggetto |
 | Perdita dati browser | Backup, storage health, sync | Bozze non sincronizzate; origine e dispositivo restano punti critici |
 | Due schede concorrenti | CAS bozze, lease sync, BroadcastChannel | API con <code>getAll()</code> scalano meno bene a volumi estremi |
-| Abuso del free tier | Auth richiesta | Se signup resta pubblico, utenti arbitrari possono consumare quota |
+| Abuso del free tier | Auth Google, quote per account, rate limit, limite Storage globale | Account multipli coordinati richiederebbero protezioni infrastrutturali ulteriori |
 
 ### 16.1 CSP e innerHTML
 
@@ -1145,9 +1165,9 @@ La CSP consente gli script serviti dalla stessa origine e vieta quelli inline o 
 
 ### 16.2 Policy signup
 
-Per un’app personale, dopo aver creato l’account proprietario conviene disabilitare nuove registrazioni o introdurre un’allowlist. Lasciare signup aperto su un progetto pubblico permette a terzi autenticati di creare il proprio spazio e consumare database e Storage, anche se RLS impedisce loro di leggere le ricette del proprietario.
+Sapori è configurata come applicazione multiutente: **le nuove registrazioni devono restare abilitate** e il provider Google deve restare attivo. Ogni persona ottiene un account e un ricettario privato indipendente. Non esiste ancora un ricettario collaborativo condiviso fra account diversi.
 
-Non va disabilitato signup prima che l’account previsto abbia completato almeno un accesso.
+L’isolamento è garantito da <code>owner_id</code>, RLS, controllo dell’account atteso nelle RPC e cartelle Storage intestate a <code>auth.uid()</code>. Le quote della sezione 13.10 riducono l’impatto di un singolo account sul piano gratuito; non sostituiscono monitoraggio, test con due identità reali e un eventuale livello anti-abuso se il pubblico dovesse crescere molto.
 
 ## 17. Debugging operativo
 
@@ -1260,15 +1280,15 @@ Il template non li inserisce. Disattivare “Intestazioni e piè di pagina” ne
 
 1. **Eseguire e stabilizzare la full suite.** In questa fase non è stata eseguita.
 2. **Aggiungere test diretti del motore sync e delle RPC.** È la parte più delicata e meno coperta dai test presenti.
-3. **Definire la policy signup.** Per uso personale: primo login, poi blocco nuove registrazioni o allowlist.
+3. **Collaudare due account distinti.** Dimostrare che ricette, categorie, preferiti e foto di A non sono leggibili da B.
 4. **Aggiungere CI tracciata.** La cartella workflow è vuota nel checkout corrente.
 5. **Completare un collaudo reale su almeno due dispositivi.** Include offline, modifica concorrente, foto, logout/login e recupero.
 6. **Eseguire la migrazione di origine con backup.** Non dismettere GitHub Pages prima del confronto.
 
 ### Priorità P2: robustezza e gestione
 
-1. **Retention di sync_receipts.** Introdurre una policy o job che elimini ricevute molto vecchie solo dopo una finestra idempotente prudente.
-2. **UI operazioni bloccate.** Mostrare entità, canale e azione “Riprova”, senza dettagli sensibili.
+1. **Monitoraggio quote.** Aggiungere una pagina amministrativa o alert che mostri crescita aggregata senza esporre contenuti delle ricette.
+2. **UI operazioni bloccate.** Mostrare entità e canale oltre all’azione generale “Riprova”, senza dettagli sensibili.
 3. **UI conflitti categorie.** Oggi il merge è automatico; manca un confronto dedicato.
 4. **Verifica oggetto Storage lato server.** La RPC valida path e metadati, ma non dimostra che l’oggetto esista.
 5. **Telemetria minima e rispettosa della privacy.** Contatori di errori o log locali esportabili aiuterebbero il supporto.
@@ -1611,7 +1631,7 @@ Esercizi:
 - [ ] Testare PDF singolo e ricettario lungo su A4.
 - [ ] Disabilitare intestazioni/piè di pagina nel dialogo per il PDF pulito.
 - [ ] Verificare PWA installabile e riapertura offline.
-- [ ] Definire policy signup prima della pubblicazione ampia.
+- [x] Definire policy signup multiutente e limiti di uso equo.
 - [ ] Aggiungere CI tracciata.
 - [ ] Conservare GitHub Pages e backup durante la migrazione di origine.
 
@@ -1631,4 +1651,4 @@ I punti architetturali più solidi sono:
 - conservazione delle versioni in conflitto;
 - build pubblica a lista consentita.
 
-Il lavoro più importante ancora da fare non è una riscrittura del frontend. È chiudere il ciclo operativo: test automatici specifici della sync, CI, collaudo reale su due dispositivi, policy signup e migrazione di origine verificata con backup. Solo dopo questi passaggi sarà corretto considerare la sincronizzazione pronta per un uso quotidiano senza supervisione.
+Il lavoro più importante ancora da fare non è una riscrittura del frontend. È chiudere il ciclo operativo: test automatici specifici della sync, CI, collaudo reale con due account e due dispositivi e migrazione di origine verificata con backup. Solo dopo questi passaggi sarà corretto considerare la sincronizzazione pronta per un uso quotidiano senza supervisione.
